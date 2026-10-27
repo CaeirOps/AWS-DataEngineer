@@ -1,0 +1,18 @@
+# =============================================================================
+# AWS Data Engineer – Dependências Python
+# Instale com: pip install -r requirements.txt
+# =============================================================================
+
+# Apache Spark / PySpark
+pyspark==3.5.3
+
+# Manipulação de dados
+pandas>=2.0.0
+pyarrow>=14.0.0
+
+# AWS SDK para Python
+boto3>=1.34.0
+
+# Notebooks interativos
+jupyter>=1.0.0
+ipykernel>=6.0.0

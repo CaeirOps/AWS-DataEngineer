@@ -1,0 +1,72 @@
+# =============================================================================
+# AWS Data Engineer – .gitignore
+# =============================================================================
+
+# --- Credenciais e configurações sensíveis ---
+.env
+.env.*
+*.pem
+*.key
+credentials
+aws_credentials.json
+*_credentials.*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+ENV/
+.python-version
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# --- Apache Spark ---
+spark-warehouse/
+derby.log
+metastore_db/
+
+# --- AWS CDK / Terraform / CloudFormation ---
+cdk.out/
+cdk.context.json
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+
+# --- IDEs e editores ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Logs e arquivos temporários ---
+*.log
+*.tmp
+*.bak
+tmp/
+temp/
+
+# --- Dados gerados / caches ---
+datasets/generated/
+*.parquet
+*.orc
+*.avro
+*.csv.gz
+
+# --- Dependências de pacotes ---
+node_modules/
+.npm
