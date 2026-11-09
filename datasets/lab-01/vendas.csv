@@ -1,0 +1,31 @@
+id_venda,data,produto,categoria,quantidade,preco_unitario,regiao,vendedor
+1,2024-01-03,Notebook Pro,Eletronicos,2,3500.00,Sudeste,Ana Lima
+2,2024-01-05,Mouse Sem Fio,Perifericos,10,120.00,Sul,Carlos Mota
+3,2024-01-07,Teclado Mecanico,Perifericos,5,350.00,Nordeste,Beatriz Souza
+4,2024-01-10,Monitor 27,Eletronicos,3,1800.00,Sudeste,Ana Lima
+5,2024-01-12,Headset Gamer,Perifericos,7,450.00,Centro-Oeste,Diego Ferreira
+6,2024-01-15,Notebook Pro,Eletronicos,1,3500.00,Norte,Fernanda Costa
+7,2024-01-18,Webcam HD,Perifericos,4,280.00,Sul,Carlos Mota
+8,2024-01-20,SSD 1TB,Armazenamento,6,520.00,Sudeste,Ana Lima
+9,2024-01-22,Monitor 27,Eletronicos,2,1800.00,Nordeste,Beatriz Souza
+10,2024-01-25,Pendrive 64GB,Armazenamento,20,45.00,Sul,Carlos Mota
+11,2024-02-02,Notebook Pro,Eletronicos,3,3500.00,Sudeste,Ana Lima
+12,2024-02-05,Teclado Mecanico,Perifericos,8,350.00,Centro-Oeste,Diego Ferreira
+13,2024-02-08,Mouse Sem Fio,Perifericos,15,120.00,Nordeste,Beatriz Souza
+14,2024-02-10,SSD 1TB,Armazenamento,4,520.00,Sul,Carlos Mota
+15,2024-02-14,Headset Gamer,Perifericos,6,450.00,Sudeste,Ana Lima
+16,2024-02-17,Webcam HD,Perifericos,3,280.00,Norte,Fernanda Costa
+17,2024-02-20,Pendrive 64GB,Armazenamento,30,45.00,Nordeste,Beatriz Souza
+18,2024-02-22,Monitor 27,Eletronicos,4,1800.00,Centro-Oeste,Diego Ferreira
+19,2024-02-25,Notebook Pro,Eletronicos,2,3500.00,Sul,Carlos Mota
+20,2024-02-28,SSD 1TB,Armazenamento,5,520.00,Sudeste,Ana Lima
+21,2024-03-03,Mouse Sem Fio,Perifericos,12,120.00,Norte,Fernanda Costa
+22,2024-03-07,Teclado Mecanico,Perifericos,6,350.00,Sudeste,Ana Lima
+23,2024-03-10,Headset Gamer,Perifericos,9,450.00,Sul,Carlos Mota
+24,2024-03-13,Monitor 27,Eletronicos,1,1800.00,Nordeste,Beatriz Souza
+25,2024-03-15,Notebook Pro,Eletronicos,4,3500.00,Sudeste,Ana Lima
+26,2024-03-18,Pendrive 64GB,Armazenamento,25,45.00,Centro-Oeste,Diego Ferreira
+27,2024-03-20,SSD 1TB,Armazenamento,3,520.00,Norte,Fernanda Costa
+28,2024-03-22,Webcam HD,Perifericos,5,280.00,Sul,Carlos Mota
+29,2024-03-25,Monitor 27,Eletronicos,2,1800.00,Sudeste,Ana Lima
+30,2024-03-28,Mouse Sem Fio,Perifericos,8,120.00,Nordeste,Beatriz Souza

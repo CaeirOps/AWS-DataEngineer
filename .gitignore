@@ -67,6 +67,9 @@ datasets/generated/
 *.avro
 *.csv.gz
 
+# --- Outputs dos laboratórios ---
+labs/**/data/output/
+
 # --- Dependências de pacotes ---
 node_modules/
 .npm
