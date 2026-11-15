@@ -1,157 +1,128 @@
-# AWS Certified Data Engineer – Associate (DEA-C01)
-## Laboratórios Práticos de Data Engineering na AWS
+# AWS Data Engineer Workshop (DEA-C01)
 
 [![AWS](https://img.shields.io/badge/AWS-Data%20Engineer-orange?logo=amazon-aws)](https://aws.amazon.com/certification/certified-data-engineer-associate/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Idioma](https://img.shields.io/badge/Idioma-Português-green)](README.md)
+[![Código: Apache 2.0](https://img.shields.io/badge/c%C3%B3digo-Apache%202.0-blue.svg)](LICENSE)
+[![Conteúdo: CC BY-SA 4.0](https://img.shields.io/badge/conte%C3%BAdo-CC%20BY--SA%204.0-lightgrey.svg)](LICENSE-CONTENT)
+[![Status](https://img.shields.io/badge/status-em%20desenvolvimento-blue)](#status)
+
+Workshop interativo, open source e *self-paced* para quem está se preparando para a certificação **AWS Certified Data Engineer - Associate (DEA-C01)**. A ideia é a mesma dos workshops oficiais da AWS: você recebe um cenário pré-configurado, constrói a solução na sua própria conta AWS e uma validação automática confere se o desafio foi resolvido.
+
+> Documentação em **português**, preservando os termos técnicos em inglês.
 
 ---
 
-## Sobre o Projeto
+## Status
 
-Este repositório reúne laboratórios práticos de **Data Engineering na AWS**, desenvolvidos como material de estudo para a certificação **AWS Certified Data Engineer – Associate (DEA-C01)**.
-
-A proposta é aprender construindo: cada laboratório apresenta um conceito do exame, implementa um pipeline ou solução real em ambiente AWS, e documenta o raciocínio por trás de cada decisão.
-
-> Toda a documentação está em **português**, preservando os termos técnicos em inglês (ex.: *pipeline*, *ingestion*, *batch*, *streaming*).
+**Em desenvolvimento.** A plataforma ainda não está pronta para uso. Os requisitos, o design técnico e o plano de implementação estão versionados em `.kiro/specs/aws-data-engineer-workshop/`.
 
 ---
 
-## Objetivos
+## Como vai funcionar
 
-- Cobrir os domínios do exame DEA-C01 com exercícios práticos e reproduzíveis.
-- Desenvolver fluência em Apache Spark, PySpark, AWS Glue, Amazon S3, Redshift, Kinesis e demais serviços de dados da AWS.
-- Documentar cada laboratório de forma clara para que outros profissionais possam reproduzir e aprender.
-- Fomentar a troca de conhecimento na comunidade AWS brasileira.
+1. Você clona o repositório.
+2. Roda `python check_requirements.py` para validar o ambiente local.
+3. Roda `python start.py`, que sobe os containers e abre o workshop em `http://localhost:5000`.
+4. Em cada lab, faz o deploy do cenário (CloudFormation), executa as tarefas na sua conta AWS e clica em **Validar**.
+   Cada tarefa tem duas trilhas: **Console**, com o passo a passo pelas telas do serviço, e **CLI**, com os comandos do AWS CLI. Você escolhe a que preferir e pode alternar a qualquer momento.
+5. Ao terminar, clica em **Finalizar Lab** para remover a infraestrutura e evitar custos.
 
----
-
-## Domínios do Exame (DEA-C01)
-
-| Domínio | Descrição | Peso |
-|---------|-----------|------|
-| 1 | Ingestão e transformação de dados | 34% |
-| 2 | Armazenamento e gerenciamento de dados | 26% |
-| 3 | Operações e suporte a pipelines de dados | 22% |
-| 4 | Segurança e governança de dados | 18% |
+Tudo roda localmente. Não há servidor externo, login ou coleta de dados.
 
 ---
 
-## Estrutura do Repositório
+## Laboratórios planejados
 
-```
-AWS-DataEngineer/
-├── README.md              # Este arquivo
-├── LICENSE                # Licença MIT
-├── .gitignore             # Arquivos ignorados pelo Git
-├── docs/                  # Documentação complementar e guias
-├── datasets/              # Dados fictícios para os laboratórios
-└── labs/                  # Laboratórios práticos
-    └── lab-01-spark-fundamentals/   # Em breve
-```
+A progressão vai do iniciante absoluto ao pipeline completo, cobrindo os quatro domínios do [guia oficial do exame](https://docs.aws.amazon.com/aws-certification/latest/data-engineer-associate-01/data-engineer-associate-01.html).
 
----
-
-## Laboratórios
-
-| # | Laboratório | Domínio | Status |
-|---|-------------|---------|--------|
-| 01 | Fundamentos de Apache Spark e PySpark | Transformação | 🔜 Em breve |
-
-> Novos laboratórios serão adicionados progressivamente.
+| Lab | Tema | Domínio | Nível |
+|---|---|---|---|
+| 01 | Fundamentos de S3 e Data Lake | D2 | ⭐ |
+| 02 | Catalogação e descoberta de dados (Glue Crawler, Data Catalog) | D2 | ⭐⭐ |
+| 03 | Transformação ETL com AWS Glue e PySpark | D1 | ⭐⭐ |
+| 04 | Consultas analíticas com Athena | D3 | ⭐⭐ |
+| 05 | Qualidade de dados com Glue DataBrew | D3 | ⭐⭐⭐ |
+| 06 | Ingestão de streaming com Kinesis | D1 | ⭐⭐⭐ |
+| 07 | Data Warehouse com Redshift | D2 | ⭐⭐⭐ |
+| 08 | Orquestração com Step Functions e EventBridge | D3 | ⭐⭐⭐⭐ |
+| 09 | Segurança e governança (Lake Formation, KMS, Macie, CloudTrail) | D4 | ⭐⭐⭐⭐ |
+| 10 | Pipeline end-to-end | D1-D4 | ⭐⭐⭐⭐⭐ |
 
 ---
 
 ## Pré-requisitos
 
-Para executar os laboratórios localmente você precisará ter instalado:
-
-- **Python 3.9+**
-- **Java 11 ou 17** (exigido pelo Apache Spark — recomendamos o Java 17 via [Homebrew](https://brew.sh/): `brew install openjdk@17`)
-- **AWS CLI v2** ([guia oficial](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))
-
-> O PySpark e demais dependências são instalados automaticamente via `pip` no passo abaixo.
+- Conta AWS própria, com acesso administrativo
+- Docker 20+ com Docker Compose v2
+- AWS CLI v2 com um profile configurado (`aws configure`, `aws configure sso` ou `aws login`)
+- Python 3.9+ no host, usado apenas pelos scripts de verificação e inicialização (sem pacotes extras)
+- Conhecimento básico de SQL, linha de comando e Git
 
 ---
 
-## Configuração do Ambiente
+## Custos
 
-### 1. Clone o repositório
-
-```bash
-git clone https://github.com/CaeirOps/AWS-DataEngineer.git
-cd AWS-DataEngineer
-```
-
-### 2. Crie e ative o virtual environment
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate   # Linux / macOS
-# .venv\Scripts\activate    # Windows
-```
-
-### 3. Instale as dependências
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure o JAVA_HOME (necessário para o Spark)
-
-Adicione ao seu `~/.zshrc` ou `~/.bashrc`:
-
-```bash
-# Java 17 via Homebrew (macOS)
-export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-export PATH="$JAVA_HOME/bin:$PATH"
-export PYSPARK_PYTHON=$(which python3)
-```
-
-Recarregue: `source ~/.zshrc`
-
-### 5. Configure as credenciais AWS
-
-```bash
-aws configure
-```
-
-Informe sua `Access Key ID`, `Secret Access Key`, região padrão (ex.: `us-east-1`) e formato de saída (ex.: `json`).
-
-### 6. Valide o ambiente
-
-```bash
-python3 -c "import pyspark; print('PySpark OK:', pyspark.__version__)"
-aws sts get-caller-identity
-```
+**Os labs criam recursos reais na sua conta AWS e podem gerar cobrança.** Cada lab mostra uma estimativa de custo antes do deploy. Faça um lab por vez e sempre use **Finalizar Lab** ao terminar. A responsabilidade pelos custos da conta é sua.
 
 ---
 
-## Como Contribuir
+## Segurança
 
-Contribuições são bem-vindas! Veja como participar:
+- Suas credenciais ficam no seu `~/.aws`, montado como somente leitura no container. Elas não são copiadas para a imagem nem enviadas a terceiros.
+- A interface fica acessível apenas em `127.0.0.1`.
+- O container da aplicação não tem acesso direto à internet. Toda saída passa por um proxy que só permite domínios da AWS.
+
+---
+
+## Como contribuir
 
 1. Faça um *fork* do repositório.
-2. Crie uma *branch* descritiva: `git checkout -b lab/02-glue-etl`.
-3. Implemente seu laboratório seguindo o padrão dos existentes.
-4. Abra um *Pull Request* com uma descrição clara do que foi adicionado.
+2. Crie uma *branch* descritiva, por exemplo `lab/04-athena`.
+3. Abra um *Pull Request* explicando o que foi adicionado.
+
+Todo commit precisa da assinatura do **DCO** ([Developer Certificate of Origin](https://developercertificate.org/)). Com ela, você declara que tem o direito de enviar a contribuição sob as licenças do projeto. Basta usar `git commit -s`, que adiciona ao commit uma linha como:
+
+```
+Signed-off-by: Seu Nome <seu@email.com>
+```
+
+Ao contribuir, você concorda que o código enviado fica sob a Apache 2.0 e o conteúdo didático sob a CC BY-SA 4.0.
 
 **Diretrizes:**
 - Documentação em português, termos técnicos em inglês.
-- Use apenas dados fictícios nos laboratórios.
+- Apenas dados fictícios.
 - Nunca inclua credenciais, tokens ou informações sensíveis.
-- Prefira recursos AWS de baixo custo ou elegíveis ao *Free Tier*.
+- Prefira recursos AWS de baixo custo e sempre inclua o teardown.
 
 ---
 
 ## Licença
 
-Este projeto está licenciado sob a [MIT License](LICENSE).
+O projeto usa duas licenças, uma para o código e outra para o conteúdo didático.
 
----
+| Parte | Licença | Arquivo |
+|---|---|---|
+| Código e configuração: Python, JavaScript, CSS, HTML, Dockerfile, Compose, Squid, templates CloudFormation, `metadata.json` | [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) | [LICENSE](LICENSE) |
+| Conteúdo didático: arquivos Markdown (incluindo este README) e tudo em `labs/**/assets/` | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br) | [LICENSE-CONTENT](LICENSE-CONTENT) |
+
+Comandos e trechos de código dentro dos arquivos Markdown também podem ser usados sob a Apache 2.0, para que você possa copiá-los para seus próprios scripts.
+
+### Usando ou adaptando este projeto
+
+Você pode usar, copiar, modificar e redistribuir o projeto, inclusive para fins comerciais, desde que:
+
+- **Código:** mantenha os arquivos `LICENSE` e `NOTICE` e indique nos arquivos alterados que eles foram modificados.
+- **Conteúdo:** dê crédito ao projeto original, coloque o link para ele, indique o que mudou e publique a sua adaptação também sob a CC BY-SA 4.0.
+
+Sugestão de crédito:
+
+> Baseado em [AWS Data Engineer Workshop (DEA-C01)](https://github.com/CaeirOps/AWS-DataEngineer), de Ricardo Caeiro e contribuidores, licenciado sob CC BY-SA 4.0 (conteúdo) e Apache 2.0 (código).
+
+As licenças não dão direito de uso do nome do projeto. Pedimos que forks usem um nome próprio e deixem claro que são uma versão derivada.
+
+## Aviso de marca
+
+Este projeto é independente e não é afiliado, patrocinado ou endossado pela Amazon Web Services, Inc. ou suas afiliadas. Amazon Web Services, AWS e as marcas relacionadas são marcas registradas da Amazon.com, Inc. ou de suas afiliadas.
 
 ## Autor
 
-**Ricardo Caeiro** — [@CaeirOps](https://github.com/CaeirOps)
-
-*Construído com o objetivo de aprender em público e devolver à comunidade.*
+**Ricardo Caeiro** - [@CaeirOps](https://github.com/CaeirOps)

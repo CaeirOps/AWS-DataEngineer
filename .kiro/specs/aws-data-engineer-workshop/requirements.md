@@ -13,11 +13,17 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 - **Validador**: O módulo Python com boto3 que verifica o estado real dos recursos AWS para um determinado step.
 - **Dashboard**: A tela inicial da plataforma que exibe o progresso consolidado de todos os labs.
 - **Progress Store**: O arquivo `progress.json` armazenado em volume local (gitignored) que persiste o estado de progresso do usuário.
-- **check_requirements.py**: Script Python de pré-validação que verifica Docker, AWS CLI, credenciais e permissões antes da inicialização.
+- **check_requirements.py**: Script Python de pré-validação que verifica Docker, Docker Compose, AWS CLI, credenciais e porta do host antes da inicialização, usando somente a biblioteca padrão do Python e o AWS CLI.
 - **Flask App**: O servidor web Python (Flask) executado em container Docker que serve o frontend estático e expõe a API de validação.
 - **CloudFormation Stack**: A stack de infraestrutura AWS provisionada por template CloudFormation para cada lab.
 - **Domínio DEA-C01**: Um dos quatro domínios de conhecimento do exame AWS Certified Data Engineer - Associate (D1, D2, D3, D4).
 - **Dica Detalhada**: Conteúdo de ajuda contextual exibido ao usuário após falhas consecutivas na validação de um step.
+- **Gateway**: Container que publica a interface em 127.0.0.1 e atua como egress proxy com allowlist de domínios AWS.
+- **Allowlist**: Arquivo versionado com os domínios de saída permitidos.
+- **start.py**: Script de inicialização no host (somente biblioteca padrão do Python) que sobe os containers, aguarda o health check e abre o browser.
+- **Trilha**: Modo de execução das tarefas de um step.
+- **Trilha Console**: Instruções passo a passo pelo AWS Management Console, com navegação entre telas, menus e opções do serviço.
+- **Trilha CLI**: Instruções com comandos do AWS CLI v2.
 
 ## Requirements
 
@@ -28,13 +34,18 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 #### Acceptance Criteria
 
 1. THE Plataforma SHALL ser distribuída exclusivamente via repositório Git público, sem dependência de registro de pacotes externo.
-2. WHEN o usuário executa `python check_requirements.py`, THE check_requirements.py SHALL verificar a presença do Docker versão 20 ou superior, AWS CLI versão 2 ou superior, credenciais AWS válidas e permissões mínimas requeridas pelo lab selecionado.
+2. WHEN o usuário executa `python check_requirements.py`, THE check_requirements.py SHALL usar somente a biblioteca padrão do Python e o AWS CLI, sem exigir instalação de pacotes no host, e SHALL verificar: Docker versão 20 ou superior com daemon em execução, Docker Compose v2, AWS CLI versão 2 ou superior, credenciais válidas via `aws sts get-caller-identity` para o profile em uso e porta do host (`WORKSHOP_PORT`) livre.
 3. IF o check_requirements.py detectar qualquer pré-requisito ausente ou inválido, THEN THE check_requirements.py SHALL exibir mensagem de erro descritiva identificando o pré-requisito faltante e os passos para corrigi-lo, interrompendo a execução.
-4. WHEN o usuário executa `docker compose up`, THE Flask App SHALL iniciar e estar acessível em `http://localhost:5000` em até 60 segundos.
+4. WHEN o usuário executa `python start.py`, THE start.py SHALL iniciar os containers em segundo plano e consultar o endpoint `/health` até obter resposta de sucesso por no máximo 60 segundos.
 5. THE Flask App SHALL montar o diretório `~/.aws` do host como volume somente-leitura no container, sem copiar credenciais para a imagem Docker.
 6. THE Flask App SHALL montar um volume local para o arquivo `progress.json`, preservando o progresso entre reinicializações do container.
-7. THE Plataforma SHALL ser licenciada sob MIT License e disponibilizada como open source.
-8. IF o Flask App não estiver acessível em `http://localhost:5000` após 60 segundos da execução de `docker compose up`, THEN THE Plataforma SHALL continuar aguardando a inicialização do Flask App sem exibir erro explícito e sem interromper a execução.
+7. THE Plataforma SHALL licenciar o código e os arquivos de configuração sob a Apache License 2.0 (arquivos `LICENSE` e `NOTICE`) e o conteúdo didático (arquivos Markdown e `labs/**/assets/`) sob a Creative Commons Attribution-ShareAlike 4.0 International (arquivo `LICENSE-CONTENT`).
+8. IF o endpoint `/health` não responder com sucesso em 60 segundos, THEN THE start.py SHALL exibir diagnóstico com o estado dos containers, as últimas 50 linhas de log, o resultado da verificação de porta em uso e as causas comuns conhecidas, e encerrar com código de saída diferente de zero, mantendo os containers para inspeção e informando o comando para encerrá-los.
+9. THE Plataforma SHALL permitir configurar a porta do host pela variável de ambiente `WORKSHOP_PORT`, com valor padrão 5000.
+10. IF o container da aplicação falhar repetidamente, THEN THE Plataforma SHALL limitar as reinicializações automáticas a 3 tentativas, evitando loop infinito de restart.
+11. WHEN o endpoint `/health` responder com sucesso, THE start.py SHALL exibir a URL de acesso e abrir o browser padrão do usuário.
+12. THE Plataforma SHALL usar o profile AWS definido pela variável `AWS_PROFILE` (padrão `default`) tanto no check_requirements.py quanto no container.
+13. THE Plataforma SHALL exigir a assinatura DCO (`Signed-off-by`) em todos os commits de contribuições.
 
 ---
 
@@ -44,7 +55,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 #### Acceptance Criteria
 
-1. WHEN o usuário acessa `http://localhost:5000`, THE Dashboard SHALL exibir todos os 10 labs com seus respectivos títulos, domínios DEA-C01 e níveis de complexidade.
+1. WHEN o usuário acessa `http://localhost:${WORKSHOP_PORT}` (padrão 5000), THE Dashboard SHALL exibir todos os 10 labs com seus respectivos títulos, domínios DEA-C01 e níveis de complexidade.
 2. THE Dashboard SHALL exibir, para cada lab, o número de steps concluídos sobre o total de steps disponíveis.
 3. THE Dashboard SHALL identificar visualmente o ponto de retomada de cada lab iniciado mas não concluído.
 4. WHEN o usuário clica em um lab no Dashboard, THE Plataforma SHALL navegar para o step mais recente não concluído daquele lab, ou para o primeiro step caso o lab ainda não tenha sido iniciado.
@@ -73,7 +84,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 #### Acceptance Criteria
 
-1. THE Plataforma SHALL exibir, para cada step, um cenário narrativo contextualizado, as tarefas a serem executadas na AWS e os critérios de aceitação esperados.
+1. THE Plataforma SHALL exibir, para cada step, um cenário narrativo contextualizado, as tarefas a serem executadas na AWS, apresentadas nas duas Trilhas conforme o Requirement 11, e os critérios de aceitação esperados.
 2. THE Plataforma SHALL exibir um disclaimer de custos AWS obrigatório no início de cada lab, antes de qualquer step de provisionamento de recursos.
 3. THE Plataforma SHALL exibir a estimativa de custo (calculada via AWS Pricing Calculator) para cada lab antes de o usuário iniciar o provisionamento de infraestrutura.
 4. THE Plataforma SHALL exibir os domínios DEA-C01 cobertos por cada lab (D1, D2, D3, D4) com as respectivas tasks do exame.
@@ -92,7 +103,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 3. WHEN a validação de um step falhar, THE Validador SHALL retornar o status "falhou" com mensagem descritiva identificando qual critério não foi atendido.
 4. THE Plataforma SHALL permitir retry ilimitado de validação sem penalidade para o usuário.
 5. WHEN o usuário falhar na validação de um step por X vezes consecutivas (configurável por lab), THE Plataforma SHALL exibir o botão "Ver Dica Detalhada" com orientações contextuais para aquele step específico.
-6. IF o Validador não conseguir se conectar à AWS devido a credenciais expiradas ou ausentes, THEN THE Validador SHALL retornar mensagem de erro indicando o problema de credenciais e orientando o usuário a reconfigurar o volume `~/.aws`.
+6. IF uma chamada AWS do Validador falhar por erro de credenciais (credenciais ausentes, inválidas ou expiradas), THEN THE Validador SHALL retornar o código e a mensagem de erro originais da chamada AWS, sem alteração, acompanhados da sugestão de verificar as credenciais AWS do profile em uso.
 7. WHEN a validação de todos os steps de um lab for concluída com sucesso, THE Plataforma SHALL exibir tela de conclusão do lab com resumo dos serviços utilizados e domínios DEA-C01 cobertos.
 
 ---
@@ -146,11 +157,13 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 #### Acceptance Criteria
 
-1. THE Flask App SHALL operar exclusivamente em modo local (`localhost`), sem expor portas para redes externas por padrão.
+1. THE Plataforma SHALL publicar a porta da interface somente na interface de loopback do host (127.0.0.1), sem expor portas para redes externas.
 2. THE Plataforma SHALL armazenar o Progress Store exclusivamente em volume local no host do usuário, sem sincronização com serviços externos.
 3. THE Flask App SHALL acessar as credenciais AWS exclusivamente por meio do volume `~/.aws` montado como somente-leitura, sem armazenar, logar ou transmitir valores de credenciais.
 4. THE Plataforma SHALL incluir o arquivo `progress.json` no `.gitignore` do repositório, impedindo commit acidental de dados de progresso do usuário.
-5. IF o container Docker tentar realizar conexão de rede para endereço externo não relacionado aos endpoints AWS necessários para boto3, THEN THE Plataforma SHALL exibir dinamicamente ao usuário, em tempo de execução, um alerta informando o comportamento detectado e sua finalidade.
+5. THE Plataforma SHALL bloquear em tempo de execução toda conexão de saída do container da aplicação, exceto conexões HTTPS (porta 443) para domínios da AWS listados em uma Allowlist versionada (padrão: `.amazonaws.com` e `.api.aws`).
+6. IF o container da aplicação tentar conectar a um destino fora da Allowlist, THEN THE Plataforma SHALL recusar a conexão e registrar no log do Gateway o domínio de destino e o horário, sem registrar credenciais ou cabeçalhos de autenticação.
+7. THE Plataforma SHALL documentar que downloads feitos no build (imagem base, pacotes pip) ocorrem fora da restrição de runtime.
 
 ---
 
@@ -165,3 +178,20 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 3. THE Workshop SHALL incluir labs que cubram as tasks do Domínio D2 (Gerenciamento de Armazenamento de Dados): tasks 2.1, 2.2, 2.3 e 2.4.
 4. THE Workshop SHALL incluir labs que cubram as tasks do Domínio D3 (Operações e Suporte de Dados): tasks 3.1, 3.2, 3.3 e 3.4.
 5. THE Workshop SHALL incluir labs que cubram as tasks do Domínio D4 (Segurança e Governança de Dados): tasks 4.1, 4.2, 4.3, 4.4 e 4.5.
+
+---
+
+### Requirement 11: Trilhas de Execução (Console e CLI)
+
+**User Story:** Como usuário da plataforma, quero escolher entre executar as tarefas pelo Console ou pelo CLI, para seguir o caminho de aprendizado mais adequado a mim.
+
+#### Acceptance Criteria
+
+1. THE Plataforma SHALL oferecer, para cada step do tipo tarefa, instruções na Trilha Console e na Trilha CLI.
+2. THE Plataforma SHALL exibir as duas Trilhas do step como opções selecionáveis na mesma tela, permitindo alternar entre elas sem perder o estado de validação do step.
+3. THE Plataforma SHALL persistir no Progress Store a última Trilha escolhida pelo usuário e aplicá-la como padrão nos steps seguintes.
+4. WHEN o usuário clicar em "Validar", THE Validador SHALL verificar o mesmo estado final dos recursos AWS independentemente da Trilha usada.
+5. THE Plataforma SHALL exibir a Dica Detalhada correspondente à Trilha selecionada.
+6. IF uma tarefa não puder ser executada em uma das Trilhas, THEN THE Plataforma SHALL indicar que essa Trilha não está disponível para o step e exibir o motivo.
+7. THE Plataforma SHALL apresentar, na Trilha CLI, comandos que usem o profile e a região do usuário por meio de variáveis ou placeholders, sem conter credenciais.
+8. THE Plataforma SHALL apresentar, na Trilha Console, as opções e configurações relevantes da tela do serviço que o usuário deve explorar, além do caminho mínimo para concluir a tarefa.

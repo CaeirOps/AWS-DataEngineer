@@ -1,5 +1,5 @@
 # =============================================================================
-# AWS Data Engineer – .gitignore
+# AWS Data Engineer Workshop - .gitignore
 # =============================================================================
 
 # --- Credenciais e configurações sensíveis ---
@@ -8,68 +8,32 @@
 *.pem
 *.key
 credentials
-aws_credentials.json
 *_credentials.*
+
+# --- Progresso local do usuário (nunca versionar) ---
+progress/*
+!progress/.gitkeep
 
 # --- Python ---
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-build/
-dist/
-*.egg-info/
-.eggs/
-venv/
 .venv/
-env/
-ENV/
-.python-version
+venv/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
 
-# --- Jupyter Notebooks ---
-.ipynb_checkpoints/
-*.ipynb_checkpoints
+# --- Docker ---
+docker-compose.override.yml
 
-# --- Apache Spark ---
-spark-warehouse/
-derby.log
-metastore_db/
-
-# --- AWS CDK / Terraform / CloudFormation ---
-cdk.out/
-cdk.context.json
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfvars
-.terraform.lock.hcl
-
-# --- IDEs e editores ---
+# --- IDEs e sistema ---
 .idea/
 .vscode/
 *.swp
-*.swo
 .DS_Store
 Thumbs.db
 
-# --- Logs e arquivos temporários ---
+# --- Logs e temporários ---
 *.log
-*.tmp
-*.bak
 tmp/
-temp/
-
-# --- Dados gerados / caches ---
-datasets/generated/
-*.parquet
-*.orc
-*.avro
-*.csv.gz
-
-# --- Outputs dos laboratórios ---
-labs/**/data/output/
-
-# --- Dependências de pacotes ---
-node_modules/
-.npm
