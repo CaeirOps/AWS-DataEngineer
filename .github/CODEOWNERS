@@ -1,0 +1,49 @@
+# CODEOWNERS
+#
+# Em CODEOWNERS a ultima regra que casa com o arquivo vence. Por isso a regra
+# padrao "*" fica primeiro e as regras especificas vem depois.
+#
+# Escolha do padrao "*": o projeto tem um unico mantenedor (@CaeirOps).
+# Com "*" nenhum arquivo fica sem dono, inclusive caminhos criados no futuro.
+# Os caminhos sensiveis abaixo continuam listados de forma explicita para
+# documentar o que exige revisao especial (veja CONTRIBUTING.md) e para
+# continuarem protegidos se o padrao "*" mudar quando houver mais mantenedores.
+# Todas as regras usam o mesmo dono, entao nenhuma regra posterior tira a
+# protecao de um caminho sensivel.
+
+* @CaeirOps
+
+# Infraestrutura
+/docker-compose.yml @CaeirOps
+/Dockerfile @CaeirOps
+/.dockerignore @CaeirOps
+/start.py @CaeirOps
+/check_requirements.py @CaeirOps
+/host_credentials.py @CaeirOps
+
+# Gateway e allowlist de rede
+/gateway/ @CaeirOps
+
+# Sessao, credenciais e cabecalhos HTTP
+/app/server.py @CaeirOps
+/app/session.py @CaeirOps
+/app/http_security.py @CaeirOps
+/app/validators/base.py @CaeirOps
+
+# Dependencias
+/requirements.in @CaeirOps
+/requirements*.txt @CaeirOps
+
+# Scripts, CI e automacoes
+/scripts/ @CaeirOps
+/.github/ @CaeirOps
+/.gitleaks.toml @CaeirOps
+
+# Testes de seguranca
+/tests/security/ @CaeirOps
+/tests/fixtures/http_client.py @CaeirOps
+
+# Licencas, avisos e politica de seguranca
+/LICENSE* @CaeirOps
+/NOTICE @CaeirOps
+/SECURITY.md @CaeirOps

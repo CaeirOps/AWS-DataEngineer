@@ -11,6 +11,7 @@ from app.lab_catalog import LabCatalog
 from app.models import ValidationResult
 from app.progress_store import ProgressStore
 from app.server import create_app
+from tests.fixtures.http_client import workshop_client
 from app.validation_service import ValidationService
 
 LAB = "lab-01"
@@ -89,10 +90,11 @@ def env(tmp_path):
             "progress_store": store,
             "validation_service": validation,
             "session_factory": fake_session,
+            "session_env": {"WORKSHOP_CREDENTIALS_EXPIRATION": "2999-01-01T00:00:00Z"},
         }
     )
     return {
-        "client": app.test_client(),
+        "client": workshop_client(app),
         "store": store,
         "file": progress_file,
         "contexts": contexts,

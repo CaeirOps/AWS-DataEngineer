@@ -1,0 +1,15 @@
+# Regras para buckets S3 dos labs: bloqueio de acesso público e criptografia.
+let buckets = Resources.*[ Type == 'AWS::S3::Bucket' ]
+
+rule s3_bloqueio_acesso_publico when %buckets !empty {
+    %buckets.Properties.PublicAccessBlockConfiguration exists
+    %buckets.Properties.PublicAccessBlockConfiguration.BlockPublicAcls == true
+    %buckets.Properties.PublicAccessBlockConfiguration.BlockPublicPolicy == true
+    %buckets.Properties.PublicAccessBlockConfiguration.IgnorePublicAcls == true
+    %buckets.Properties.PublicAccessBlockConfiguration.RestrictPublicBuckets == true
+}
+
+rule s3_criptografia when %buckets !empty {
+    %buckets.Properties.BucketEncryption exists
+    %buckets.Properties.BucketEncryption.ServerSideEncryptionConfiguration[*].ServerSideEncryptionByDefault.SSEAlgorithm in ['AES256', 'aws:kms', 'aws:kms:dsse']
+}

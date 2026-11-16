@@ -1,6 +1,8 @@
 // Deploy e teardown de stacks CloudFormation com polling de status.
 
-import { api, el, errorBanner, errorMessage, replaceContent } from "./dom.js";
+import { api } from "./api.js";
+import { el, errorBanner, errorMessage, replaceContent } from "./dom.js";
+import { guardAction, isSessionExpired, reportApiError } from "./session.js";
 
 const POLL_INTERVAL_MS = 5000;
 const enc = encodeURIComponent;
@@ -86,6 +88,7 @@ function createStackPanel(labId, notFoundText) {
     } catch (err) {
       if (ticket !== generation) return null;
       current = null;
+      reportApiError(err);
       if (err.code === "STACK_NOT_FOUND") {
         replaceContent(box, el("p", { class: "card__meta" }, notFoundText));
       } else {
@@ -127,7 +130,9 @@ export function createDeployPanel(labId) {
   const messageBox = el("div");
   const button = el("button", { type: "button", class: "btn btn--primary" }, "Iniciar deploy");
 
+  guardAction(button);
   button.addEventListener("click", async () => {
+    if (isSessionExpired()) return;
     button.disabled = true;
     replaceContent(messageBox);
     try {
@@ -136,9 +141,10 @@ export function createDeployPanel(labId) {
       stack.showStatus(data.status);
       if (!isInProgress(data.status)) await stack.refresh();
     } catch (err) {
+      reportApiError(err);
       replaceContent(messageBox, errorBanner(err, "Falha ao iniciar o deploy"));
     } finally {
-      button.disabled = false;
+      button.disabled = isSessionExpired();
     }
   });
 
@@ -225,9 +231,11 @@ export function createTeardownPanel(labId) {
   const residualBox = el("div");
   const button = el("button", { type: "button", class: "btn btn--danger" }, "Excluir stack");
 
+  guardAction(button);
   button.addEventListener("click", async () => {
+    if (isSessionExpired()) return;
     const confirmed = await confirmModal(labId);
-    if (!confirmed) return;
+    if (!confirmed || isSessionExpired()) return;
     button.disabled = true;
     replaceContent(messageBox);
     try {
@@ -238,9 +246,10 @@ export function createTeardownPanel(labId) {
       stack.showStatus(data.status);
       if (!isInProgress(data.status)) await stack.refresh();
     } catch (err) {
+      reportApiError(err);
       replaceContent(messageBox, errorBanner(err, "Falha ao excluir a stack"));
     } finally {
-      button.disabled = false;
+      button.disabled = isSessionExpired();
     }
   });
 

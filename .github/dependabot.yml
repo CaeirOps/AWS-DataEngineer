@@ -1,0 +1,45 @@
+version: 2
+
+# Atualizações semanais, com limite de PRs abertos e um grupo por ecossistema.
+updates:
+  # Dependências Python (requirements.in/requirements.txt). O Dependabot
+  # atualiza o requirements.txt; os hashes devem ser regenerados com
+  # pip-compile --generate-hashes antes do merge.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      pip:
+        patterns: ["*"]
+
+  # Imagem base do Dockerfile (fixada por digest) e, abaixo, a imagem do Squid
+  # declarada em "image:" no docker-compose.yml.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      docker:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      docker-compose:
+        patterns: ["*"]
+
+  # Actions fixadas por SHA: o Dependabot atualiza SHA e comentário de versão.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns: ["*"]

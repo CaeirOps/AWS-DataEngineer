@@ -21,7 +21,7 @@ import check_requirements as cr
 DOCKER_STATES = ["ok", "old", "stopped"]
 COMPOSE_STATES = ["ok", "old", "unavailable"]
 AWS_STATES = ["ok", "old"]
-CREDS_STATES = ["ok", "invalid"]
+CREDS_STATES = ["ok", "invalid", "long_lived"]
 PORT_STATES = ["free", "busy"]
 
 # Trecho do nome de cada pre-requisito, usado para localiza-lo na saida.
@@ -56,6 +56,16 @@ def make_run(docker="ok", compose="ok", aws="ok", creds="ok",
             if creds == "invalid":
                 return 255, "", "The security token included in the request is expired"
             return 0, json.dumps({"Account": "123456789012"}), ""
+        if cmd[:3] == ["aws", "configure", "export-credentials"]:
+            payload = {
+                "Version": 1,
+                "AccessKeyId": "FAKEACCESSKEYID",
+                "SecretAccessKey": "fake-secret-value",
+            }
+            if creds != "long_lived":
+                payload["SessionToken"] = "fake-session-token"
+                payload["Expiration"] = "2099-01-01T00:00:00Z"
+            return 0, json.dumps(payload), ""
         raise AssertionError("comando inesperado: %r" % (cmd,))
 
     return run
@@ -237,6 +247,17 @@ def test_credenciais_invalidas_usam_profile_informado():
     assert code == 1
     assert_failure_described(output, ["creds"])
     assert "meu" in output
+
+
+def test_credencial_de_longa_duracao_pede_sso_ou_login():
+    code, output = execute(make_run(creds="long_lived"), env={"AWS_PROFILE": "meu"})
+    assert code == 1
+    assert_failure_described(output, ["creds"])
+    assert "aws sso login" in output
+    assert "aws login" in output
+    # Valores de credenciais nunca sao impressos.
+    assert "FAKEACCESSKEYID" not in output
+    assert "fake-secret-value" not in output
 
 
 def test_porta_ocupada():

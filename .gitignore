@@ -9,6 +9,9 @@
 *.key
 credentials
 *_credentials.*
+# Código-fonte e testes de credenciais temporárias não são segredos
+!host_credentials.py
+!tests/security/test_*_credentials.py
 
 # --- Progresso local do usuário (nunca versionar) ---
 progress/*
@@ -39,3 +42,6 @@ Thumbs.db
 tmp/
 # --- Lock do ProgressStore ---
 *.lock
+
+# --- Estado local de execução do Kiro (histórico de tarefas desta máquina) ---
+.kiro/specs/**/tasks.meta.json

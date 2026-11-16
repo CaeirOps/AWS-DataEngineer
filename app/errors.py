@@ -85,6 +85,13 @@ class StepRequiresValidationError(WorkshopError):
     http_status = 409
 
 
+class SessionExpiredError(WorkshopError):
+    """Sessão de credenciais temporárias expirada; rotas AWS são recusadas."""
+
+    code = "SESSION_EXPIRED"
+    http_status = 401
+
+
 class StackNotFoundError(WorkshopError):
     """Stack CloudFormation não existe."""
 
@@ -97,3 +104,31 @@ class StackDeployError(WorkshopError):
 
     code = "STACK_DEPLOY_FAILED"
     http_status = 422
+
+
+class HostNotAllowedError(WorkshopError):
+    """Cabeçalho `Host` fora da allowlist (proteção contra DNS rebinding)."""
+
+    code = "HOST_NOT_ALLOWED"
+    http_status = 421
+
+
+class OriginNotAllowedError(WorkshopError):
+    """`Origin` ausente ou fora da allowlist em requisição que altera estado."""
+
+    code = "ORIGIN_NOT_ALLOWED"
+    http_status = 403
+
+
+class UnsupportedMediaTypeError(WorkshopError):
+    """`Content-Type` diferente de `application/json`."""
+
+    code = "UNSUPPORTED_MEDIA_TYPE"
+    http_status = 415
+
+
+class MissingWorkshopHeaderError(WorkshopError):
+    """Cabeçalho de requisição própria ausente ou inválido."""
+
+    code = "MISSING_WORKSHOP_HEADER"
+    http_status = 403

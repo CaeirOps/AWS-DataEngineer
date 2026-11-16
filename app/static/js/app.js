@@ -7,6 +7,7 @@ import { el, replaceContent } from "./dom.js";
 import { renderDashboard } from "./dashboard.js";
 import { renderLab } from "./lab.js";
 import { stopAllPolling } from "./cloudformation.js";
+import { initSession, resetGuards } from "./session.js";
 
 const root = document.getElementById("app");
 let renderTicket = 0;
@@ -31,6 +32,7 @@ export function navigate(url, { replace = false } = {}) {
 async function render() {
   const ticket = ++renderTicket;
   stopAllPolling();
+  resetGuards();
   const route = parseRoute(location.pathname);
   replaceContent(root, el("p", { class: "loading" }, "Carregando..."));
 
@@ -67,5 +69,10 @@ document.addEventListener("click", (event) => {
 });
 
 window.addEventListener("popstate", render);
+
+initSession({
+  timerElement: document.getElementById("session-timer"),
+  bannerElement: document.getElementById("session-banner"),
+});
 
 render();

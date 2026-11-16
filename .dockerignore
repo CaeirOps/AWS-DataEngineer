@@ -1,0 +1,16 @@
+# Mantem fora do contexto de build tudo que nao pertence a imagem
+.git
+.github
+.kiro
+.venv
+.hypothesis
+.pytest_cache
+__pycache__
+**/__pycache__
+*.pyc
+tests
+progress
+.env
+.env.*
+*.pem
+.aws

@@ -6,6 +6,7 @@ import pytest
 
 from app.lab_catalog import InvalidLabMetadataError, LabCatalog
 from app.server import create_app
+from tests.fixtures.http_client import workshop_client
 
 FIXTURE_LABS = Path(__file__).resolve().parent.parent / "fixtures" / "labs"
 
@@ -68,7 +69,7 @@ def test_fixture_lab_example_loads_with_services():
 def test_api_returns_services(tmp_path):
     progress_file = tmp_path / "progress.json"
     app = create_app({"labs_dir": str(FIXTURE_LABS), "progress_file": str(progress_file)})
-    client = app.test_client()
+    client = workshop_client(app)
 
     listing = client.get("/api/labs").get_json()
     item = next(x for x in listing["labs"] if x["lab_id"] == "lab-example")

@@ -1,0 +1,200 @@
+name: CI
+
+# Nunca usar pull_request_target: o código do PR não deve rodar com contexto privilegiado.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Testes unitários Python e suíte JS. Os testes de integração (Docker/AWS) ficam fora do CI.
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python v7.1.0
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7.1.0
+        with:
+          node-version: "22"
+      - name: Instalar dependências
+        run: |
+          python -m pip install --require-hashes -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+      - name: pytest (unitários)
+        run: python -m pytest tests/unit tests/security -q
+      - name: Testes JavaScript
+        run: node --test tests/js/
+
+  # Verifica Signed-off-by em todos os commits do PR (ou do push em main).
+  dco:
+    name: dco
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verificar DCO
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="${PR_BASE}..${PR_HEAD}"
+          elif [[ "$PUSH_BEFORE" =~ ^0+$ ]]; then
+            range="${PUSH_AFTER}~1..${PUSH_AFTER}"
+          else
+            range="${PUSH_BEFORE}..${PUSH_AFTER}"
+          fi
+          echo "Intervalo verificado: $range"
+          python3 scripts/check_dco.py "$range"
+
+  # Varredura de segredos no histórico do PR (ou do push) com gitleaks, binário com checksum fixo.
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Instalar gitleaks
+        run: |
+          set -euo pipefail
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/gitleaks.tar.gz" "$url"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+      - name: Varredura de segredos
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="${PR_BASE}..${PR_HEAD}"
+          elif [[ "$PUSH_BEFORE" =~ ^0+$ ]]; then
+            range="${PUSH_AFTER}"
+          else
+            range="${PUSH_BEFORE}..${PUSH_AFTER}"
+          fi
+          "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --verbose --log-opts="$range" .
+
+  # Auditoria de vulnerabilidades nas dependências com hashes.
+  dependencies:
+    name: dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python v7.1.0
+        with:
+          python-version: "3.11"
+      - name: Instalar pip-audit
+        run: python -m pip install "pip-audit==2.10.1"
+      - name: pip-audit
+        run: pip-audit -r requirements.txt --require-hashes
+
+  # Lint do Dockerfile com hadolint, binário com checksum fixo.
+  dockerfile:
+    name: dockerfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HADOLINT_VERSION: "2.15.1"
+      HADOLINT_SHA256: "c7187db94eeeeca956519a6af171adc31453941a1e777961f6e680f697c8c507"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - name: Instalar hadolint
+        run: |
+          set -euo pipefail
+          url="https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-linux-x86_64"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/hadolint" "$url"
+          echo "${HADOLINT_SHA256}  $RUNNER_TEMP/hadolint" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/hadolint"
+      - name: hadolint
+        run: '"$RUNNER_TEMP/hadolint" Dockerfile'
+
+  # cfn-lint e cfn-guard nos templates dos labs e do fixture. Sem templates em labs/, passa sem erro.
+  cloudformation:
+    name: cloudformation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CFN_GUARD_VERSION: "3.2.1"
+      CFN_GUARD_SHA256: "09c2b8cfd81d513374a8da89d4805dc55006a3da52bbf598e272022d4d198e94"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python v7.1.0
+        with:
+          python-version: "3.11"
+      - name: Listar templates
+        run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
+          files=(labs/**/cloudformation/*.yaml tests/fixtures/labs/*/cloudformation/*.yaml)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "Nenhum template encontrado."
+          else
+            printf '%s\n' "${files[@]}"
+          fi
+          printf '%s\n' "${files[@]}" > "$RUNNER_TEMP/templates.txt"
+      - name: Instalar cfn-lint
+        run: python -m pip install "cfn-lint==1.60.1"
+      - name: cfn-lint
+        run: |
+          set -euo pipefail
+          if [ ! -s "$RUNNER_TEMP/templates.txt" ]; then echo "Sem templates, nada a validar."; exit 0; fi
+          xargs -a "$RUNNER_TEMP/templates.txt" cfn-lint
+      - name: Instalar cfn-guard
+        run: |
+          set -euo pipefail
+          if [ ! -s "$RUNNER_TEMP/templates.txt" ]; then exit 0; fi
+          url="https://github.com/aws-cloudformation/cloudformation-guard/releases/download/${CFN_GUARD_VERSION}/cfn-guard-v3-x86_64-ubuntu-latest.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/cfn-guard.tar.gz" "$url"
+          echo "${CFN_GUARD_SHA256}  $RUNNER_TEMP/cfn-guard.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/cfn-guard.tar.gz" -C "$RUNNER_TEMP"
+      - name: cfn-guard
+        run: |
+          set -euo pipefail
+          if [ ! -s "$RUNNER_TEMP/templates.txt" ]; then echo "Sem templates, nada a validar."; exit 0; fi
+          if ! ls .github/cfn-guard/*.guard >/dev/null 2>&1; then
+            echo "::error::Regras do cfn-guard ausentes em .github/cfn-guard/"
+            exit 1
+          fi
+          guard="$RUNNER_TEMP/cfn-guard-v3-x86_64-ubuntu-latest/cfn-guard"
+          while IFS= read -r template; do
+            echo "cfn-guard: $template"
+            "$guard" validate --data "$template" --rules .github/cfn-guard/ --show-summary fail
+          done < "$RUNNER_TEMP/templates.txt"

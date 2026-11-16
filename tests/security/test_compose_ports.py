@@ -45,7 +45,7 @@ porta_env = st.one_of(st.none(), st.integers(min_value=1, max_value=65535))
 @settings(max_examples=100)
 @given(porta=porta_env)
 def test_porta_publicada_somente_em_loopback(porta):
-    # HOME e usado nos volumes; AWS_PROFILE e irrelevante aqui
+    # As credenciais nao afetam as portas; so WORKSHOP_PORT importa aqui
     env = {"HOME": "/home/usuario"}
     if porta is not None:
         env["WORKSHOP_PORT"] = str(porta)

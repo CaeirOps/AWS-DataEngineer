@@ -1,4 +1,4 @@
-// Utilitários de DOM e de chamada à API. Nunca usa innerHTML: todo texto vindo
+// Utilitários de DOM. Nunca usa innerHTML: todo texto vindo
 // da API entra no DOM como nó de texto.
 
 /** Cria um elemento. `attrs` aceita class, dataset, aria-*, on* (funções) e atributos comuns. */
@@ -33,47 +33,6 @@ export function clear(node) {
 export function replaceContent(node, ...children) {
   clear(node);
   return append(node, children);
-}
-
-/** Erro da API com o schema `{error, code, message, http_status}`. */
-export class ApiError extends Error {
-  constructor(message, code, status) {
-    super(message);
-    this.name = "ApiError";
-    this.code = code;
-    this.status = status;
-  }
-}
-
-/** Chamada JSON à API. Lança ApiError com a mensagem original do servidor. */
-export async function api(method, url, body) {
-  const options = { method, headers: { Accept: "application/json" } };
-  if (body !== undefined) {
-    options.headers["Content-Type"] = "application/json";
-    options.body = JSON.stringify(body);
-  }
-  let response;
-  try {
-    response = await fetch(url, options);
-  } catch (err) {
-    throw new ApiError(
-      "Não foi possível conectar ao servidor do workshop. Verifique se os containers estão em execução.",
-      "NETWORK_ERROR",
-      0
-    );
-  }
-  let data = null;
-  try {
-    data = await response.json();
-  } catch (err) {
-    data = null;
-  }
-  if (!response.ok || (data && data.error === true)) {
-    const message =
-      (data && data.message) || `Erro ${response.status} ao acessar ${url}.`;
-    throw new ApiError(message, data && data.code, response.status);
-  }
-  return data;
 }
 
 export function errorMessage(err) {

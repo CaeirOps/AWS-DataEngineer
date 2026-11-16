@@ -1,0 +1,44 @@
+name: CodeQL
+
+# Nunca usar pull_request_target: o código do PR não deve rodar com contexto privilegiado.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1" # semanalmente, segunda-feira 04:17 UTC
+
+# Permissões mínimas no topo; o job concede somente o necessário.
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # github/codeql-action v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - name: Analisar
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # github/codeql-action v4.39.3
+        with:
+          category: "/language:${{ matrix.language }}"

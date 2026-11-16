@@ -28,6 +28,7 @@ from app.errors import (
 )
 from app.lab_catalog import LabCatalog
 from app.models import LabMetadata
+from app.redaction import log_exception
 from app.validation_service import default_session_factory
 from app.validators.base import CREDENTIAL_ERROR_CODES, _credential_message
 
@@ -304,7 +305,7 @@ class CloudFormationService:
             for page in paginator.paginate(StackName=stack_name):
                 events.extend(page.get("StackEvents", []))
         except ClientError:
-            logger.exception("Falha ao ler eventos da stack %s", stack_name)
+            log_exception(logger, "Falha ao ler eventos da stack %s", stack_name)
             return None
         want_delete = stack_status == "DELETE_FAILED"
         for event in reversed(events):

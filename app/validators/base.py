@@ -17,6 +17,7 @@ from botocore.exceptions import (
 )
 
 from app.models import ValidationResult
+from app.redaction import log_exception
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ def _safe_validate(fn: StepValidator) -> StepValidator:
                 )
             return ValidationResult(passed=False, message=f"{code}: {message}")
         except Exception:
-            logger.exception("Erro inesperado no validador %s", fn.__name__)
+            log_exception(logger, "Erro inesperado no validador %s", fn.__name__)
             return ValidationResult(passed=False, message=GENERIC_ERROR_MESSAGE)
 
     return wrapper

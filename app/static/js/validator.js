@@ -1,7 +1,9 @@
 // Validação de steps `task`: chamada à API, feedback sem reload e dica por Trilha.
 
-import { api, el, errorMessage, replaceContent } from "./dom.js";
+import { api } from "./api.js";
+import { el, errorMessage, replaceContent } from "./dom.js";
 import { renderMarkdown } from "./markdown.js";
+import { guardAction, isSessionExpired, reportApiError } from "./session.js";
 
 const enc = encodeURIComponent;
 
@@ -39,6 +41,8 @@ export function createValidatorPanel({ labId, step, getPath, onResult }) {
   const attemptsLabel = el("span", { class: "card__meta" });
   const validateButton = el("button", { type: "button", class: "btn btn--primary" }, "Validar");
   const hintButton = el("button", { type: "button", class: "btn", hidden: true, "aria-expanded": "false" }, "Ver Dica Detalhada");
+
+  guardAction(validateButton);
 
   function updateAttempts() {
     attemptsLabel.textContent = `Tentativas: ${attempts}`;
@@ -90,6 +94,7 @@ export function createValidatorPanel({ labId, step, getPath, onResult }) {
   });
 
   validateButton.addEventListener("click", async () => {
+    if (isSessionExpired()) return;
     validateButton.disabled = true;
     validateButton.textContent = "Validando...";
     try {
@@ -103,9 +108,10 @@ export function createValidatorPanel({ labId, step, getPath, onResult }) {
       showHintButton(Boolean(result.show_hint_button) && !result.passed);
       if (onResult) onResult(result);
     } catch (err) {
+      reportApiError(err);
       replaceContent(resultBox, feedback(false, errorMessage(err), null, null));
     } finally {
-      validateButton.disabled = false;
+      validateButton.disabled = isSessionExpired();
       validateButton.textContent = "Validar";
     }
   });

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Este documento define os requisitos para a Plataforma de Workshop AWS Data Engineer — uma plataforma de treinamento interativa, open source e self-paced voltada para a comunidade AWS brasileira. A plataforma prepara candidatos para a certificação AWS Certified Data Engineer - Associate (DEA-C01) por meio de 10 laboratórios práticos que utilizam recursos reais na AWS. A solução é distribuída via `git clone` e executada localmente com Docker Compose, sem autenticação, sem servidor externo e sem rastreamento de dados do usuário.
+Este documento define os requisitos para a Plataforma de Workshop AWS Data Engineer: uma plataforma de treinamento interativa, open source e self-paced voltada para a comunidade AWS brasileira. A plataforma prepara candidatos para a certificação AWS Certified Data Engineer - Associate (DEA-C01) por meio de 10 laboratórios práticos que utilizam recursos reais na AWS. A solução é distribuída via `git clone` e executada localmente com Docker Compose, sem autenticação, sem servidor externo e sem rastreamento de dados do usuário.
 
 ## Glossary
 
@@ -20,7 +20,10 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 - **Dica Detalhada**: Conteúdo de ajuda contextual exibido ao usuário após falhas consecutivas na validação de um step.
 - **Gateway**: Container que publica a interface em 127.0.0.1 e atua como egress proxy com allowlist de domínios AWS.
 - **Allowlist**: Arquivo versionado com os domínios de saída permitidos.
-- **start.py**: Script de inicialização no host (somente biblioteca padrão do Python) que sobe os containers, aguarda o health check e abre o browser.
+- **start.py**: Script de inicialização no host (somente biblioteca padrão do Python) que obtém credenciais temporárias do profile escolhido, sobe os containers, aguarda o health check e abre o browser.
+- **Credenciais temporárias**: Credenciais AWS com `SessionToken` e `Expiration`, exportadas pelo AWS CLI no host (`aws configure export-credentials --format process`) e entregues ao container `workshop` somente por variáveis de ambiente.
+- **Sessão**: Período de validade das credenciais temporárias em uso pelo container `workshop`, que termina em `Expiration`.
+- **Cabeçalho de requisição própria**: Cabeçalho `X-Workshop-Request: 1`, enviado pelo frontend em requisições que alteram estado.
 - **Trilha**: Modo de execução das tarefas de um step.
 - **Trilha Console**: Instruções passo a passo pelo AWS Management Console, com navegação entre telas, menus e opções do serviço.
 - **Trilha CLI**: Instruções com comandos do AWS CLI v2.
@@ -34,18 +37,21 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 #### Acceptance Criteria
 
 1. THE Plataforma SHALL ser distribuída exclusivamente via repositório Git público, sem dependência de registro de pacotes externo.
-2. WHEN o usuário executa `python check_requirements.py`, THE check_requirements.py SHALL usar somente a biblioteca padrão do Python e o AWS CLI, sem exigir instalação de pacotes no host, e SHALL verificar: Docker versão 20 ou superior com daemon em execução, Docker Compose v2, AWS CLI versão 2 ou superior, credenciais válidas via `aws sts get-caller-identity` para o profile em uso e porta do host (`WORKSHOP_PORT`) livre.
+2. WHEN o usuário executa `python check_requirements.py`, THE check_requirements.py SHALL usar somente a biblioteca padrão do Python e o AWS CLI, sem exigir instalação de pacotes no host, e SHALL verificar: Docker versão 20 ou superior com daemon em execução, Docker Compose v2, AWS CLI versão 2 ou superior, credenciais temporárias válidas para o profile em uso (via `aws sts get-caller-identity` e `aws configure export-credentials`) e porta do host (`WORKSHOP_PORT`) livre.
 3. IF o check_requirements.py detectar qualquer pré-requisito ausente ou inválido, THEN THE check_requirements.py SHALL exibir mensagem de erro descritiva identificando o pré-requisito faltante e os passos para corrigi-lo, interrompendo a execução.
 4. WHEN o usuário executa `python start.py`, THE start.py SHALL iniciar os containers em segundo plano e consultar o endpoint `/health` até obter resposta de sucesso por no máximo 60 segundos.
-5. THE Flask App SHALL montar o diretório `~/.aws` do host como volume somente-leitura no container, sem copiar credenciais para a imagem Docker.
+5. WHEN o usuário executa `python start.py`, THE start.py SHALL obter credenciais temporárias somente do profile definido em `AWS_PROFILE`, por meio de `aws configure export-credentials --profile "$AWS_PROFILE" --format process`, e SHALL entregá-las ao container `workshop` exclusivamente pelas variáveis de ambiente `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` e `WORKSHOP_CREDENTIALS_EXPIRATION`, sem gravar credenciais em disco (inclusive em arquivo `.env` temporário), sem imprimi-las e sem copiá-las para a imagem Docker.
 6. THE Flask App SHALL montar um volume local para o arquivo `progress.json`, preservando o progresso entre reinicializações do container.
 7. THE Plataforma SHALL licenciar o código e os arquivos de configuração sob a Apache License 2.0 (arquivos `LICENSE` e `NOTICE`) e o conteúdo didático (arquivos Markdown e `labs/**/assets/`) sob a Creative Commons Attribution-ShareAlike 4.0 International (arquivo `LICENSE-CONTENT`).
 8. IF o endpoint `/health` não responder com sucesso em 60 segundos, THEN THE start.py SHALL exibir diagnóstico com o estado dos containers, as últimas 50 linhas de log, o resultado da verificação de porta em uso e as causas comuns conhecidas, e encerrar com código de saída diferente de zero, mantendo os containers para inspeção e informando o comando para encerrá-los.
 9. THE Plataforma SHALL permitir configurar a porta do host pela variável de ambiente `WORKSHOP_PORT`, com valor padrão 5000.
 10. IF o container da aplicação falhar repetidamente, THEN THE Plataforma SHALL limitar as reinicializações automáticas a 3 tentativas, evitando loop infinito de restart.
 11. WHEN o endpoint `/health` responder com sucesso, THE start.py SHALL exibir a URL de acesso e abrir o browser padrão do usuário.
-12. THE Plataforma SHALL usar o profile AWS definido pela variável `AWS_PROFILE` (padrão `default`) tanto no check_requirements.py quanto no container.
+12. THE Plataforma SHALL usar o profile AWS definido pela variável `AWS_PROFILE` (padrão `default`) no check_requirements.py e no start.py, no host, e SHALL NOT repassar `AWS_PROFILE` nem montar `~/.aws` no container `workshop`, que usa somente as credenciais temporárias recebidas por variáveis de ambiente e a região de `AWS_DEFAULT_REGION`.
 13. THE Plataforma SHALL exigir a assinatura DCO (`Signed-off-by`) em todos os commits de contribuições.
+14. IF a exportação de credenciais do profile não retornar `SessionToken` e `Expiration` (credenciais de longa duração), THEN THE start.py e THE check_requirements.py SHALL recusar as credenciais, interromper a execução com código de saída diferente de zero e exibir mensagem pedindo o uso de AWS IAM Identity Center (SSO) ou `aws login`.
+15. WHEN o usuário executa `python start.py --refresh`, THE start.py SHALL exportar novamente as credenciais temporárias do profile e recriar somente o serviço `workshop` com `docker compose up -d --force-recreate --no-deps workshop`, preservando o volume de progresso e o serviço `gateway`.
+16. THE Plataforma SHALL documentar que a renovação do login (SSO ou `aws login`) é sempre manual e feita pelo usuário no host, e que o container `workshop` não acessa `portal.sso.*` nem qualquer outro endpoint de login.
 
 ---
 
@@ -104,7 +110,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 3. WHEN a validação de um step falhar, THE Validador SHALL retornar o status "falhou" com mensagem descritiva identificando qual critério não foi atendido.
 4. THE Plataforma SHALL permitir retry ilimitado de validação sem penalidade para o usuário.
 5. WHEN o usuário falhar na validação de um step por X vezes consecutivas (configurável por lab), THE Plataforma SHALL exibir o botão "Ver Dica Detalhada" com orientações contextuais para aquele step específico.
-6. IF uma chamada AWS do Validador falhar por erro de credenciais (credenciais ausentes, inválidas ou expiradas), THEN THE Validador SHALL retornar o código e a mensagem de erro originais da chamada AWS, sem alteração, acompanhados da sugestão de verificar as credenciais AWS do profile em uso.
+6. IF uma chamada AWS do Validador falhar por erro de credenciais (credenciais ausentes, inválidas ou expiradas), THEN THE Validador SHALL retornar o código e a mensagem de erro originais da chamada AWS, sem alteração, acompanhados da sugestão de verificar as credenciais AWS do profile em uso e de renovar o login no host e executar `python start.py --refresh`, sem incluir valores de credenciais na mensagem.
 7. WHEN a validação de todos os steps de um lab for concluída com sucesso, THE Plataforma SHALL exibir tela de conclusão do lab com resumo dos serviços utilizados e domínios DEA-C01 cobertos.
 
 ---
@@ -160,11 +166,13 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 1. THE Plataforma SHALL publicar a porta da interface somente na interface de loopback do host (127.0.0.1), sem expor portas para redes externas.
 2. THE Plataforma SHALL armazenar o Progress Store exclusivamente em volume local no host do usuário, sem sincronização com serviços externos.
-3. THE Flask App SHALL acessar as credenciais AWS exclusivamente por meio do volume `~/.aws` montado como somente-leitura, sem armazenar, logar ou transmitir valores de credenciais.
+3. THE Flask App SHALL acessar as credenciais AWS exclusivamente pelas variáveis de ambiente de Credenciais temporárias recebidas do start.py, com `AWS_SHARED_CREDENTIALS_FILE=/dev/null`, `AWS_CONFIG_FILE=/dev/null` e `AWS_EC2_METADATA_DISABLED=true` no container, sem armazenar, logar ou transmitir valores de credenciais e sem incluí-los em nenhuma resposta da API.
 4. THE Plataforma SHALL incluir o arquivo `progress.json` no `.gitignore` do repositório, impedindo commit acidental de dados de progresso do usuário.
 5. THE Plataforma SHALL bloquear em tempo de execução toda conexão de saída do container da aplicação, exceto conexões HTTPS (porta 443) para domínios da AWS listados em uma Allowlist versionada (padrão: `.amazonaws.com` e `.api.aws`).
 6. IF o container da aplicação tentar conectar a um destino fora da Allowlist, THEN THE Plataforma SHALL recusar a conexão e registrar no log do Gateway o domínio de destino e o horário, sem registrar credenciais ou cabeçalhos de autenticação.
 7. THE Plataforma SHALL documentar que downloads feitos no build (imagem base, pacotes pip) ocorrem fora da restrição de runtime.
+8. THE Plataforma SHALL documentar no README o risco residual de que a Allowlist por domínio não impede o envio de dados a um bucket S3 de terceiros em `*.amazonaws.com`, e que a mitigação é o uso de conta AWS isolada e de privilégio mínimo.
+9. THE Plataforma SHALL recomendar no README, seguindo as práticas de segurança da AWS, o uso de uma conta AWS dedicada (sandbox) separada de contas com dados reais, de um alerta no AWS Budgets, de um permission set com o mínimo necessário em vez de `AdministratorAccess` e de sessão curta com renovação manual.
 
 ---
 
@@ -196,3 +204,77 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 6. IF uma tarefa não puder ser executada em uma das Trilhas, THEN THE Plataforma SHALL indicar que essa Trilha não está disponível para o step e exibir o motivo.
 7. THE Plataforma SHALL apresentar, na Trilha CLI, comandos que usem o profile e a região do usuário por meio de variáveis ou placeholders, sem conter credenciais.
 8. THE Plataforma SHALL apresentar, na Trilha Console, as opções e configurações relevantes da tela do serviço que o usuário deve explorar, além do caminho mínimo para concluir a tarefa.
+
+---
+
+### Requirement 12: Sessão e Credenciais Temporárias
+
+**User Story:** Como usuário da plataforma, quero ver quanto tempo resta da minha sessão AWS e ser impedido de usar credenciais expiradas, para que eu renove o login antes de perder o trabalho e evite chamadas que vão falhar.
+
+#### Acceptance Criteria
+
+1. THE Flask App SHALL expor `GET /api/session` retornando `expires_at`, `seconds_remaining` (calculado no servidor a partir de `WORKSHOP_CREDENTIALS_EXPIRATION`) e `status`, sem retornar valores de credenciais.
+2. THE Flask App SHALL calcular `status` como `valid` quando `seconds_remaining` for maior que 600, `expiring` quando for de 1 a 600 e `expired` quando for 0 ou menor.
+3. IF a variável `WORKSHOP_CREDENTIALS_EXPIRATION` estiver ausente ou não for um instante ISO 8601 válido, THEN THE Flask App SHALL tratar a sessão como `expired`.
+4. THE Plataforma SHALL exibir o cronômetro da sessão no cabeçalho, sincronizá-lo com `GET /api/session` a cada 60 segundos e exibir aviso visível quando `status` for `expiring`.
+5. WHILE `status` for `expired`, THE Plataforma SHALL bloquear as ações Validar, Deploy e Teardown no frontend, exibindo a explicação e o comando `python start.py --refresh` com botão de copiar.
+6. WHILE `status` for `expired`, THE Flask App SHALL recusar as rotas que chamam a AWS (`POST /api/validate/<lab_id>/<step_id>`, `POST /api/deploy/<lab_id>`, `POST /api/teardown/<lab_id>` e `GET /api/stack-status/<lab_id>`) com o código `SESSION_EXPIRED` e HTTP 401, sem depender do frontend e sem chamar a AWS.
+
+---
+
+### Requirement 13: Proteção da API Local
+
+**User Story:** Como usuário da plataforma, quero que a API local rejeite requisições de outras origens e de páginas maliciosas abertas no meu browser, para que um site externo não consiga acionar a minha conta AWS.
+
+#### Acceptance Criteria
+
+1. THE Flask App SHALL validar o cabeçalho `Host` de toda requisição contra uma allowlist formada por `127.0.0.1:<porta>` e `localhost:<porta>`, em que `<porta>` é o valor de `WORKSHOP_PORT` recebido pelo container, e SHALL responder 400 ou 421 quando o valor não constar da allowlist, exceto em `GET /health`, que não retorna dados e é usado pelo healthcheck interno do container.
+2. WHEN uma requisição `POST`, `PUT` ou `DELETE` chegar à API, THE Flask App SHALL exigir o cabeçalho `Origin` presente e igual a `http://127.0.0.1:<porta>` ou `http://localhost:<porta>`, o cabeçalho `Content-Type: application/json` e o Cabeçalho de requisição própria, e SHALL recusar a requisição que não cumprir qualquer uma das três condições.
+3. THE Plataforma SHALL enviar o Cabeçalho de requisição própria em toda requisição `POST`, `PUT` ou `DELETE` feita pelo frontend.
+4. THE Flask App SHALL incluir em todas as respostas os cabeçalhos `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin` e `Cross-Origin-Resource-Policy: same-origin`.
+5. THE Plataforma SHALL entregar a porta publicada ao container `workshop` pela variável `WORKSHOP_PORT`, de modo que a allowlist de `Host` e `Origin` use a porta que o browser enxerga, pois o Gateway repassa o `Host` enviado pelo browser.
+
+---
+
+### Requirement 14: Endurecimento do Container e da Cadeia de Suprimentos
+
+**User Story:** Como usuário da plataforma, quero que os containers rodem com o mínimo de privilégios e que as imagens e dependências sejam verificáveis, para que um componente comprometido cause o menor dano possível.
+
+#### Acceptance Criteria
+
+1. THE Plataforma SHALL executar o container `workshop` com usuário não root definido no Dockerfile, com `read_only: true`, `tmpfs` em `/tmp`, `cap_drop: [ALL]` e `security_opt: [no-new-privileges:true]`.
+2. THE Plataforma SHALL manter o volume de progresso gravável pelo usuário do container `workshop` e nenhum outro caminho gravável além de `/tmp`.
+3. THE Plataforma SHALL definir `mem_limit` e `pids_limit` nos serviços `workshop` e `gateway`, e SHALL aplicar ao `gateway` o máximo de restrição compatível com o funcionamento do Squid.
+4. THE Plataforma SHALL fixar por digest as imagens base `python:3.11-slim` e `ubuntu/squid`.
+5. THE Plataforma SHALL instalar as dependências com `pip install --require-hashes` a partir de um `requirements.txt` com hashes, gerado de forma reproduzível e com o procedimento de regeneração documentado.
+6. THE Plataforma SHALL NOT montar no container nenhum caminho de credenciais do host (`~/.aws`, `~/.ssh`, `~/.config`, `~/.docker`) nem o socket do Docker, e o serviço `workshop` SHALL receber somente as variáveis de ambiente previstas.
+
+---
+
+### Requirement 15: CI e Governança do Repositório
+
+**User Story:** Como mantenedor, quero que todo código aceito passe por verificações automáticas e por revisão, seguindo as recomendações de segurança do GitHub, para reduzir o risco de código malicioso ou de vazamento de segredos no repositório.
+
+#### Acceptance Criteria
+
+1. THE Plataforma SHALL incluir o workflow `.github/workflows/ci.yml` acionado por `pull_request` e por `push` em `main`, SHALL NOT usar `pull_request_target`, SHALL declarar `permissions: contents: read` no nível do workflow e SHALL NOT usar secrets.
+2. THE Plataforma SHALL fixar por SHA completo de commit todas as actions de terceiros usadas nos workflows.
+3. THE CI SHALL executar os testes Python e JavaScript, a verificação de DCO (`Signed-off-by` em todos os commits do pull request, sem app de terceiros), a varredura de segredos, `pip-audit`, `hadolint` no Dockerfile, e `cfn-lint` e `cfn-guard` nos templates de `labs/` e do fixture.
+4. THE Plataforma SHALL incluir o workflow `.github/workflows/codeql.yml` para Python e JavaScript, com permissões mínimas e `security-events: write` somente no job.
+5. THE Plataforma SHALL incluir `.github/dependabot.yml` com atualização semanal para `pip`, `docker` e `github-actions`.
+6. THE Plataforma SHALL incluir `.github/CODEOWNERS` atribuindo `@CaeirOps` a `docker-compose.yml`, `Dockerfile`, `start.py`, `check_requirements.py`, `gateway/`, `app/server.py`, ao módulo de credenciais e sessão, a `requirements*.txt`, `.github/`, `tests/security/`, `LICENSE*` e `NOTICE`.
+7. THE Plataforma SHALL incluir `.github/pull_request_template.md` com checklist de segurança.
+8. THE Plataforma SHALL manter os testes de segurança em `tests/security/`, cobrindo as regras dos Requirements 9, 12, 13 e 14 e dos workflows.
+9. WHEN o CI tiver executado ao menos uma vez em `main`, THE mantenedor SHALL aplicar ao repositório um ruleset em `main` com pull request obrigatório, status checks do CI obrigatórios, revisão de code owners obrigatória, resolução de conversas, bloqueio de force push e de exclusão, histórico linear e bypass restrito ao papel de administrador via pull request, e SHALL habilitar secret scanning, push protection, Dependabot alerts e security updates, Private Vulnerability Reporting e as restrições de Actions (permissão padrão de leitura, sem aprovação de PR por Actions, aprovação obrigatória para workflows de fork e actions permitidas restritas).
+
+---
+
+### Requirement 16: Documentação Pública de Segurança e Contribuição
+
+**User Story:** Como contribuidor ou pesquisador de segurança, quero instruções claras para reportar vulnerabilidades e contribuir, para que o processo seja seguro e previsível.
+
+#### Acceptance Criteria
+
+1. THE Plataforma SHALL incluir `SECURITY.md` com as versões suportadas, o modo de reportar vulnerabilidade de forma privada (GitHub Private Vulnerability Reporting), o prazo de resposta indicativo e o que está fora de escopo.
+2. THE Plataforma SHALL incluir `CONTRIBUTING.md` com o uso de DCO (`git commit -s`), como rodar os testes, a exigência de que o CI passe, a exigência de revisão do mantenedor para arquivos sensíveis e as diretrizes de dados fictícios, ausência de credenciais e preservação de termos técnicos em inglês.
+3. THE README SHALL NOT conter instruções de configuração administrativa do repositório no GitHub.

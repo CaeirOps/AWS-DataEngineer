@@ -6,6 +6,8 @@ A Plataforma de Workshop AWS Data Engineer é uma aplicação web local, distrib
 
 A stack é composta por dois containers: `workshop` (Flask + gunicorn, em rede Docker `internal`, sem acesso direto à internet) e `gateway` (Squid, único com porta publicada em `127.0.0.1` e único com saída para a internet, filtrada por Allowlist). Dois scripts no host, `check_requirements.py` e `start.py`, usam somente a biblioteca padrão do Python.
 
+O princípio de segurança adotado é "security first", seguindo as recomendações de segurança do GitHub e da AWS. Na prática: o container `workshop` recebe somente credenciais temporárias por variáveis de ambiente e nunca monta `~/.aws`; a API local valida `Host`, `Origin` e um cabeçalho próprio; os containers rodam sem privilégios; as imagens e dependências são fixadas por digest e por hash; e o repositório tem CI, CodeQL, Dependabot e CODEOWNERS.
+
 ## Architecture
 
 ```
@@ -33,8 +35,8 @@ A stack é composta por dois containers: `workshop` (Flask + gunicorn, em rede D
 │  │   │ workshop (gunicorn + Flask, 0.0.0.0:5000)  │                      │ │
 │  │   │  HTTPS_PROXY=http://gateway:3128           │                      │ │
 │  │   │  Validation Modules (boto3)                │                      │ │
-│  │   │  Volumes: ~/.aws:/root/.aws:ro             │                      │ │
-│  │   │           ./progress:/app/progress         │                      │ │
+│  │   │  Env: AWS_* temporárias (sem ~/.aws)       │                      │ │
+│  │   │  Volume: ./progress:/app/progress          │                      │ │
 │  │   └────────────────────────────────────────────┘                      │ │
 │  └──────────────────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -57,6 +59,8 @@ A arquitetura continua sem banco de dados e sem autenticação. O estado do usu�
 | Flask escuta em `0.0.0.0:5000` dentro do container | O tráfego encaminhado pelo Docker chega pela interface de rede do container, não pelo loopback. A restrição a localhost é feita na publicação da porta |
 | Squid com `http_access deny all` por padrão | Tudo que não for explicitamente permitido é recusado (9.5, 9.6) |
 | Downloads de build (imagem base, `pip install`) ocorrem no `docker compose build` | Fora da restrição de runtime; documentado no README (9.7) |
+| O container `workshop` não acessa `portal.sso.*` nem endpoints de login | Ele só usa credenciais temporárias já exportadas no host; a renovação do login é manual no host (1.16). A Allowlist continua limitada a `.amazonaws.com` e `.api.aws` |
+| O Squid repassa ao Flask o `Host` enviado pelo browser (`http_port 8080 accel vhost`) | O Flask valida `Host` contra `127.0.0.1:<porta>` e `localhost:<porta>`; a porta chega ao container pela variável `WORKSHOP_PORT` (13.1, 13.5) |
 
 ## Components and Interfaces
 
@@ -71,10 +75,12 @@ Script de pré-validação executado no host antes de `python start.py`. Usa som
 | Docker >= 20 com daemon ativo | `docker version --format '{{.Server.Version}}'` | Versão >= 20 e comando retorna 0 (daemon respondendo) |
 | Docker Compose v2 | `docker compose version --short` | Versão major >= 2 |
 | AWS CLI >= 2 | `aws --version` | Versão major >= 2 |
-| Credenciais válidas | `aws sts get-caller-identity --profile $AWS_PROFILE` | Retorna 0. `AWS_PROFILE` padrão: `default` (1.12) |
+| Credenciais temporárias válidas | `aws sts get-caller-identity --profile $AWS_PROFILE` e `aws configure export-credentials --profile $AWS_PROFILE --format process` | Ambos retornam 0 e o JSON exportado contém `SessionToken` e `Expiration` (1.2, 1.14). `AWS_PROFILE` padrão: `default` (1.12) |
 | Porta livre | tentativa de `bind` via `socket` em `127.0.0.1:$WORKSHOP_PORT` | Bind bem-sucedido. `WORKSHOP_PORT` padrão: 5000 |
 
 A verificação de permissões por lab não faz parte do escopo (removida dos requisitos).
+
+A verificação de credenciais reutiliza `host_credentials.py` (seção 1a). Credenciais sem `SessionToken` ou `Expiration` falham com mensagem pedindo AWS IAM Identity Center (SSO) ou `aws login` (1.14). Nenhum valor de credencial é impresso.
 
 **Responsabilidades:**
 - Executar todas as verificações e listar todas as falhas, não só a primeira
@@ -91,16 +97,54 @@ A verificação de permissões por lab não faz parte do escopo (removida dos re
 }
 ```
 
+### 1a. host_credentials.py (módulo de host, somente stdlib)
+
+Módulo compartilhado por `start.py` e `check_requirements.py` que obtém e valida as credenciais temporárias do profile. Fica na raiz do repositório e é coberto pelo CODEOWNERS.
+
+```python
+@dataclass(frozen=True)
+class TempCredentials:
+    access_key_id: str = field(repr=False)
+    secret_access_key: str = field(repr=False)
+    session_token: str = field(repr=False)
+    expiration: datetime          # timezone-aware, UTC
+
+class LongLivedCredentialsError(Exception): ...
+class CredentialsExportError(Exception): ...
+
+def export_credentials(profile: str, run=subprocess.run) -> TempCredentials:
+    """Executa `aws configure export-credentials --profile <profile> --format process`
+    (lista de argumentos, sem shell), lê o JSON de stdout e valida.
+    Levanta LongLivedCredentialsError se faltar SessionToken ou Expiration,
+    e CredentialsExportError se o comando falhar ou a saída não for JSON válido.
+    As mensagens de erro nunca contêm valores de credenciais."""
+
+def to_environment(creds: TempCredentials) -> dict[str, str]:
+    """Retorna AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN e
+    WORKSHOP_CREDENTIALS_EXPIRATION (ISO 8601 UTC)."""
+```
+
+- O `stdout` do AWS CLI é lido em memória e nunca gravado em disco nem repassado ao terminal. O `stderr` do CLI só é exibido depois de filtrado, sem linhas que contenham os valores lidos.
+- O formato `process` devolve `Version`, `AccessKeyId`, `SecretAccessKey`, `SessionToken` e `Expiration`. Ausência de `SessionToken` ou de `Expiration` indica credencial de longa duração (access key de usuário IAM) e é recusada (1.14).
+- `repr=False` nos campos evita que um traceback ou log exiba valores.
+
 ### 1b. start.py
 
 Script de inicialização executado no host. Usa somente a biblioteca padrão (`subprocess`, `urllib.request`, `socket`, `webbrowser`, `time`, `os`).
 
 **Fluxo:**
 1. Lê `WORKSHOP_PORT` (padrão 5000) e `AWS_PROFILE` (padrão `default`).
-2. Executa `docker compose up -d --build`.
-3. Faz polling em `http://127.0.0.1:${WORKSHOP_PORT}/health` a cada 2 s, por até 60 s (1.4).
-4. Sucesso: imprime a URL e abre o browser com `webbrowser.open` (1.11).
-5. Timeout: imprime o diagnóstico abaixo, sai com código 1 e não derruba os containers (1.8).
+2. Chama `host_credentials.export_credentials(AWS_PROFILE)`. Se falhar ou se as credenciais forem de longa duração, imprime mensagem pedindo SSO ou `aws login` e sai com código 1, sem subir containers (1.14).
+3. Executa `docker compose up -d --build` com `env={**os.environ, **to_environment(creds)}`. O Compose declara essas variáveis em modo pass-through (sem valor no arquivo) e as entrega ao `workshop`. Nada é gravado em disco (nem `.env` temporário) e nada é impresso (1.5).
+4. Faz polling em `http://127.0.0.1:${WORKSHOP_PORT}/health` a cada 2 s, por até 60 s (1.4).
+5. Sucesso: imprime a URL, o horário de expiração da sessão (sem valores de credenciais) e abre o browser com `webbrowser.open` (1.11).
+6. Timeout: imprime o diagnóstico abaixo, sai com código 1 e não derruba os containers (1.8).
+
+**Modo `--refresh` (1.15):**
+1. Exporta novamente as credenciais do profile e valida como no fluxo normal.
+2. Executa `docker compose up -d --force-recreate --no-deps workshop`, que recria somente o serviço `workshop` com as novas variáveis. O volume `./progress` e o `gateway` são preservados.
+3. Faz o polling de `/health` como no fluxo normal.
+4. A renovação do login (`aws sso login` ou `aws login`) é sempre manual no host. O `start.py --refresh` não executa nenhum comando de login (1.16).
 
 **Diagnóstico em caso de timeout:**
 - `docker compose ps` (estado e health de cada serviço)
@@ -110,7 +154,7 @@ Script de inicialização executado no host. Usa somente a biblioteca padrão (`
   - AirPlay Receiver do macOS ocupa a porta 5000. Sugerir `WORKSHOP_PORT=5050`.
   - Docker Desktop sem memória suficiente.
   - Erro de import na aplicação (ver logs do `workshop`).
-  - Credenciais ausentes ou profile inexistente em `~/.aws`.
+  - Sessão expirada ou variáveis de credenciais ausentes no container (renovar o login no host e executar `python start.py --refresh`).
 - Comando para encerrar: `docker compose down`
 
 ```python
@@ -140,6 +184,7 @@ Aplicação WSGI Flask que atua como API backend e servidor de arquivos estátic
 - Dentro do container: `gunicorn --bind 0.0.0.0:5000 --workers 2 app.server:app`. O bind em `127.0.0.1` dentro do container tornaria o serviço inacessível, porque o tráfego encaminhado pelo Docker chega pela interface de rede do container.
 - A restrição a localhost é feita na publicação de porta do `gateway` (`127.0.0.1:${WORKSHOP_PORT:-5000}:8080`). O `workshop` não publica portas.
 - `debug=False` em produção (controlado por variável de ambiente `FLASK_ENV`)
+- `WORKSHOP_PORT` é passada ao container pelo Compose e usada por `app/http_security.py` para montar a allowlist de `Host` e `Origin` (13.5)
 - CORS desabilitado (mesma origem: o browser acessa pelo `gateway`)
 - `create_app(config)` constrói a aplicação Flask e aceita em `config` o diretório de labs, o caminho do `progress.json` e `validator_loader` (função que carrega os módulos validadores). O `ValidationService` recebe esse `validator_loader` diretamente, sem depender de variável de ambiente ou de patch de módulo; quando ausente, usa o carregador padrão de `app/validators/`. O objeto `app` exposto ao gunicorn é `create_app(config_padrao)`.
 - Com 2 workers, o `ProgressStore` não pode depender apenas de `threading.Lock` em memória. A escrita de `progress.json` deve ser atômica (arquivo temporário + `os.replace`) e protegida por lock de arquivo (`fcntl.flock`) para evitar perda de atualização entre processos.
@@ -161,10 +206,46 @@ Aplicação WSGI Flask que atua como API backend e servidor de arquivos estátic
 | `GET` | `/api/labs/<lab_id>/steps/<step_id>/content?path=console\|cli` | Retorna o Markdown do cenário (`scenario.md`) concatenado ao da Trilha escolhida (11.1, 11.8, 11.7) |
 | `GET` | `/api/labs/<lab_id>/steps/<step_id>/hint?path=console\|cli` | Retorna a Dica Detalhada da Trilha escolhida (11.5) |
 | `POST` | `/api/labs/<lab_id>/steps/<step_id>/visit` | Marca como concluído um step que não é `task`, quando o usuário avança além dele (2.6) |
+| `GET` | `/api/session` | Retorna `expires_at`, `seconds_remaining` e `status` da sessão, sem valores de credenciais (12.1) |
 
 `POST .../visit` só vale para steps `info`, `deploy`, `teardown` e `completion`. Para step `task`, retorna `STEP_REQUIRES_VALIDATION` (409), porque esses steps só passam por validação. A rota chama `ProgressStore.mark_visited`, é idempotente (repetir a chamada não altera `passed_at` nem `attempts`) e não aceita corpo. Lab ou step inexistente retorna `LAB_NOT_FOUND`/`STEP_NOT_FOUND` (404).
 
 `path` aceita somente `console` ou `cli`. Valor ausente ou inválido resulta em `INVALID_PATH` (400). Trilha válida mas ausente de `paths` do step resulta em `PATH_UNAVAILABLE` (409), com o motivo de `unavailable_paths` na mensagem. Rotas de conteúdo e dica só existem para steps do tipo `task`; para outros tipos, o conteúdo é único e vem de `GET /api/labs/<lab_id>`. A troca de Trilha é persistida por `PUT /api/progress` com `{"preferences": {"path": "cli"}}` (11.3). Nenhuma dessas rotas altera o status do step (11.2).
+
+**Proteção da API local (Requirement 13):** o módulo `app/http_security.py` registra `before_request` e `after_request` em `create_app`.
+
+| Verificação | Regra | Resposta em caso de falha |
+|-------------|-------|---------------------------|
+| `Host` (toda requisição, exceto `GET /health`) | Igual a `127.0.0.1:<porta>` ou `localhost:<porta>`, com `<porta>` de `WORKSHOP_PORT` | 421 `HOST_NOT_ALLOWED` |
+| `Origin` (`POST`, `PUT`, `DELETE`) | Presente e igual a `http://127.0.0.1:<porta>` ou `http://localhost:<porta>` | 403 `ORIGIN_NOT_ALLOWED` |
+| `Content-Type` (`POST`, `PUT`, `DELETE`) | `application/json` (parâmetro `charset` aceito) | 415 `UNSUPPORTED_MEDIA_TYPE` |
+| `X-Workshop-Request` (`POST`, `PUT`, `DELETE`) | Igual a `1` | 403 `MISSING_WORKSHOP_HEADER` |
+
+`GET /health` fica fora da checagem de `Host` porque o healthcheck do container chama `localhost:5000` e a rota só retorna `{"status": "ok"}`. A ordem é: `Host`, `Origin`, `Content-Type`, cabeçalho próprio. Uma requisição recusada não chega à rota e não altera estado. O browser não consegue forjar `Origin` nem o cabeçalho próprio em requisição cross-origin sem preflight, e o servidor não responde a `OPTIONS` com CORS, então o preflight falha.
+
+Cabeçalhos de segurança em todas as respostas, inclusive as de erro: `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin` e `Cross-Origin-Resource-Policy: same-origin` (13.4). A CSP `default-src 'self'` exige que o frontend não use scripts nem estilos inline; isso já vale para o frontend atual, sem CDN (8.2).
+
+**Como a porta chega ao Flask:** o browser acessa `127.0.0.1:<porta>` e envia `Host: 127.0.0.1:<porta>`. O Squid recebe em `:8080` (porta interna) e, com `http_port 8080 accel vhost`, repassa ao Flask o `Host` original do browser. O `docker-compose.yml` passa `WORKSHOP_PORT=${WORKSHOP_PORT:-5000}` ao `workshop`, e `app/http_security.py` monta a allowlist com esse valor. O `squid.conf` troca a ACL `reverse_site` (baseada em `dstdomain workshop`) por uma ACL de porta local (`acl reverse_listener localport 8080`), porque com `vhost` o domínio de destino passa a ser o `Host` do browser. Isso mantém `http_access deny all` ao final e só aceita na porta 8080 o tráfego do reverse proxy. A confirmação em ambiente real (o `Host` de um browser chega ao Flask como `127.0.0.1:<porta>`, e `Host: evil.example` via gateway recebe 421) faz parte da verificação final.
+
+**Sessão (Requirement 12):** o módulo `app/session.py` lê `WORKSHOP_CREDENTIALS_EXPIRATION` e calcula o estado no servidor.
+
+```python
+EXPIRING_THRESHOLD_S = 600
+
+@dataclass(frozen=True)
+class SessionState:
+    expires_at: Optional[str]     # ISO 8601 UTC, ou None se ausente ou inválido
+    seconds_remaining: int        # nunca negativo
+    status: str                   # "valid" | "expiring" | "expired"
+
+def get_session_state(env: Mapping[str, str] = os.environ,
+                      now: Callable[[], datetime] = utcnow) -> SessionState: ...
+
+def require_active_session() -> None:
+    """Levanta SessionExpiredError (SESSION_EXPIRED, 401) se status == "expired"."""
+```
+
+`status` é `expired` se `seconds_remaining <= 0` ou se a variável estiver ausente ou inválida (falha fechada, 12.3), `expiring` se `1 <= seconds_remaining <= 600` e `valid` acima disso (12.2). `require_active_session()` é chamada no início das rotas que chamam a AWS (`POST /api/validate/...`, `POST /api/deploy/...`, `POST /api/teardown/...`, `GET /api/stack-status/...`) antes de criar qualquer cliente boto3 (12.6). As demais rotas (conteúdo, progresso, visit, session, health) continuam funcionando com a sessão expirada.
 
 **Rota de saúde:**
 
@@ -196,7 +277,7 @@ def validate_step(boto3_session: boto3.Session, context: dict) -> ValidationResu
     Valida o estado real dos recursos AWS para um step específico.
     
     Args:
-        boto3_session: Sessão boto3 autenticada (criada a partir de ~/.aws)
+        boto3_session: Sessão boto3 autenticada (criada a partir das variáveis de ambiente de credenciais temporárias)
         context: Dicionário com step_id, lab_id, attempt_count e parâmetros extras
     
     Returns:
@@ -209,7 +290,7 @@ def validate_step(boto3_session: boto3.Session, context: dict) -> ValidationResu
 
 **Independência da Trilha (11.4):** o validador não recebe a Trilha. `context` nunca contém a chave `path`, e `validate_step` verifica somente o estado final dos recursos na AWS, que é o mesmo nas duas Trilhas (Console ou CLI). A rota `POST /api/validate/<lab_id>/<step_id>` ignora qualquer `path` presente no corpo da requisição e o `ValidationService` o remove de `context` antes de chamar o validador. Consequências: um recurso criado pelo Console e outro criado pelo CLI passam na mesma validação, e nenhuma mensagem de erro depende da Trilha. A Trilha só afeta o conteúdo exibido (instruções e dica).
 
-**Exemplo de validador (lab01, step-01 — bucket S3 criado):**
+**Exemplo de validador (lab01, step-01, bucket S3 criado):**
 
 ```python
 def validate_step(boto3_session: boto3.Session, context: dict) -> ValidationResult:
@@ -449,7 +530,9 @@ app/static/
     ├── lab.js              # Lógica de lab/step/wizard
     ├── validator.js        # Lógica de validação e feedback
     ├── progress.js         # Leitura/escrita de progresso via API
-    └── cloudformation.js   # Polling de status de stack
+    ├── cloudformation.js   # Polling de status de stack
+    ├── api.js              # fetch central: envia X-Workshop-Request e Content-Type JSON
+    └── session.js          # Cronometro de sessao e bloqueio de acoes AWS
 ```
 
 **Roteamento client-side:**
@@ -467,6 +550,8 @@ app/static/
 - Ao clicar em uma aba, o frontend chama `GET /api/labs/<lab_id>/steps/<step_id>/content?path=<trilha>` via `fetch`, substitui o bloco de instruções sem recarregar a página e envia `PUT /api/progress` com `{"preferences": {"path": "<trilha>"}}`. O resultado de validação já exibido, o contador de tentativas e o botão "Validar" permanecem como estão.
 - Uma Trilha presente em `unavailable_paths` aparece como aba desabilitada (`aria-disabled="true"`), com o motivo visível no próprio rótulo ou em tooltip e no texto da área de conteúdo.
 - O botão "Dica detalhada" (exibido conforme `show_hint_button`) busca `.../hint?path=<trilha ativa>`. Trocar de aba com a dica aberta recarrega a dica da nova Trilha.
+- `api.js` centraliza as chamadas `fetch`: em `POST`, `PUT` e `DELETE` envia `Content-Type: application/json` e `X-Workshop-Request: 1` (13.3). Nenhum módulo chama `fetch` diretamente para rotas que alteram estado.
+- `session.js` exibe o cronômetro no cabeçalho, consulta `GET /api/session` na carga e a cada 60 s e, entre as consultas, decrementa localmente `seconds_remaining` a cada segundo. Com `status == "expiring"` mostra aviso visível. Com `expired` desabilita Validar, Deploy e Teardown, explica o motivo e mostra `python start.py --refresh` com botão de copiar (12.4, 12.5). O servidor continua sendo a autoridade: ele recusa as rotas AWS mesmo se o frontend for contornado (12.6).
 - Os arquivos Markdown de conteúdo são convertidos em HTML no cliente por um renderizador local, sem CDN (8.2). Blocos de código da Trilha CLI têm botão de copiar.
 
 **Paleta de cores (workshops.aws):**
@@ -489,19 +574,30 @@ app/static/
 **Dockerfile (serviço `workshop`):**
 
 ```dockerfile
-FROM python:3.11-slim
+# Fixada por digest (14.4); o digest real e definido na implementacao
+FROM python:3.11-slim@sha256:<digest>
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
+
+# Usuario nao root (14.1); o diretorio de progresso pertence a ele
+RUN groupadd --gid 10001 workshop \
+ && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin workshop \
+ && mkdir -p /app/progress && chown workshop:workshop /app/progress
 
 COPY app/ ./app/
 COPY labs/ ./labs/
 
-# Volumes externos (nao copiados na imagem)
-# ~/.aws      -> /root/.aws (somente-leitura)
+USER 10001:10001
+
+# Volume externo (nao copiado na imagem)
 # ./progress/ -> /app/progress/
+# Nenhuma credencial entra na imagem nem por volume: elas chegam por variaveis de ambiente.
 
 EXPOSE 5000
 
@@ -511,7 +607,7 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
 
 # Dentro do container o bind e 0.0.0.0; a restricao a localhost e feita
 # na publicacao de porta do gateway (127.0.0.1:...).
-CMD ["gunicorn", "--workers", "2", "--bind", "0.0.0.0:5000", "app.server:app"]
+CMD ["gunicorn", "--workers", "2", "--bind", "0.0.0.0:5000", "--worker-tmp-dir", "/tmp", "app.server:app"]
 ```
 
 **docker-compose.yml** (sem a chave `version`, obsoleta no Compose v2):
@@ -523,13 +619,30 @@ services:
     # Sem "ports:". Conectado somente a rede internal.
     networks:
       - workshop-internal
+    user: "${WORKSHOP_UID:-10001}:${WORKSHOP_GID:-10001}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    pids_limit: 128
     volumes:
-      - "${HOME}/.aws:/root/.aws:ro"   # credenciais read-only
-      - "./progress:/app/progress"     # progresso persistido
+      - "./progress:/app/progress"     # unico volume; nenhum caminho de credenciais
     environment:
       - FLASK_ENV=production
-      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - WORKSHOP_PORT=${WORKSHOP_PORT:-5000}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      # Credenciais temporarias: pass-through do ambiente do processo do start.py
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - WORKSHOP_CREDENTIALS_EXPIRATION
+      # Nada de ~/.aws, profile ou metadata service no container
+      - AWS_SHARED_CREDENTIALS_FILE=/dev/null
+      - AWS_CONFIG_FILE=/dev/null
+      - AWS_EC2_METADATA_DISABLED=true
       - HTTPS_PROXY=http://gateway:3128
       - HTTP_PROXY=http://gateway:3128
       - NO_PROXY=localhost,127.0.0.1,gateway
@@ -542,7 +655,19 @@ services:
     restart: on-failure:3
 
   gateway:
-    image: ubuntu/squid:<tag-fixada>   # tag explicita, nunca "latest"
+    image: ubuntu/squid:<tag-fixada>@sha256:<digest>   # tag e digest explicitos, nunca "latest" (14.4)
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/log/squid
+      - /var/spool/squid
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]   # minimo para o Squid trocar para o usuario proxy; confirmar na implementacao
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    pids_limit: 128
     depends_on:
       workshop:
         condition: service_healthy
@@ -569,10 +694,11 @@ O boto3 respeita `HTTPS_PROXY`, `HTTP_PROXY` e `NO_PROXY`, então nenhuma altera
 
 ```
 # Reverse proxy (accel): entrada do browser -> Flask
-http_port 8080 accel defaultsite=workshop
+# vhost: repassa ao Flask o Host original do browser (127.0.0.1:<porta>), que o Flask valida (13.1)
+http_port 8080 accel vhost defaultsite=workshop
 cache_peer workshop parent 5000 0 no-query originserver name=app
-acl reverse_site dstdomain workshop
-cache_peer_access app allow reverse_site
+acl reverse_listener localport 8080
+cache_peer_access app allow reverse_listener
 
 # Forward proxy: saida do workshop -> AWS, somente CONNECT 443 para a allowlist
 http_port 3128
@@ -582,7 +708,7 @@ acl CONNECT method CONNECT
 acl from_internal src 172.16.0.0/12 10.0.0.0/8 192.168.0.0/16
 
 http_access allow CONNECT SSL_ports allowed_domains from_internal
-http_access allow reverse_site
+http_access allow reverse_listener
 http_access deny all
 
 # Log de acesso: horario e destino. Squid nao registra cabecalhos de
@@ -598,7 +724,7 @@ access_log stdio:/var/log/squid/access.log squid
 ```
 
 **Observações:**
-- O `http_port 8080` não usa `vhost`: o browser envia `Host: 127.0.0.1:<porta>`, que não casaria com a ACL `reverse_site` (`workshop`). Sem `vhost`, o Squid usa `defaultsite` para todas as requisições.
+- O `http_port 8080` usa `vhost` para repassar ao Flask o `Host` do browser (`127.0.0.1:<porta>`), necessário para a validação de `Host` (13.1). Como o domínio de destino passa a ser o `Host` do browser, a ACL `reverse_site` por `dstdomain` é trocada por `reverse_listener` (`localport 8080`). A porta 8080 só é publicada em `127.0.0.1` (9.1).
 - O formato `squid` do `access_log` registra horário, método, destino e código de resultado (por exemplo `TCP_DENIED/403` para destinos recusados). Não inclui cabeçalhos de autenticação (9.6).
 - Em requisições `CONNECT` o tráfego TLS é fim a fim. O Squid só vê o host e a porta de destino, nunca o corpo nem os cabeçalhos `Authorization`.
 - As faixas de `from_internal` na ACL devem ser conferidas na implementação contra a sub-rede real atribuída a `workshop-internal`.
@@ -606,13 +732,17 @@ access_log stdio:/var/log/squid/access.log squid
 - O `gateway` só inicia depois que o `workshop` está `healthy` (`condition: service_healthy`).
 - Downloads do build (pull da imagem base, `pip install`) ocorrem em `docker compose build`, fora da restrição de runtime. O README deve documentar isso (9.7).
 
-**Credenciais e profile (1.12):**
-- O Compose passa `AWS_PROFILE=${AWS_PROFILE:-default}` e `AWS_DEFAULT_REGION` ao `workshop`. O `check_requirements.py` usa o mesmo profile em `aws sts get-caller-identity --profile`.
-- `~/.aws` permanece montado em `:ro`.
-- **RISCO NÃO VERIFICADO:** com profiles SSO ou `aws login`, o botocore pode tentar gravar o token renovado no cache em `~/.aws`. Com o volume somente leitura, a renovação pode falhar. Não há mitigação específica: o usuário vê o código e a mensagem originais do erro AWS, mais a sugestão genérica de verificar as credenciais do profile em uso. Deve ser testado na implementação com um profile SSO real antes de considerar o requisito 9.3 atendido para esse tipo de profile.
+**Credenciais e profile (1.5, 1.12, 9.3):**
+- O `AWS_PROFILE` (padrão `default`) é usado somente no host, por `check_requirements.py` e `start.py`. O container não recebe `AWS_PROFILE` nem `~/.aws`.
+- O `start.py` exporta credenciais temporárias do profile e as passa ao `workshop` por variáveis de ambiente (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` e `WORKSHOP_CREDENTIALS_EXPIRATION`). O Compose declara as quatro em modo pass-through, sem valor no arquivo, e não há arquivo `.env` temporário. O container ignora arquivos de configuração (`AWS_SHARED_CREDENTIALS_FILE=/dev/null`, `AWS_CONFIG_FILE=/dev/null`) e o serviço de metadata (`AWS_EC2_METADATA_DISABLED=true`), de modo que o boto3 usa só as variáveis.
+- A região vem de `AWS_DEFAULT_REGION` (padrão `us-east-1`).
+- O container não precisa mais alcançar `portal.sso.*`: o risco de renovação de token com `~/.aws:ro` deixa de existir, porque o container nunca renova nada. Quando a sessão expira, o usuário renova o login no host e executa `python start.py --refresh`.
+- Residual: as variáveis de ambiente ficam visíveis a quem tem acesso ao Docker do usuário (`docker inspect`). Isso está dentro da mesma fronteira de confiança do usuário local e é documentado no README. A mitigação é a sessão curta.
+- As tasks 9.5 e 15C.3 (teste SSO com `~/.aws:ro`) ficam como histórico concluído. O teste `test_sso_readonly.py` é substituído por um teste que verifica que o container não tem `~/.aws` e só recebe as variáveis esperadas (task 15D.12).
 
 **Arquivos de dependências:**
-- `requirements.txt`: `flask`, `gunicorn`, `boto3` (versões fixadas na implementação)
+- `requirements.in`: `flask`, `gunicorn`, `boto3` (dependências diretas)
+- `requirements.txt`: gerado a partir de `requirements.in` com hashes de todos os pacotes, instalado com `pip install --require-hashes` (14.5). A geração é reproduzível: `scripts/compile-requirements.sh` executa `pip-compile --generate-hashes` dentro da imagem `python:3.11-slim` fixada por digest, e o procedimento é descrito no `CONTRIBUTING.md`. O Dependabot atualiza `requirements.in`/`requirements.txt` e o CI roda `pip-audit`.
 - `requirements-dev.txt`: `pytest`, `hypothesis`
 
 **Estrutura de diretórios do repositório:**
@@ -621,15 +751,30 @@ access_log stdio:/var/log/squid/access.log squid
 .
 ├── start.py
 ├── check_requirements.py
+├── host_credentials.py
 ├── docker-compose.yml
 ├── Dockerfile
+├── requirements.in
 ├── requirements.txt
 ├── requirements-dev.txt
+├── SECURITY.md
+├── CONTRIBUTING.md
+├── scripts/
+│   ├── compile-requirements.sh
+│   └── check_dco.py
+├── .github/
+│   ├── workflows/ci.yml
+│   ├── workflows/codeql.yml
+│   ├── dependabot.yml
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
 ├── gateway/
 │   ├── squid.conf
 │   └── allowlist.txt
 ├── app/
 │   ├── server.py
+│   ├── http_security.py   # Host, Origin, cabecalho proprio e cabecalhos de seguranca
+│   ├── session.py         # estado da sessao e guarda SESSION_EXPIRED
 │   ├── validators/
 │   └── static/
 ├── labs/
@@ -637,6 +782,10 @@ access_log stdio:/var/log/squid/access.log squid
 ├── progress/
 │   └── .gitkeep          # progress.json fica no .gitignore
 ├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── js/
+│   └── security/          # testes de seguranca (CODEOWNERS)
 ├── README.md
 └── LICENSE
 ```
@@ -818,6 +967,18 @@ Response (falha com dica disponível):
 }
 ```
 
+**GET /api/session**
+
+```json
+{
+  "expires_at": "2025-01-01T12:00:00Z",
+  "seconds_remaining": 1840,
+  "status": "valid"
+}
+```
+
+`status` é `valid`, `expiring` (600 s ou menos) ou `expired`. Nunca contém valores de credenciais. Com a variável ausente ou inválida, retorna `expires_at: null`, `seconds_remaining: 0` e `status: "expired"`.
+
 ### Error Response Schema
 
 Todos os erros da API seguem o formato:
@@ -845,6 +1006,11 @@ Todos os erros da API seguem o formato:
 | `STEP_REQUIRES_VALIDATION` | 409 | `POST .../visit` em step do tipo `task`; esse step só passa por validação |
 | `STACK_NOT_FOUND` | 404 | Stack CloudFormation não existe |
 | `STACK_DEPLOY_FAILED` | 422 | Deploy CloudFormation falhou |
+| `SESSION_EXPIRED` | 401 | Sessão expirada: rota que chama a AWS recusada antes de qualquer chamada. A mensagem traz o comando `python start.py --refresh` |
+| `HOST_NOT_ALLOWED` | 421 | Cabeçalho `Host` fora da allowlist (13.1) |
+| `ORIGIN_NOT_ALLOWED` | 403 | `Origin` ausente ou diferente da origem da plataforma em `POST`/`PUT`/`DELETE` (13.2) |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | `Content-Type` diferente de `application/json` em `POST`/`PUT`/`DELETE` (13.2) |
+| `MISSING_WORKSHOP_HEADER` | 403 | Falta `X-Workshop-Request: 1` em `POST`/`PUT`/`DELETE` (13.2) |
 | `INTERNAL_ERROR` | 500 | Erro interno não classificado |
 
 ## Data Models
@@ -1043,7 +1209,30 @@ class StepRequiresValidationError(WorkshopError):
 class StackDeployError(WorkshopError):
     code = "STACK_DEPLOY_FAILED"
     http_status = 422
+
+class SessionExpiredError(WorkshopError):
+    """Sessão de credenciais temporárias expirada; rotas AWS são recusadas."""
+    code = "SESSION_EXPIRED"
+    http_status = 401
+
+class HostNotAllowedError(WorkshopError):
+    code = "HOST_NOT_ALLOWED"
+    http_status = 421
+
+class OriginNotAllowedError(WorkshopError):
+    code = "ORIGIN_NOT_ALLOWED"
+    http_status = 403
+
+class UnsupportedMediaTypeError(WorkshopError):
+    code = "UNSUPPORTED_MEDIA_TYPE"
+    http_status = 415
+
+class MissingWorkshopHeaderError(WorkshopError):
+    code = "MISSING_WORKSHOP_HEADER"
+    http_status = 403
 ```
+
+Quando o erro for de credenciais, a mensagem retornada ao usuário acrescenta a sugestão de renovar o login no host e executar `python start.py --refresh` (5.6). A mensagem nunca inclui valores de credenciais. Antes de chegar ao validador, a guarda `require_active_session()` já recusa a chamada com `SESSION_EXPIRED` quando a sessão expirou localmente.
 
 ### Flask Error Handler Global
 
@@ -1059,6 +1248,7 @@ def handle_workshop_error(e: WorkshopError):
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(e: Exception):
+    # Nunca registrar os valores de os.environ, cabecalhos ou corpo da requisicao
     app.logger.exception("Erro inesperado")
     return jsonify({
         "error": True,
@@ -1117,7 +1307,7 @@ def _safe_validate(fn):
 
 ### Estratégia de Polling de Stack CloudFormation
 
-O frontend chama `GET /api/stack-status/{lab_id}` a cada 5 segundos enquanto o status for `*_IN_PROGRESS`. O backend não mantém estado de polling — cada chamada executa `describe_stacks` diretamente.
+O frontend chama `GET /api/stack-status/{lab_id}` a cada 5 segundos enquanto o status for `*_IN_PROGRESS`. O backend não mantém estado de polling: cada chamada executa `describe_stacks` diretamente.
 
 **Estados terminais (polling para):**
 - `CREATE_COMPLETE` → sucesso
@@ -1169,12 +1359,25 @@ Usados para cenários específicos, pontos de integração e edge cases:
 - `metadata.json` sem `services`, com `services` vazio ou com item não string/vazio é rejeitado na carga do `LabCatalog`; `GET /api/labs` e `GET /api/labs/<lab_id>` retornam `services` (5.7)
 - Frontend (teste de DOM): ao avançar de um step não-`task`, `lab.js` chama a rota `visit`; a navegação direta usa o status do servidor e não há uso de `sessionStorage`; a tela de conclusão lista `services` e `dea_domains` (2.6, 3.2, 5.7)
 - Frontend (teste de DOM): aba de Trilha indisponível fica desabilitada e exibe o motivo; clicar em uma aba carrega o conteúdo via `fetch` sem recarregar a página e mantém o resultado da última validação (11.2, 11.6)
+- `host_credentials.export_credentials` com `subprocess` mockado: JSON completo vira `TempCredentials`; ausência de `SessionToken` ou de `Expiration` levanta `LongLivedCredentialsError`; comando com falha ou saída inválida levanta `CredentialsExportError`; nenhuma mensagem de erro nem `repr` contém valores de credenciais (1.5, 1.14)
+- `start.py` com `run` injetado: o ambiente passado ao `docker compose up` contém as quatro variáveis e nenhum arquivo é criado; `--refresh` executa exatamente `docker compose up -d --force-recreate --no-deps workshop`; nada é impresso com valores de credenciais; credenciais de longa duração interrompem com código 1 antes de qualquer `docker compose` (1.5, 1.14, 1.15)
+- `GET /api/session` com relógio injetado: `valid` acima de 600 s, `expiring` de 1 a 600 s, `expired` em 0 ou menos, variável ausente ou inválida; resposta sem valores de credenciais (12.1, 12.2, 12.3)
+- Cabeçalhos de segurança presentes em respostas 200, 4xx e 5xx; `GET /health` responde com qualquer `Host`; `POST` com `Origin` ausente, `Origin` de outro domínio, `Content-Type` diferente de JSON ou sem `X-Workshop-Request` é recusado e não altera o progresso (13.1, 13.2, 13.4)
+- Frontend (teste de DOM): `api.js` envia `X-Workshop-Request: 1` e `Content-Type: application/json` em `POST`/`PUT`; `session.js` exibe o aviso em `expiring`, bloqueia Validar, Deploy e Teardown em `expired` e mostra o comando `python start.py --refresh` (12.4, 12.5, 13.3)
 - `check_requirements.py` com `subprocess` mockado: Docker 18 reprovado, daemon parado, Compose v1 reprovado, AWS CLI 1.x reprovado, `sts` com erro, porta ocupada (1.2, 1.3)
+
+### Testes de Segurança (`tests/security/`)
+
+Os testes de segurança ficam em `tests/security/`, coberta pelo CODEOWNERS. Esta pasta reúne os testes de smoke de configuração (compose, Dockerfile, requirements, workflows), os testes de propriedade 13, 14, 20, 21 e 22, o teste do matcher de allowlist e os testes de integração com Docker (egress e ambiente do container). Os testes que precisam de Docker são ignorados quando o Docker não está disponível.
+
+- Property 20 (credenciais nunca expostas): gerar valores de credenciais (`AKIA`/`ASIA` + 16 caracteres, secrets e tokens aleatórios), injetá-los no ambiente da aplicação, exercitar todas as rotas e erros (inclusive exceções forçadas) e verificar que nenhum corpo de resposta, cabeçalho, nem registro capturado de log contém os valores
+- Property 21 (sessão expirada bloqueia rotas AWS): gerar instantes de expiração e relógios e verificar a classificação de `status` e que as rotas AWS retornam `SESSION_EXPIRED` sem criar cliente boto3
+- Property 22 (requisições inválidas recusadas): gerar combinações de `Host`, `Origin`, `Content-Type` e cabeçalho próprio em rotas de `POST`/`PUT`/`DELETE` e verificar que só a combinação totalmente válida é aceita e que as recusadas não alteram o `progress.json`
 
 ### Testes de Smoke
 
 Verificações estáticas de configuração executadas uma vez:
-- `docker-compose.yml` monta `~/.aws` como read-only
+- `docker-compose.yml` não monta `~/.aws`, `~/.ssh`, `~/.config`, `~/.docker` nem o socket do Docker (9.3, 14.6); o `workshop` só recebe as variáveis esperadas (as quatro de credenciais, `AWS_SHARED_CREDENTIALS_FILE=/dev/null`, `AWS_CONFIG_FILE=/dev/null`, `AWS_EC2_METADATA_DISABLED=true`, `AWS_DEFAULT_REGION`, `WORKSHOP_PORT`, `FLASK_ENV` e as de proxy) e não recebe `AWS_PROFILE`
 - `progress.json` está no `.gitignore`
 - 10 arquivos `cloudformation/stack.yaml` existem com sintaxe YAML válida
 - O serviço `workshop` não tem `ports:` e está somente na rede `workshop-internal` com `internal: true` (9.5)
@@ -1183,10 +1386,15 @@ Verificações estáticas de configuração executadas uma vez:
 - `gateway` tem `depends_on` do `workshop` com `condition: service_healthy`
 - O compose não contém a chave `version` e a imagem do gateway tem tag fixada, diferente de `latest`
 - O healthcheck não usa `curl`
-- `AWS_PROFILE` é repassado ao `workshop` e `check_requirements.py` usa `--profile` (1.12)
+- `check_requirements.py` e `start.py` usam `--profile` (1.12) e o compose não repassa `AWS_PROFILE` ao `workshop`
 - `gateway/squid.conf` termina em `http_access deny all` e `gateway/allowlist.txt` contém `.amazonaws.com` e `.api.aws` (9.5)
 - O README documenta que downloads do build ocorrem fora da restrição de runtime e que o Squid não registra cabeçalhos de autenticação (9.6, 9.7)
-- `requirements.txt` contém flask, gunicorn e boto3; `requirements-dev.txt` contém pytest e hypothesis
+- `requirements.txt` contém flask, gunicorn e boto3 com hashes (`--hash=sha256:`) em todas as entradas e o Dockerfile instala com `--require-hashes` (14.5); `requirements-dev.txt` contém pytest e hypothesis
+- Dockerfile define `USER` não root; o compose define `read_only: true`, `tmpfs` em `/tmp`, `cap_drop: [ALL]`, `no-new-privileges:true`, `mem_limit` e `pids_limit` nos dois serviços (14.1, 14.3)
+- As imagens `python:3.11-slim` e `ubuntu/squid` estão fixadas por `@sha256:` (14.4)
+- Workflows em `.github/workflows/`: sem `pull_request_target`, `permissions` no topo restritas a `contents: read` (`security-events: write` só no job do CodeQL), todas as actions de terceiros fixadas por SHA de 40 caracteres e nenhuma referência a `secrets.` (15.1, 15.2, 15.4)
+- `.github/CODEOWNERS` cobre os caminhos sensíveis com `@CaeirOps`; `dependabot.yml` cobre `pip`, `docker` e `github-actions` com frequência semanal (15.5, 15.6)
+- `SECURITY.md`, `CONTRIBUTING.md` e `.github/pull_request_template.md` existem; o README não contém instruções de configuração administrativa do GitHub (16.1, 16.2, 16.3)
 - Todo `cli.md` usa `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` (ou placeholders `<...>`) e todo `console.md` contém um caminho de navegação `Serviço > Menu > Botão` (11.7, 11.8; verificação de presença, o conteúdo editorial é revisado manualmente)
 
 ### Testes de Integração de Rede (egress)
@@ -1196,7 +1404,8 @@ Executados com a stack no ar (`docker compose up -d --build`), com poucos exempl
 - A partir do container `workshop`, uma requisição a um domínio fora da allowlist (por exemplo `https://example.com`) falha, e o `access.log` do gateway registra destino e horário, sem cabeçalhos de autenticação.
 - A partir do container `workshop`, uma conexão direta sem proxy a um IP público falha, porque a rede é `internal`.
 - A partir do host, `http://127.0.0.1:${WORKSHOP_PORT}/health` responde 200, e o serviço não é alcançável pelo IP não-loopback do host.
-- Verificação do risco de credenciais: com um profile SSO e `~/.aws` em `:ro`, executar uma validação e observar se a renovação de token falha.
+- O container `workshop` em execução não tem `~/.aws` (nem qualquer caminho de credenciais do host), roda com usuário não root, sistema de arquivos `read_only` com `/tmp` e `./progress` graváveis, e o ambiente contém exatamente as variáveis esperadas (9.3, 14.1, 14.6).
+- `Host` do browser chega ao Flask como `127.0.0.1:<porta>` pelo gateway; `Host: evil.example` pelo gateway recebe 421; `POST` sem `Origin` recebe 403 (13.1, 13.2, 13.5).
 
 ### Verificação de ambiente com Docker e AWS real (somente leitura)
 
@@ -1292,7 +1501,7 @@ def test_validate_step_handles_any_bucket_name(bucket_name):
 
 ### Property 8: Validador retorna ValidationResult para qualquer exceção AWS
 
-*Para qualquer* validador de qualquer lab, quando `validate_step` é chamado com uma sessão boto3 que lança `ClientError` ou `NoCredentialsError`, a função deve retornar `ValidationResult(passed=False)` com mensagem não-vazia, sem propagar a exceção. Quando a exceção é `NoCredentialsError` ou um erro de credencial (`ClientError` com código em `ExpiredToken`, `ExpiredTokenException`, `InvalidClientTokenId`, `UnrecognizedClientException`, `InvalidSignatureException`, ou `UnauthorizedSSOTokenError`/`TokenRetrievalError`), a mensagem deve conter o código de erro original e a sugestão "Verifique as credenciais AWS do profile em uso."
+*Para qualquer* validador de qualquer lab, quando `validate_step` é chamado com uma sessão boto3 que lança `ClientError` ou `NoCredentialsError`, a função deve retornar `ValidationResult(passed=False)` com mensagem não-vazia, sem propagar a exceção. Quando a exceção é `NoCredentialsError` ou um erro de credencial (`ClientError` com código em `ExpiredToken`, `ExpiredTokenException`, `InvalidClientTokenId`, `UnrecognizedClientException`, `InvalidSignatureException`, ou `UnauthorizedSSOTokenError`/`TokenRetrievalError`), a mensagem deve conter o código de erro original e a sugestão "Verifique as credenciais AWS do profile em uso. e a orientação de renovar o login no host e executar `python start.py --refresh`, sem valores de credenciais.
 
 **Validates: Requirements 5.3, 5.6**
 
@@ -1383,3 +1592,27 @@ def test_validate_step_handles_any_bucket_name(bucket_name):
 *Para qualquer* lab com steps de tipos mistos e qualquer progresso válido, aplicar `mark_visited` a qualquer subconjunto de steps que não são `task` deve (a) manter inalterados `status`, `attempts`, `last_attempt_at` e `passed_at` de todos os steps `task`, (b) deixar `attempts` dos steps marcados em 0, com `status == "passed"`, e (c) fazer `get_resume_step` retornar o primeiro step, pela ordem de `metadata.json`, cujo status não é `"passed"`. `_compute_lab_status` só retorna `"completed"` quando todos os steps `task` estão `passed`, independentemente dos steps não-task marcados. Chamar `mark_visited` em um step `task` levanta `StepRequiresValidationError` e não altera o progresso.
 
 **Validates: Requirements 2.4, 2.6, 3.2**
+
+---
+
+### Property 20: Credenciais nunca aparecem em respostas nem em logs
+
+*Para qualquer* valor de `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_SESSION_TOKEN` presente no ambiente da aplicação e *para qualquer* rota da API (inclusive `GET /api/session`, respostas de erro e erros inesperados forçados), nenhum corpo de resposta, cabeçalho de resposta ou registro de log da aplicação contém esses valores. No host, nenhuma mensagem de `start.py`, `check_requirements.py` ou `host_credentials.py` (saída padrão, erro padrão e `repr` de `TempCredentials`) contém esses valores, e nenhum arquivo é criado em disco durante o fluxo.
+
+**Validates: Requirements 1.5, 5.6, 9.3, 12.1**
+
+---
+
+### Property 21: Sessão expirada bloqueia as rotas que chamam a AWS
+
+*Para qualquer* valor de `WORKSHOP_CREDENTIALS_EXPIRATION` (instantes passados, futuros, ausente ou inválido) e *para qualquer* instante atual, `status` é `expired` se e somente se `seconds_remaining <= 0` ou a variável é ausente ou inválida; `expiring` se e somente se `1 <= seconds_remaining <= 600`; e `valid` caso contrário. Quando `status == "expired"`, `POST /api/validate/<lab_id>/<step_id>`, `POST /api/deploy/<lab_id>`, `POST /api/teardown/<lab_id>` e `GET /api/stack-status/<lab_id>` retornam `SESSION_EXPIRED` (HTTP 401) sem criar nenhum cliente boto3 e sem alterar o `progress.json`.
+
+**Validates: Requirements 12.2, 12.3, 12.6**
+
+---
+
+### Property 22: Requisições sem Host, Origin, Content-Type ou cabeçalho próprio válidos são recusadas
+
+*Para qualquer* combinação de `Host`, `Origin`, `Content-Type` e `X-Workshop-Request` em uma requisição `POST`, `PUT` ou `DELETE` à API, a requisição só é aceita se `Host` for `127.0.0.1:<porta>` ou `localhost:<porta>`, `Origin` estiver presente e for `http://127.0.0.1:<porta>` ou `http://localhost:<porta>`, `Content-Type` for `application/json` e `X-Workshop-Request` for `1`. Qualquer outra combinação é recusada com o código de erro correspondente e não altera o estado (`progress.json` idêntico antes e depois). *Para qualquer* requisição `GET` com `Host` fora da allowlist, exceto `/health`, a resposta é 421. Todas as respostas incluem os cinco cabeçalhos de segurança.
+
+**Validates: Requirements 13.1, 13.2, 13.4**

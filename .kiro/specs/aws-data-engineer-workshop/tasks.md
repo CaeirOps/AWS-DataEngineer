@@ -4,7 +4,7 @@
 
 Implementação de uma plataforma web local de workshop para a certificação DEA-C01, composta por: infraestrutura Docker Compose com dois containers (`workshop` em rede interna e `gateway` Squid com allowlist de saída), scripts de host em stdlib (`check_requirements.py` e `start.py`), servidor Flask executado por gunicorn com API REST, módulos Python de validação com boto3, frontend SPA em HTML/CSS/JS puro e estrutura de conteúdo para 10 labs com CloudFormation. Cada step `task` oferece as Trilhas Console e CLI (Requirement 11): metadados `paths`/`unavailable_paths`, conteúdo e dica por Trilha servidos pela API, preferência de Trilha persistida no `progress.json` e abas `Console | CLI` no frontend.
 
-O plano está dividido em três partes: **Parte 1 (tasks 1 a 15)** constrói a plataforma completa e a valida com um lab de exemplo usado só em testes; **Parte 2 (tasks 16 a 25)** cria os 10 labs reais, um por vez, com aprovação do usuário antes (proposta) e depois (revisão) de cada lab; **Parte 3 (tasks 26 e 27)** verifica o catálogo completo.
+O plano está dividido em três partes: **Parte 1 (tasks 1 a 15)** constrói a plataforma completa e a valida com um lab de exemplo usado só em testes; **Parte 2 (tasks 16 a 25)** cria os 10 labs reais, um por vez, com aprovação do usuário antes (proposta) e depois (revisão) de cada lab; **Parte 3 (tasks 26 e 27)** verifica o catálogo completo. Entre a Parte 1 e a Parte 2 entram os ajustes 15A a 15H: retomada com steps não-task, campo `services`, verificação de ambiente, e as tasks de segurança (credenciais temporárias e sessão, proteção da API local, endurecimento do container, CI e governança, validação final e configuração do GitHub), seguindo o princípio "security first".
 
 ## Tasks
 
@@ -356,13 +356,212 @@ O plano está dividido em três partes: **Parte 1 (tasks 1 a 15)** constrói a p
     - Proibido: criar qualquer recurso AWS ou fazer deploy de stacks
     - _Requirements: 5.1, 9.3, 9.5, 1.12_
 
+## Ajustes de segurança antes dos labs reais
+
+Princípio: "security first", seguindo as recomendações de segurança do GitHub e da AWS. As tasks 15D a 15H substituem o modelo de volume `~/.aws` por credenciais temporárias e adicionam sessão, proteção da API local, endurecimento do container, CI e governança. Tasks 1 a 15C permanecem como histórico concluído (9.5 e 15C.3 testaram o modelo antigo de `~/.aws:ro`).
+
+- [x] 15D. Credenciais temporárias e cronômetro de sessão
+  - [x] 15D.1 Criar `host_credentials.py` (stdlib) com a exportação de credenciais
+    - Implementar `TempCredentials` (campos com `repr=False`), `export_credentials(profile, run)` com `aws configure export-credentials --profile <profile> --format process` (lista de argumentos, sem shell) e `to_environment(creds)`
+    - Levantar `LongLivedCredentialsError` quando faltar `SessionToken` ou `Expiration` e `CredentialsExportError` quando o comando falhar ou a saída não for JSON válido; as mensagens pedem SSO ou `aws login` e nunca contêm valores de credenciais
+    - Ler o `stdout` só em memória; filtrar o `stderr` antes de exibir
+    - _Requirements: 1.5, 1.14, 9.3_
+
+  - [x] 15D.2 Adaptar `check_requirements.py` ao modelo de credenciais temporárias
+    - Na verificação de credenciais, manter `aws sts get-caller-identity --profile` e chamar `host_credentials.export_credentials`; falhar com a mensagem de SSO ou `aws login` quando as credenciais forem de longa duração
+    - Não imprimir valores de credenciais
+    - Atualizar os testes existentes de `check_requirements.py` e a Property 1 para incluir o caso de credencial de longa duração
+    - _Requirements: 1.2, 1.3, 1.12, 1.14_
+
+  - [x] 15D.3 Adaptar `start.py` para exportar credenciais e adicionar `--refresh`
+    - Exportar as credenciais do `AWS_PROFILE` e passar `to_environment(creds)` somente no `env` do subprocesso `docker compose up -d --build`, sem arquivo `.env`, sem gravar em disco e sem imprimir credenciais; imprimir apenas o horário de expiração
+    - Recusar credenciais de longa duração e erro de exportação com exit code 1, antes de qualquer `docker compose`
+    - Implementar `python start.py --refresh`: exportar de novo e executar `docker compose up -d --force-recreate --no-deps workshop`, com o mesmo polling de `/health`; nenhum comando de login é executado
+    - Atualizar o diagnóstico de timeout (sessão expirada ou variáveis ausentes, em vez de `~/.aws`) e os testes existentes de `start.py`
+    - _Requirements: 1.4, 1.5, 1.8, 1.14, 1.15, 1.16_
+
+  - [x] 15D.4 Remover o volume `~/.aws` do `docker-compose.yml` e passar as variáveis de credenciais
+    - Remover `${HOME}/.aws:/root/.aws:ro` e `AWS_PROFILE` do `workshop`; manter somente o volume `./progress`
+    - Declarar em pass-through `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` e `WORKSHOP_CREDENTIALS_EXPIRATION`; definir `AWS_SHARED_CREDENTIALS_FILE=/dev/null`, `AWS_CONFIG_FILE=/dev/null` e `AWS_EC2_METADATA_DISABLED=true`; manter `AWS_DEFAULT_REGION`
+    - Ajustar os testes e smoke tests existentes que afirmam o volume `~/.aws` ou `AWS_PROFILE` no `workshop`
+    - _Requirements: 1.5, 1.12, 9.3, 14.6_
+
+  - [x] 15D.5 Criar `app/session.py`, a rota `GET /api/session` e a guarda `SESSION_EXPIRED`
+    - Implementar `get_session_state(env, now)` e `require_active_session()` conforme o design (`expired` com variável ausente ou inválida; `expiring` de 1 a 600 s)
+    - Criar `SessionExpiredError` (`SESSION_EXPIRED`, HTTP 401) em `app/errors.py` e chamar `require_active_session()` no início de `POST /api/validate/...`, `POST /api/deploy/...`, `POST /api/teardown/...` e `GET /api/stack-status/...`, antes de criar qualquer cliente boto3
+    - Em `app/validators/base.py`, acrescentar à mensagem de erro de credenciais a orientação de renovar o login no host e executar `python start.py --refresh`, sem valores de credenciais
+    - _Requirements: 5.6, 12.1, 12.2, 12.3, 12.6_
+
+  - [x] 15D.6 Implementar o cronômetro de sessão no frontend
+    - Criar `app/static/js/session.js` e o espaço no cabeçalho de `index.html`: consulta `GET /api/session` na carga e a cada 60 s, contagem local a cada segundo, aviso visível em `expiring`
+    - Em `expired`, desabilitar Validar, Deploy e Teardown, explicar o motivo e exibir `python start.py --refresh` com botão de copiar; manter Markdown e navegação funcionando
+    - Sem scripts nem estilos inline e sem URLs externas
+    - _Requirements: 12.4, 12.5, 8.2_
+
+  - [x]* 15D.7 Escrever testes de unidade de `host_credentials.py`, `check_requirements.py` e `start.py`
+    - `export_credentials` com `run` injetado: JSON completo, sem `SessionToken`, sem `Expiration`, comando com falha e saída inválida; `repr` e mensagens sem valores de credenciais
+    - `start.py`: o `env` do `docker compose up` contém as quatro variáveis, nenhum arquivo é criado, `--refresh` executa exatamente o comando previsto e preserva o `gateway`, credencial de longa duração interrompe antes de qualquer `docker compose`
+    - _Requirements: 1.5, 1.14, 1.15_
+
+  - [x]* 15D.8 Escrever teste de propriedade para a sessão expirada
+    - **Property 21: Sessão expirada bloqueia as rotas que chamam a AWS**
+    - Em `tests/security/test_session_guard.py`: gerar instantes de expiração e relógios, verificar a classificação de `status` e que as quatro rotas AWS retornam `SESSION_EXPIRED` sem criar cliente boto3 nem alterar o `progress.json`
+    - **Validates: Requirements 12.2, 12.3, 12.6**
+
+  - [x]* 15D.9 Escrever teste de propriedade para a não exposição de credenciais
+    - **Property 20: Credenciais nunca aparecem em respostas nem em logs**
+    - Em `tests/security/test_no_credential_leak.py`: injetar valores gerados no ambiente, exercitar todas as rotas e erros forçados e verificar respostas, cabeçalhos e logs capturados; no host, verificar `start.py`, `check_requirements.py` e `host_credentials.py` (saída, erro e `repr`)
+    - **Validates: Requirements 1.5, 5.6, 9.3, 12.1**
+
+  - [x]* 15D.10 Escrever testes de unidade da rota de sessão e testes de DOM do cronômetro
+    - `GET /api/session` com relógio injetado nos limiares 601, 600, 1 e 0 s e com variável ausente ou inválida
+    - DOM: aviso em `expiring`, bloqueio de Validar, Deploy e Teardown em `expired`, comando `python start.py --refresh` exibido, sincronização a cada 60 s
+    - _Requirements: 12.1, 12.2, 12.4, 12.5_
+
+  - [x] 15D.11 Remover o teste SSO com `~/.aws:ro` e atualizar a seção de credenciais do README
+    - Remover `tests/integration/test_sso_readonly.py` e as variáveis `WORKSHOP_SSO_TEST_PROFILE` de qualquer documentação
+    - Substituir a seção "Credenciais SSO" do README por "Credenciais temporárias": fluxo `start.py`, `--refresh`, renovação manual do login no host e o registro de que o container não acessa `portal.sso.*`
+    - _Requirements: 1.5, 1.16, 9.3_
+
+  - [x]* 15D.12 Escrever teste de integração: o container não tem `~/.aws` e só recebe as variáveis esperadas
+    - Em `tests/security/test_container_env.py` (ignorado sem Docker): com credenciais fictícias, subir o `workshop`, verificar que `/root/.aws` e qualquer `.aws` não existem, que o ambiente contém exatamente as variáveis previstas (sem `AWS_PROFILE`) e que `AWS_SHARED_CREDENTIALS_FILE` e `AWS_CONFIG_FILE` apontam para `/dev/null`
+    - _Requirements: 9.3, 14.6_
+
+- [x] 15E. Proteção da API local (CSRF e DNS rebinding)
+  - [x] 15E.1 Criar `app/http_security.py` com as validações de `Host`, `Origin`, `Content-Type` e cabeçalho próprio
+    - Registrar `before_request` em `create_app`: `Host` contra `127.0.0.1:<porta>` e `localhost:<porta>` com `WORKSHOP_PORT` (exceto `GET /health`); em `POST`, `PUT` e `DELETE`, `Origin` presente e igual, `Content-Type: application/json` e `X-Workshop-Request: 1`
+    - Criar os erros `HostNotAllowedError` (421), `OriginNotAllowedError` (403), `UnsupportedMediaTypeError` (415) e `MissingWorkshopHeaderError` (403) em `app/errors.py`
+    - Ajustar os clientes de teste e fixtures existentes (`base_url`, `Origin` e cabeçalhos padrão) para as requisições válidas
+    - _Requirements: 13.1, 13.2, 13.5_
+
+  - [x] 15E.2 Adicionar os cabeçalhos de segurança a todas as respostas
+    - `after_request` com CSP `default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin` e `Cross-Origin-Resource-Policy: same-origin`, inclusive em respostas de erro
+    - Garantir que o frontend não usa script nem estilo inline, para que a CSP não o quebre
+    - _Requirements: 13.4, 8.2_
+
+  - [x] 15E.3 Centralizar o `fetch` do frontend em `app/static/js/api.js`
+    - Enviar `Content-Type: application/json` e `X-Workshop-Request: 1` em `POST`, `PUT` e `DELETE`; migrar `progress.js`, `validator.js`, `lab.js`, `cloudformation.js` e `session.js` para o helper
+    - _Requirements: 13.3_
+
+  - [x] 15E.4 Ajustar o Gateway e o compose para que o `Host` do browser e a porta cheguem ao Flask
+    - Em `gateway/squid.conf`, usar `http_port 8080 accel vhost defaultsite=workshop`, trocar a ACL `reverse_site` por `reverse_listener` (`localport 8080`), manter `http_access deny all` ao final
+    - Em `docker-compose.yml`, passar `WORKSHOP_PORT=${WORKSHOP_PORT:-5000}` ao `workshop`
+    - Validar a sintaxe com `squid -k parse` usando a imagem fixada
+    - _Requirements: 13.1, 13.5, 9.5_
+
+  - [x]* 15E.5 Escrever teste de propriedade para a recusa de requisições inválidas
+    - **Property 22: Requisições sem Host, Origin, Content-Type ou cabeçalho próprio válidos são recusadas**
+    - Em `tests/security/test_http_protection.py`: gerar combinações de `Host`, `Origin`, `Content-Type` e cabeçalho próprio e verificar que só a combinação válida é aceita, que as recusadas não alteram o `progress.json` e que os cinco cabeçalhos de segurança estão presentes
+    - **Validates: Requirements 13.1, 13.2, 13.4**
+
+  - [x]* 15E.6 Escrever testes de unidade e de DOM da proteção da API
+    - `GET /health` responde com qualquer `Host`; `GET` com `Host` fora da allowlist retorna 421; `POST` sem `Origin`, com `Origin` de outro domínio, com `Content-Type` diferente de JSON ou sem `X-Workshop-Request` é recusado; cabeçalhos presentes em respostas 200, 4xx e 5xx
+    - DOM: `api.js` envia os dois cabeçalhos em `POST` e `PUT`, e nenhum módulo chama `fetch` diretamente para rotas que alteram estado
+    - _Requirements: 13.1, 13.2, 13.3, 13.4_
+
+- [x] 15F. Endurecimento do container e da cadeia de suprimentos
+  - [x] 15F.1 Endurecer o Dockerfile
+    - Fixar `python:3.11-slim` por `@sha256:` (obter o digest com `docker buildx imagetools inspect`), criar o usuário `workshop` (uid 10001) e `USER 10001:10001`, `/app/progress` pertencente a ele, `PYTHONDONTWRITEBYTECODE=1`, `pip install --require-hashes` e `--worker-tmp-dir /tmp` no gunicorn
+    - Manter o `HEALTHCHECK` sem curl e o `EXPOSE 5000`
+    - _Requirements: 14.1, 14.2, 14.4, 14.5_
+
+  - [x] 15F.2 Gerar `requirements.txt` com hashes de forma reproduzível
+    - Criar `requirements.in` com `flask`, `gunicorn` e `boto3`; criar `scripts/compile-requirements.sh`, que executa `pip-compile --generate-hashes` dentro da imagem `python:3.11-slim` fixada por digest; gerar `requirements.txt` com hashes de todas as dependências, inclusive transitivas
+    - Documentar a regeneração no `CONTRIBUTING.md` (tarefa 15G.5)
+    - _Requirements: 14.5_
+
+  - [x] 15F.3 Endurecer o `docker-compose.yml`
+    - Em `workshop`: `user` (`${WORKSHOP_UID:-10001}:${WORKSHOP_GID:-10001}`), `read_only: true`, `tmpfs: [/tmp]`, `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`, `mem_limit` e `pids_limit`
+    - Em `gateway`: imagem `ubuntu/squid` fixada por tag e `@sha256:`, `read_only: true` com `tmpfs` para `/tmp`, `/var/run`, `/var/log/squid` e `/var/spool/squid`, `cap_drop: [ALL]` com `cap_add` somente do mínimo que o Squid exigir (`CHOWN`, `SETUID`, `SETGID`), `no-new-privileges:true`, `mem_limit` e `pids_limit`
+    - Confirmar com `docker compose up` que o Squid inicia com a menor lista de capabilities possível e registrar a lista final em comentário no compose
+    - _Requirements: 14.1, 14.2, 14.3, 14.4_
+
+  - [x] 15F.4 Fazer o `start.py` preparar o volume de progresso para o usuário do container
+    - Criar `progress/` se não existir; em Linux, exportar `WORKSHOP_UID` e `WORKSHOP_GID` do usuário atual no `env` do `docker compose`, para que o volume seja gravável; nos demais sistemas manter 10001
+    - Atualizar os testes de `start.py`
+    - _Requirements: 14.2_
+
+  - [x] 15F.5 Mover os testes de segurança existentes para `tests/security/`
+    - Mover `tests/unit/test_compose_ports.py` (Property 14), `tests/unit/test_allowlist.py` e `tests/unit/allowlist_matcher.py` (Property 13) e `tests/integration/test_egress.py` para `tests/security/`, atualizando os imports
+    - _Requirements: 15.8, 9.1, 9.5, 9.6_
+
+  - [x]* 15F.6 Escrever testes de smoke de segurança do Dockerfile, do compose e das dependências
+    - Em `tests/security/`: o compose não monta `~/.aws`, `~/.ssh`, `~/.config`, `~/.docker` nem o socket do Docker; `workshop` não publica portas e só recebe as variáveis esperadas, sem `AWS_PROFILE`; `USER` não root; `read_only`, `cap_drop: [ALL]` e `no-new-privileges` nos dois serviços (com `cap_add` do gateway restrito ao mínimo); `mem_limit` e `pids_limit`; imagens fixadas por `@sha256:`; `requirements.txt` com `--hash=sha256:` em todas as entradas e `--require-hashes` no Dockerfile
+    - _Requirements: 9.3, 14.1, 14.2, 14.3, 14.4, 14.5, 14.6_
+
+- [x] 15G. CI, cadeia de suprimentos e documentação pública
+  - [x] 15G.1 Criar `scripts/check_dco.py` (stdlib)
+    - Verificar que todos os commits de um intervalo (`base..head`) contêm `Signed-off-by:` com nome e e-mail; sair com código 1 e listar os commits sem assinatura; sem dependência de app de terceiros
+    - _Requirements: 1.13, 15.3_
+
+  - [x] 15G.2 Criar `.github/workflows/ci.yml`
+    - Gatilhos `pull_request` e `push` em `main`, nunca `pull_request_target`; `permissions: contents: read` no topo; sem secrets; todas as actions de terceiros fixadas por SHA completo, com o nome e a versão em comentário
+    - Jobs: testes Python e JS (`pytest` e a suíte de `tests/js`), DCO (`scripts/check_dco.py`), varredura de segredos, `pip-audit`, `hadolint` no `Dockerfile`, `cfn-lint` e `cfn-guard` nos templates de `labs/` e do fixture (regras versionadas em `.github/cfn-guard/`); `actions/checkout` com `persist-credentials: false`
+    - _Requirements: 15.1, 15.2, 15.3, 1.13_
+
+  - [x] 15G.3 Criar `.github/workflows/codeql.yml` e `.github/dependabot.yml`
+    - CodeQL para `python` e `javascript` com `permissions` mínimas no topo e `security-events: write` somente no job, actions fixadas por SHA
+    - Dependabot semanal para `pip`, `docker` e `github-actions`
+    - _Requirements: 15.2, 15.4, 15.5_
+
+  - [x] 15G.4 Criar `.github/CODEOWNERS` e `.github/pull_request_template.md`
+    - `@CaeirOps` em `docker-compose.yml`, `Dockerfile`, `start.py`, `check_requirements.py`, `host_credentials.py`, `gateway/`, `app/server.py`, `app/session.py`, `app/http_security.py`, `requirements*.txt`, `.github/`, `tests/security/`, `LICENSE*` e `NOTICE`
+    - Template de PR com checklist de segurança: sem credenciais nem dados reais, DCO, testes passando, mudanças em arquivos sensíveis descritas
+    - _Requirements: 15.6, 15.7_
+
+  - [x] 15G.5 Criar `SECURITY.md` e `CONTRIBUTING.md`
+    - `SECURITY.md`: versões suportadas, reporte privado via GitHub Private Vulnerability Reporting, prazo de resposta indicativo e o que está fora de escopo
+    - `CONTRIBUTING.md`: DCO com `git commit -s`, como rodar os testes (Python e JS), CI obrigatório, revisão do mantenedor para arquivos sensíveis, diretrizes (dados fictícios, sem credenciais, termos técnicos em inglês) e como regenerar `requirements.txt`
+    - _Requirements: 16.1, 16.2, 14.5_
+
+  - [x] 15G.6 Atualizar o README com as recomendações de segurança para quem usa o workshop
+    - Conta AWS dedicada (sandbox) separada de contas com dados reais, alerta no AWS Budgets, permission set com o mínimo necessário em vez de `AdministratorAccess`, sessão curta e renovação manual (`python start.py --refresh`)
+    - Explicar o risco residual de que a Allowlist por domínio não impede o envio de dados a um bucket S3 de terceiros e que a mitigação é conta isolada e privilégio mínimo; documentar que as variáveis de ambiente do container ficam visíveis a quem acessa o Docker do usuário
+    - Não incluir instruções de configuração administrativa do repositório no GitHub
+    - _Requirements: 9.7, 9.8, 9.9, 16.3_
+
+  - [x]* 15G.7 Escrever testes de segurança dos workflows, do CODEOWNERS e da documentação
+    - Em `tests/security/test_workflows.py`: sem `pull_request_target`, `permissions` mínimas no topo, `security-events: write` somente no job do CodeQL, toda `uses:` de terceiros com SHA de 40 caracteres, nenhuma referência a `secrets.`; `CODEOWNERS` cobre os caminhos sensíveis; `dependabot.yml` cobre os três ecossistemas; `SECURITY.md`, `CONTRIBUTING.md` e o template de PR existem; o README não contém instruções administrativas do GitHub
+    - _Requirements: 15.1, 15.2, 15.4, 15.5, 15.6, 15.7, 16.1, 16.2, 16.3_
+
+  - [x]* 15G.8 Escrever testes de unidade de `scripts/check_dco.py`
+    - Repositório git temporário: commits assinados passam; commit sem `Signed-off-by` falha e é listado
+    - _Requirements: 1.13, 15.3_
+
+- [ ] 15H. Validação final com Docker e configuração do GitHub
+  - [x] 15H.1 Executar a suíte completa e validar compose, build e Squid
+    - Executar `pytest` (incluindo `tests/security/`) e a suíte JS; executar `docker compose config`, `docker compose build`, `squid -k parse` na imagem fixada e `hadolint` no `Dockerfile` quando disponível
+    - Corrigir qualquer falha antes de seguir
+    - _Requirements: 14.1, 14.3, 14.4, 14.5, 15.3_
+
+  - [x] 15H.2 Executar `check_requirements.py` e `start.py` reais com o profile `Caeiro-Admin`
+    - Com `AWS_PROFILE=Caeiro-Admin`: `python check_requirements.py`, `python start.py` (health pelo gateway, `GET /api/session` com `status` e sem credenciais, `Host: 127.0.0.1:<porta>` aceito e `Host: evil.example` recusado com 421, `POST` sem `Origin` recusado, container não root, `read_only`, sem `~/.aws` e com as variáveis esperadas), `python start.py --refresh` (volume de progresso e `gateway` preservados) e `docker compose down` ao final
+    - Executar os testes de integração com Docker de `tests/security/` (egress e ambiente do container) e uma chamada `sts:GetCallerIdentity` dentro do container, sem criar recursos AWS e sem imprimir credenciais
+    - _Requirements: 1.2, 1.4, 1.5, 1.14, 1.15, 9.3, 12.1, 13.1, 13.2, 14.1, 14.6_
+
+  - [-] 15H.3 Fazer commit e push das mudanças
+    - Adicionar os arquivos por nome (nunca `git add -A`), conferir com `git status` e `git diff --cached` que não há credenciais, `progress/*` nem `.env`, criar os commits com `git commit -s` (`Signed-off-by`) e fazer push em `main`
+    - _Requirements: 1.13, 15.1_
+
+  - [~] 15H.4 Confirmar a execução do CI em `main` e obter os nomes dos status checks
+    - Com `gh run list` e `gh run watch`, aguardar `ci.yml` e `codeql.yml` terminarem com sucesso em `main` e registrar os nomes exatos dos checks (`gh api repos/{owner}/{repo}/commits/<sha>/check-runs`) para uso no ruleset
+    - Se algum job falhar, corrigir e repetir a partir da 15H.3
+    - _Requirements: 15.3, 15.9_
+
+  - [~] 15H.5 Configurar o repositório no GitHub com o `gh` CLI (autenticado como administrador)
+    - Ruleset em `main`: pull request obrigatório, status checks obrigatórios do CI (nomes da 15H.4), revisão de code owners obrigatória, resolução de conversas, bloqueio de force push e de exclusão, histórico linear; bypass somente do papel de administrador e somente via pull request
+    - Habilitar secret scanning e push protection, Dependabot alerts e security updates, e Private Vulnerability Reporting
+    - Actions: `default_workflow_permissions` igual a `read`, sem permissão de aprovar PR pelo Actions, aprovação obrigatória para workflows de fork de todos os colaboradores externos, e actions permitidas restritas às do GitHub e às fixadas por SHA usadas no CI
+    - Conferir cada configuração relendo-a pela API; registrar o resultado somente no relatório da execução, sem criar arquivo no repositório
+    - _Requirements: 15.9_
+
 ## Parte 2: Labs (um por task, com revisão do usuário entre eles)
 
 - [ ] 16. Lab 01 - Fundamentos de S3 e Data Lake (D2, iniciante)
   - [~] 16.1 Checkpoint de proposta do Lab 01
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (S3) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - Depende das tarefas 15A, 15B e 15C (retomada, campo `services` e verificação de ambiente) concluídas
+    - Depende das tarefas 15A, 15B e 15C (retomada, campo `services` e verificação de ambiente) e das tarefas 15D a 15H (credenciais, sessão, proteção da API, endurecimento, CI e GitHub) concluídas
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
   - [~] 16.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
@@ -717,10 +916,18 @@ O plano está dividido em três partes: **Parte 1 (tasks 1 a 15)** constrói a p
 - A task 15A (retomada com steps não-task, Property 19), a 15B (campo obrigatório `services` no `metadata.json`) e a 15C (verificação de ambiente com Docker e AWS real) entram entre a Parte 1 e a Parte 2. Os ids 15A, 15B e 15C evitam renumerar as tasks 16 a 27. A task 16.1 depende de 15A, 15B e 15C
 - A task 15C é somente leitura: não cria recursos AWS nem faz deploy de stacks. Ela executa `docker`, `check_requirements.py`, `start.py` e uma chamada `sts:GetCallerIdentity`, com `AWS_PROFILE=Caeiro-Admin`; as tasks 15C.3 e 15C.4 exigem Docker e um token SSO válido
 - Toda `metadata.json` de lab real declara `services` (lista não vazia); a tela de conclusão o exibe (5.7)
+- As tasks 15D a 15H aplicam o princípio "security first" (recomendações de segurança do GitHub e da AWS). Os ids 15D a 15H evitam renumerar as tasks 16 a 27, e a task 16.1 depende de 15D a 15H
+- 15D substitui o modelo de volume `~/.aws` por credenciais temporárias (Properties 20 e 21); as tasks 9.5 e 15C.3 ficam como histórico concluído, e o teste `test_sso_readonly.py` é removido na 15D.11 e substituído por `tests/security/test_container_env.py` (15D.12)
+- 15E adiciona a proteção da API local (Property 22); o Gateway passa a repassar o `Host` do browser (`vhost`) e a porta chega ao Flask por `WORKSHOP_PORT`, a ser confirmada em ambiente real na 15H.2
+- Os testes de segurança ficam em `tests/security/` (CODEOWNERS); a 15F.5 move para lá os testes existentes das Properties 13 e 14 e de egress
+- A 15F.3 ajusta `cap_add` do gateway ao mínimo que o Squid exigir; a lista final é confirmada com `docker compose up`
+- A 15H.3 e a 15H.5 alteram o estado remoto (push em `main` e configurações do GitHub). A 15H.5 só roda depois de a 15H.4 confirmar que o CI executou em `main`, e o resultado vai somente para o relatório da execução, não para o repositório
+- As tasks 15D.12 e 15H exigem Docker e, a 15H.2, um token SSO válido para o profile `Caeiro-Admin`; a task 15H.2 não cria recursos AWS
 
 ## Task Dependency Graph
 
-```json{
+```json
+{
   "waves": [
     { "id": 0, "tasks": ["1.1", "1.2", "1.3", "2.1", "3.1", "4.1"] },
     { "id": 1, "tasks": ["1.4", "2.2", "3.2", "4.2", "5.1"] },
@@ -741,57 +948,67 @@ O plano está dividido em três partes: **Parte 1 (tasks 1 a 15)** constrói a p
     { "id": 16, "tasks": ["15C.2"] },
     { "id": 17, "tasks": ["15C.3"] },
     { "id": 18, "tasks": ["15C.4"] },
-    { "id": 19, "tasks": ["16.1"] },
-    { "id": 20, "tasks": ["16.2"] },
-    { "id": 21, "tasks": ["16.3", "16.4"] },
-    { "id": 22, "tasks": ["16.5"] },
-    { "id": 23, "tasks": ["16.6"] },
-    { "id": 24, "tasks": ["17.1"] },
-    { "id": 25, "tasks": ["17.2"] },
-    { "id": 26, "tasks": ["17.3", "17.4"] },
-    { "id": 27, "tasks": ["17.5"] },
-    { "id": 28, "tasks": ["17.6"] },
-    { "id": 29, "tasks": ["18.1"] },
-    { "id": 30, "tasks": ["18.2"] },
-    { "id": 31, "tasks": ["18.3", "18.4"] },
-    { "id": 32, "tasks": ["18.5"] },
-    { "id": 33, "tasks": ["18.6"] },
-    { "id": 34, "tasks": ["19.1"] },
-    { "id": 35, "tasks": ["19.2"] },
-    { "id": 36, "tasks": ["19.3", "19.4"] },
-    { "id": 37, "tasks": ["19.5"] },
-    { "id": 38, "tasks": ["19.6"] },
-    { "id": 39, "tasks": ["20.1"] },
-    { "id": 40, "tasks": ["20.2"] },
-    { "id": 41, "tasks": ["20.3", "20.4"] },
-    { "id": 42, "tasks": ["20.5"] },
-    { "id": 43, "tasks": ["20.6"] },
-    { "id": 44, "tasks": ["21.1"] },
-    { "id": 45, "tasks": ["21.2"] },
-    { "id": 46, "tasks": ["21.3", "21.4"] },
-    { "id": 47, "tasks": ["21.5"] },
-    { "id": 48, "tasks": ["21.6"] },
-    { "id": 49, "tasks": ["22.1"] },
-    { "id": 50, "tasks": ["22.2"] },
-    { "id": 51, "tasks": ["22.3", "22.4"] },
-    { "id": 52, "tasks": ["22.5"] },
-    { "id": 53, "tasks": ["22.6"] },
-    { "id": 54, "tasks": ["23.1"] },
-    { "id": 55, "tasks": ["23.2"] },
-    { "id": 56, "tasks": ["23.3", "23.4"] },
-    { "id": 57, "tasks": ["23.5"] },
-    { "id": 58, "tasks": ["23.6"] },
-    { "id": 59, "tasks": ["24.1"] },
-    { "id": 60, "tasks": ["24.2"] },
-    { "id": 61, "tasks": ["24.3", "24.4"] },
-    { "id": 62, "tasks": ["24.5"] },
-    { "id": 63, "tasks": ["24.6"] },
-    { "id": 64, "tasks": ["25.1"] },
-    { "id": 65, "tasks": ["25.2"] },
-    { "id": 66, "tasks": ["25.3", "25.4"] },
-    { "id": 67, "tasks": ["25.5"] },
-    { "id": 68, "tasks": ["25.6"] },
-    { "id": 69, "tasks": ["26.1", "26.2", "26.3", "26.4", "26.5"] }
+    { "id": 19, "tasks": ["15D.1", "15D.5", "15F.2", "15G.1", "15G.4", "15G.5"] },
+    { "id": 20, "tasks": ["15D.2", "15D.3", "15D.4", "15D.6", "15E.1", "15F.1", "15G.2"] },
+    { "id": 21, "tasks": ["15D.7", "15D.8", "15D.9", "15D.10", "15D.11", "15D.12", "15E.2", "15E.3", "15E.4", "15F.5", "15G.3"] },
+    { "id": 22, "tasks": ["15E.5", "15E.6", "15F.3", "15F.4", "15G.6", "15G.7", "15G.8"] },
+    { "id": 23, "tasks": ["15F.6"] },
+    { "id": 24, "tasks": ["15H.1"] },
+    { "id": 25, "tasks": ["15H.2"] },
+    { "id": 26, "tasks": ["15H.3"] },
+    { "id": 27, "tasks": ["15H.4"] },
+    { "id": 28, "tasks": ["15H.5"] },
+    { "id": 29, "tasks": ["16.1"] },
+    { "id": 30, "tasks": ["16.2"] },
+    { "id": 31, "tasks": ["16.3", "16.4"] },
+    { "id": 32, "tasks": ["16.5"] },
+    { "id": 33, "tasks": ["16.6"] },
+    { "id": 34, "tasks": ["17.1"] },
+    { "id": 35, "tasks": ["17.2"] },
+    { "id": 36, "tasks": ["17.3", "17.4"] },
+    { "id": 37, "tasks": ["17.5"] },
+    { "id": 38, "tasks": ["17.6"] },
+    { "id": 39, "tasks": ["18.1"] },
+    { "id": 40, "tasks": ["18.2"] },
+    { "id": 41, "tasks": ["18.3", "18.4"] },
+    { "id": 42, "tasks": ["18.5"] },
+    { "id": 43, "tasks": ["18.6"] },
+    { "id": 44, "tasks": ["19.1"] },
+    { "id": 45, "tasks": ["19.2"] },
+    { "id": 46, "tasks": ["19.3", "19.4"] },
+    { "id": 47, "tasks": ["19.5"] },
+    { "id": 48, "tasks": ["19.6"] },
+    { "id": 49, "tasks": ["20.1"] },
+    { "id": 50, "tasks": ["20.2"] },
+    { "id": 51, "tasks": ["20.3", "20.4"] },
+    { "id": 52, "tasks": ["20.5"] },
+    { "id": 53, "tasks": ["20.6"] },
+    { "id": 54, "tasks": ["21.1"] },
+    { "id": 55, "tasks": ["21.2"] },
+    { "id": 56, "tasks": ["21.3", "21.4"] },
+    { "id": 57, "tasks": ["21.5"] },
+    { "id": 58, "tasks": ["21.6"] },
+    { "id": 59, "tasks": ["22.1"] },
+    { "id": 60, "tasks": ["22.2"] },
+    { "id": 61, "tasks": ["22.3", "22.4"] },
+    { "id": 62, "tasks": ["22.5"] },
+    { "id": 63, "tasks": ["22.6"] },
+    { "id": 64, "tasks": ["23.1"] },
+    { "id": 65, "tasks": ["23.2"] },
+    { "id": 66, "tasks": ["23.3", "23.4"] },
+    { "id": 67, "tasks": ["23.5"] },
+    { "id": 68, "tasks": ["23.6"] },
+    { "id": 69, "tasks": ["24.1"] },
+    { "id": 70, "tasks": ["24.2"] },
+    { "id": 71, "tasks": ["24.3", "24.4"] },
+    { "id": 72, "tasks": ["24.5"] },
+    { "id": 73, "tasks": ["24.6"] },
+    { "id": 74, "tasks": ["25.1"] },
+    { "id": 75, "tasks": ["25.2"] },
+    { "id": 76, "tasks": ["25.3", "25.4"] },
+    { "id": 77, "tasks": ["25.5"] },
+    { "id": 78, "tasks": ["25.6"] },
+    { "id": 79, "tasks": ["26.1", "26.2", "26.3", "26.4", "26.5"] }
   ]
 }
 ```

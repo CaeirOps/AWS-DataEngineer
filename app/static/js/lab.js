@@ -1,6 +1,7 @@
 // Tela de lab: wizard de steps, abas Console | CLI, validação e deploy/teardown.
 
-import { api, el, errorBanner, errorMessage, replaceContent, formatCost, domainBadge, difficultyBadge } from "./dom.js";
+import { api } from "./api.js";
+import { el, errorBanner, errorMessage, replaceContent, formatCost, domainBadge, difficultyBadge } from "./dom.js";
 import { renderMarkdown } from "./markdown.js";
 import { PATHS, getProgress, preferredPathOf, setPreferredPath, visitStep } from "./progress.js";
 import { createValidatorPanel } from "./validator.js";

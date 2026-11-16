@@ -327,3 +327,23 @@
   .step-nav .btn { flex: 1; }
   .modal__actions .btn { flex: 1; }
 }
+
+/* Cronômetro da sessão AWS (Requirement 12) */
+.session-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  color: #C5CDD8;
+}
+.session-timer--expiring { color: #FFD479; font-weight: 700; }
+.session-timer--expired { color: #FF9C9C; font-weight: 700; }
+.session-banner { padding: var(--space-2, 8px) var(--space-4, 16px); }
+.session-banner[hidden] { display: none; }
+.session-command {
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-family: monospace;
+}

@@ -2,7 +2,7 @@
 
 Como executar (requer Docker e acesso a internet):
     docker compose up -d
-    WORKSHOP_EGRESS_TEST=1 .venv/bin/python -m pytest tests/integration/test_egress.py -q -rs
+    WORKSHOP_EGRESS_TEST=1 .venv/bin/python -m pytest tests/security/test_egress.py -q -rs
     docker compose down
 
 Ignorado se `docker` nao existir ou se WORKSHOP_EGRESS_TEST nao estiver definida.
@@ -44,7 +44,7 @@ def _connect(host: str) -> str:
 
 def _log_gateway() -> str:
     r = subprocess.run(
-        ["docker", "compose", "exec", "-T", "gateway", "cat", "/var/log/squid/access.log"],
+        ["docker", "compose", "exec", "-T", "-u", "proxy", "gateway", "cat", "/var/log/squid/access.log"],
         capture_output=True, text=True, timeout=30,
     )
     return r.stdout

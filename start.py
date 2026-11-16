@@ -5,6 +5,20 @@ Usa somente a biblioteca padrao do Python. Executa `docker compose up -d --build
 aguarda o /health responder e abre o browser. Em caso de timeout, imprime um
 diagnostico e mantem os containers no ar.
 
+As credenciais temporarias do profile sao exportadas no host e entregues ao
+`docker compose` somente pelo ambiente do subprocesso (nunca por arquivo nem
+pela linha de comando). Nada de credencial e impresso: so a hora de expiracao.
+Com `--refresh`, exporta de novo e recria apenas o servico `workshop`.
+
+Volume de progresso: `progress/` e criado no host se nao existir, sem `chmod 777`
+e sem `sudo`. O container roda como UID/GID 10001 por padrao. No Linux o bind
+mount respeita as permissoes do host, entao exportamos `WORKSHOP_UID` e
+`WORKSHOP_GID` do usuario atual no ambiente do `docker compose` (o compose deve
+usar `user: "${WORKSHOP_UID:-10001}:${WORKSHOP_GID:-10001}"`); assim o diretorio,
+que pertence a esse usuario, fica gravavel. Se o usuario for root (UID 0), mantem
+10001 para nao rodar o container como root. No macOS (Docker Desktop) e nos demais
+sistemas o bind mount e gravavel independentemente do UID, entao mantem 10001.
+
 Codigos de saida: 0 (workshop no ar) ou 1 (falha ao subir ou timeout de health).
 """
 
@@ -15,10 +29,17 @@ import sys
 import time
 import urllib.request
 import webbrowser
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
+
+import host_credentials
 
 DEFAULT_PROFILE = "default"
 DEFAULT_PORT = 5000
+# UID/GID fixos do usuario nao root definido no Dockerfile.
+CONTAINER_UID = 10001
+CONTAINER_GID = 10001
+DEFAULT_PROGRESS_DIR = Path(__file__).resolve().parent / "progress"
 POLL_INTERVAL_S = 2
 TIMEOUT_S = 60
 # O build pode baixar a imagem base e dependencias; o limite e generoso.
@@ -26,13 +47,19 @@ UP_TIMEOUT_S = 1800
 DIAG_TIMEOUT_S = 60
 
 # run(cmd) -> (returncode, stdout, stderr). Pode lancar OSError ou
-# subprocess.TimeoutExpired.
+# subprocess.TimeoutExpired. Quando `env` e informado (somente no `compose up`),
+# ele e o ambiente completo do subprocesso.
 RunFn = Callable[[List[str]], Tuple[int, str, str]]
 
 
-def default_run(cmd: List[str], timeout: int = UP_TIMEOUT_S) -> Tuple[int, str, str]:
+def default_run(
+    cmd: List[str],
+    timeout: int = UP_TIMEOUT_S,
+    env: Optional[Dict[str, str]] = None,
+) -> Tuple[int, str, str]:
     proc = subprocess.run(
         cmd,
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
@@ -53,6 +80,27 @@ def read_port(env: Dict[str, str]) -> Tuple[Optional[int], str]:
 
 def read_profile(env: Dict[str, str]) -> str:
     return env.get("AWS_PROFILE", "").strip() or DEFAULT_PROFILE
+
+
+def container_user(
+    platform: str = sys.platform,
+    getuid: Optional[Callable[[], int]] = None,
+    getgid: Optional[Callable[[], int]] = None,
+) -> Tuple[int, int]:
+    """UID/GID com que o container deve rodar para gravar em `progress/`."""
+    if platform.startswith("linux"):
+        getuid = getuid or getattr(os, "getuid", None)
+        getgid = getgid or getattr(os, "getgid", None)
+        if getuid and getgid:
+            uid, gid = getuid(), getgid()
+            if uid != 0:
+                return uid, gid
+    return CONTAINER_UID, CONTAINER_GID
+
+
+def ensure_progress_dir(path: Path) -> None:
+    """Cria `progress/` se nao existir (permissoes padrao do usuario)."""
+    path.mkdir(parents=True, exist_ok=True)
 
 
 def _first_line(text: str, limit: int = 300) -> str:
@@ -171,8 +219,9 @@ def build_diagnostics(
     lines.append("- Docker Desktop sem memoria suficiente (aumente em Settings > Resources).")
     lines.append("- Erro de import na aplicacao: procure um traceback nos logs do servico workshop acima.")
     lines.append(
-        "- Credenciais ausentes ou profile inexistente em ~/.aws: confira AWS_PROFILE "
-        "e rode `python check_requirements.py`."
+        "- Sessao expirada ou variaveis de credenciais ausentes no container: renove o "
+        "login no host (`aws sso login --profile <profile>` ou `aws login`) e execute "
+        "`python start.py --refresh`."
     )
     lines.append("")
     lines.append("Os containers continuam no ar para inspecao.")
@@ -180,11 +229,27 @@ def build_diagnostics(
     return "\n".join(lines)
 
 
-def compose_up(run: RunFn, out) -> bool:
-    """Executa `docker compose up -d --build`. Retorna True em sucesso."""
-    out.write("Subindo os containers (docker compose up -d --build)...\n")
+def mask_credentials(text: str, env: Dict[str, str]) -> str:
+    """Troca valores de credenciais do `env` por `***`, mantendo o resto do texto.
+
+    A saida do docker pode repetir variaveis do ambiente do subprocesso.
+    """
+    for name in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"):
+        value = env.get(name, "")
+        if len(value) >= 8:
+            text = text.replace(value, "***")
+    return text
+
+
+UP_CMD = ["docker", "compose", "up", "-d", "--build"]
+REFRESH_CMD = ["docker", "compose", "up", "-d", "--force-recreate", "--no-deps", "workshop"]
+
+
+def compose_up(run: RunFn, out, env: Dict[str, str], cmd: List[str] = UP_CMD) -> bool:
+    """Executa o comando `docker compose up` com `env`. Retorna True em sucesso."""
+    out.write("Subindo os containers (%s)...\n" % " ".join(cmd))
     try:
-        code, _stdout, stderr = run(["docker", "compose", "up", "-d", "--build"])
+        code, _stdout, stderr = run(list(cmd), env=env)
     except FileNotFoundError:
         out.write(
             "Erro: o comando 'docker' nao foi encontrado. Instale o Docker: "
@@ -199,10 +264,10 @@ def compose_up(run: RunFn, out) -> bool:
         return False
     if code != 0:
         detail = (stderr or "").strip()
-        out.write("Erro: 'docker compose up -d --build' falhou (codigo %d).\n" % code)
+        out.write("Erro: '%s' falhou (codigo %d).\n" % (" ".join(cmd), code))
         if detail:
             tail = "\n".join(detail.splitlines()[-15:])
-            out.write(tail + "\n")
+            out.write(mask_credentials(tail, env) + "\n")
         out.write(
             "Verifique se o Docker esta instalado e com o daemon ativo "
             "(Docker Desktop aberto) e rode `python check_requirements.py`.\n"
@@ -220,9 +285,21 @@ def main(
     browser_open: Callable[[str], object] = webbrowser.open,
     port_checker: Callable[[int], Optional[str]] = default_port_checker,
     out=None,
+    argv: Optional[List[str]] = None,
+    export: Callable[[str], "host_credentials.TempCredentials"] = host_credentials.export_credentials,
+    progress_dir: Path = DEFAULT_PROGRESS_DIR,
+    platform: str = sys.platform,
+    getuid: Optional[Callable[[], int]] = None,
+    getgid: Optional[Callable[[], int]] = None,
 ) -> int:
     out = out or sys.stdout
     env = os.environ if env is None else env
+    args = sys.argv[1:] if argv is None else argv
+    unknown = [a for a in args if a != "--refresh"]
+    if unknown:
+        out.write("Erro: argumento desconhecido '%s'. Uso: python start.py [--refresh]\n" % unknown[0])
+        return 1
+    refresh = "--refresh" in args
 
     port, invalid = read_port(env)
     if port is None:
@@ -234,13 +311,34 @@ def main(
     profile = read_profile(env)
     out.write("Profile AWS: %s | Porta: %d\n" % (profile, port))
 
-    # O compose le WORKSHOP_PORT e AWS_PROFILE do ambiente do processo filho.
-    # Garante que os valores resolvidos (com padroes) sejam os usados.
-    if env is os.environ:
-        os.environ["WORKSHOP_PORT"] = str(port)
-        os.environ["AWS_PROFILE"] = profile
+    # Exporta antes de qualquer `docker compose`: falha ou credencial de longa
+    # duracao interrompe aqui. Nenhum valor de credencial e impresso.
+    try:
+        creds = export(profile)
+    except (host_credentials.LongLivedCredentialsError, host_credentials.CredentialsExportError) as exc:
+        out.write("Erro: %s\n" % exc)
+        return 1
+    out.write(
+        "Sessao AWS valida ate %s (UTC).\n"
+        % creds.expiration.strftime("%Y-%m-%d %H:%M:%S")
+    )
 
-    if not compose_up(run, out):
+    try:
+        ensure_progress_dir(Path(progress_dir))
+    except OSError as exc:
+        out.write("Erro: nao foi possivel criar o diretorio '%s': %s\n" % (progress_dir, exc))
+        return 1
+    uid, gid = container_user(platform, getuid, getgid)
+
+    # Credenciais so no ambiente do subprocesso: sem .env, sem disco, sem argv.
+    child_env = dict(os.environ)
+    child_env.update(env)
+    child_env["WORKSHOP_PORT"] = str(port)
+    child_env["WORKSHOP_UID"] = str(uid)
+    child_env["WORKSHOP_GID"] = str(gid)
+    child_env.update(host_credentials.to_environment(creds))
+
+    if not compose_up(run, out, child_env, REFRESH_CMD if refresh else UP_CMD):
         return 1
 
     out.write("Aguardando o workshop ficar saudavel em %s ...\n" % health_url(port))
@@ -253,7 +351,7 @@ def main(
             out.write("Nao foi possivel abrir o browser automaticamente. Abra a URL acima.\n")
         return 0
 
-    out.write(build_diagnostics(port, run, port_checker) + "\n")
+    out.write(mask_credentials(build_diagnostics(port, run, port_checker), child_env) + "\n")
     return 1
 
 

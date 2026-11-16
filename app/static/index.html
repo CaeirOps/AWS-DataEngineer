@@ -22,6 +22,7 @@
   <link rel="modulepreload" href="/static/js/lab.js">
   <link rel="modulepreload" href="/static/js/validator.js">
   <link rel="modulepreload" href="/static/js/cloudformation.js">
+  <link rel="modulepreload" href="/static/js/session.js">
   <script type="module" src="/static/js/app.js"></script>
 </head>
 <body>
@@ -33,7 +34,9 @@
       <span>Workshop AWS Data Engineer</span>
     </a>
     <span class="site-header__tag">Preparação DEA-C01</span>
+    <span id="session-timer" class="session-timer session-timer--unknown" role="timer" aria-label="Tempo restante da sessão AWS">Sessão AWS: verificando...</span>
   </header>
+  <div id="session-banner" class="session-banner" aria-live="polite" hidden></div>
 
   <main id="app" class="site-main" tabindex="-1" aria-live="polite">
     <noscript>

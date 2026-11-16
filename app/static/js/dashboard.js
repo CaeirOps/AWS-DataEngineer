@@ -1,6 +1,7 @@
 // Dashboard: lista os labs com progresso e ponto de retomada.
 
-import { api, el, errorBanner, formatCost, domainBadge, difficultyBadge } from "./dom.js";
+import { api } from "./api.js";
+import { el, errorBanner, formatCost, domainBadge, difficultyBadge } from "./dom.js";
 
 const STATUS_LABELS = {
   completed: "Concluído",

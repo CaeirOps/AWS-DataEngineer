@@ -3,17 +3,44 @@
 services:
   workshop:
     build: .
+    # UID/GID exportados pelo start.py (Linux) para o volume de progresso ser
+    # gravavel; nos demais sistemas, 10001 (mesmo usuario do Dockerfile).
+    user: "${WORKSHOP_UID:-10001}:${WORKSHOP_GID:-10001}"
+    # Hardening: rootfs somente leitura, sem capabilities, sem escalada.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    mem_limit: 512m
+    pids_limit: 128
+    cpus: 1.0
     # Sem "ports:". Conectado somente a rede internal; a entrada do browser
     # passa pelo gateway.
     networks:
       - workshop-internal
     volumes:
-      - "${HOME}/.aws:/root/.aws:ro"   # credenciais AWS, read-only
       - "./progress:/app/progress"     # progress.json persistido no host
     environment:
       - FLASK_ENV=production
-      - AWS_PROFILE=${AWS_PROFILE:-default}
+      # Porta publicada ao browser: base da allowlist de Host e Origin
+      - WORKSHOP_PORT=${WORKSHOP_PORT:-5000}
+      # rootfs somente leitura: o gunicorn grava o socket de controle em $HOME
+      - HOME=/tmp
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      # Credenciais temporarias repassadas do ambiente do host (start.py as
+      # coloca no ambiente do subprocesso). Sem valor aqui: o compose so
+      # repassa o que existir, nunca inventa um valor.
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - WORKSHOP_CREDENTIALS_EXPIRATION
+      # Impede o SDK de ler arquivos de credenciais/config e o IMDS
+      - AWS_SHARED_CREDENTIALS_FILE=/dev/null
+      - AWS_CONFIG_FILE=/dev/null
+      - AWS_EC2_METADATA_DISABLED=true
       # Toda saida para a internet passa pelo Squid (allowlist)
       - HTTPS_PROXY=http://gateway:3128
       - HTTP_PROXY=http://gateway:3128
@@ -29,7 +56,26 @@ services:
 
   gateway:
     # Tag fixada (Ubuntu 24.04 LTS, Squid 6.6). Nunca usar "latest".
-    image: ubuntu/squid:6.6-24.04_beta
+    # Fixada por tag e digest do indice multi-arquitetura.
+    image: ubuntu/squid:6.6-24.04_beta@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/log/squid:uid=13,gid=13,mode=0755
+      - /var/spool/squid:uid=13,gid=13,mode=0755
+    cap_drop:
+      - ALL
+    # Minimo exigido pelo Squid, confirmado com `docker compose up`: o master
+    # roda como root e troca para o usuario "proxy" (initgroups/setgid/setuid).
+    cap_add:
+      - SETUID
+      - SETGID
+    security_opt:
+      - "no-new-privileges:true"
+    mem_limit: 256m
+    pids_limit: 128
+    cpus: 0.5
     depends_on:
       workshop:
         condition: service_healthy

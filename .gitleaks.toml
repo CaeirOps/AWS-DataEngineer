@@ -1,0 +1,21 @@
+# Configuração do gitleaks usada pelo job `secrets` do CI.
+# Mantém as regras padrão e ignora apenas os padrões fictícios de credenciais
+# usados como entrada nos testes que verificam a detecção e a mascaração de segredos.
+
+title = "AWS Data Engineer Workshop"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Credenciais fictícias usadas como entrada de teste"
+condition = "AND"
+paths = [
+  '''tests/unit/test_cloudformation_service\.py''',
+  '''tests/unit/test_start\.py''',
+]
+regexes = [
+  '''AKIA[A-Z0-9]{16}''',
+  '''ASIA[A-Z0-9]{16}''',
+  '''wJalrXUtnFEMI/K7MDENG/bPxRfiCY[A-Za-z0-9/+]*''',
+]

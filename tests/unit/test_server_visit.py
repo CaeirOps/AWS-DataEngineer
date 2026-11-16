@@ -10,6 +10,7 @@ import pytest
 
 from app.models import ValidationResult
 from app.server import create_app
+from tests.fixtures.http_client import workshop_client
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "labs"
 LAB = "lab-example"
@@ -23,7 +24,7 @@ def progress_file(tmp_path):
 @pytest.fixture
 def client(progress_file):
     app = create_app({"labs_dir": str(FIXTURES), "progress_file": str(progress_file)})
-    return app.test_client()
+    return workshop_client(app)
 
 
 def _visit(client, lab_id, step_id):
@@ -92,10 +93,11 @@ def test_create_app_usa_validator_loader_injetado_sem_variavel_de_ambiente(
             "labs_dir": str(FIXTURES),
             "progress_file": str(progress_file),
             "session_factory": lambda: object(),
+            "session_env": {"WORKSHOP_CREDENTIALS_EXPIRATION": "2999-01-01T00:00:00Z"},
             "validator_loader": loader,
         }
     )
-    resp = app.test_client().post(f"/api/validate/{LAB}/step-03", json={})
+    resp = workshop_client(app).post(f"/api/validate/{LAB}/step-03", json={})
     assert resp.status_code == 200
     assert resp.get_json()["passed"] is True
     assert carregados == [LAB]

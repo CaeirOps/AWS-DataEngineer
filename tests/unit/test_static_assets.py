@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from app.server import create_app
+from tests.fixtures.http_client import workshop_client
 
 STATIC = Path(__file__).resolve().parents[2] / "app" / "static"
 JS_FILES = sorted((STATIC / "js").glob("*.js"))
@@ -66,7 +67,7 @@ def client(tmp_path_factory):
     app = create_app(
         {"labs_dir": str(labs), "progress_file": str(tmp / "progress.json")}
     )
-    return app.test_client()
+    return workshop_client(app)
 
 
 def test_existem_arquivos_estaticos():

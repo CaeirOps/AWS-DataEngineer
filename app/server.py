@@ -10,6 +10,7 @@ completion). Steps `task` não trazem `content`; o conteúdo deles vem das
 rotas `.../content?path=` e `.../hint?path=`.
 """
 
+import json
 import logging
 import os
 from pathlib import Path
@@ -19,9 +20,12 @@ from flask import Flask, jsonify, request, send_from_directory
 
 from app.cloudformation_service import CloudFormationService
 from app.errors import InvalidPayloadError, LabNotFoundError, WorkshopError
+from app.http_security import register_request_guards
 from app.lab_catalog import LabCatalog
 from app.models import LabMetadata, StepMetadata
+from app import session as session_module
 from app.progress_store import ProgressStore
+from app.redaction import log_exception, mask_json
 from app.validation_service import ValidationService
 
 logger = logging.getLogger(__name__)
@@ -57,8 +61,9 @@ def create_app(config: Optional[dict] = None) -> Flask:
             `cloudformation_service` (instâncias prontas), `labs_dir` e
             `progress_file` (usados quando a instância não é informada),
             `session_factory` (repassado aos serviços AWS criados aqui),
-            `validator_loader` (repassado ao `ValidationService` criado aqui)
-            e `static_folder`.
+            `validator_loader` (repassado ao `ValidationService` criado aqui),
+            `workshop_port` (porta da allowlist de `Host` e `Origin`; padrão
+            `WORKSHOP_PORT`) e `static_folder`.
     """
     config = config or {}
     app = Flask(
@@ -86,6 +91,14 @@ def create_app(config: Optional[dict] = None) -> Flask:
         "validation": validation,
         "cloudformation": cfn,
     }
+
+    register_request_guards(app, config.get("workshop_port"))
+
+    session_env = config.get("session_env", os.environ)
+    session_clock = config.get("session_clock", session_module.utcnow)
+
+    def guard_session() -> None:
+        session_module.require_active_session(session_env, session_clock)
 
     def require_lab(lab_id: str) -> LabMetadata:
         lab = catalog.get_lab(lab_id)
@@ -226,6 +239,7 @@ def create_app(config: Optional[dict] = None) -> Flask:
 
     @app.post("/api/validate/<lab_id>/<step_id>")
     def validate(lab_id, step_id):
+        guard_session()
         context = _json_body().get("context")
         context = context if isinstance(context, dict) else {}
         # `path` no corpo ou no context é ignorado (11.4).
@@ -233,11 +247,13 @@ def create_app(config: Optional[dict] = None) -> Flask:
 
     @app.post("/api/deploy/<lab_id>")
     def deploy(lab_id):
+        guard_session()
         lab = require_lab(lab_id)
         return jsonify(cfn.deploy(lab_id, lab))
 
     @app.post("/api/teardown/<lab_id>")
     def teardown(lab_id):
+        guard_session()
         require_lab(lab_id)
         if _json_body().get("confirm") is not True:
             raise InvalidPayloadError(
@@ -247,7 +263,23 @@ def create_app(config: Optional[dict] = None) -> Flask:
 
     @app.get("/api/stack-status/<lab_id>")
     def stack_status(lab_id):
+        guard_session()
         return jsonify(cfn.get_status(lab_id))
+
+    @app.get("/api/session")
+    def get_session():
+        """Estado da sessão, sem valores de credenciais (12.1)."""
+        return jsonify(session_module.get_session_state(session_env, session_clock).to_dict())
+
+    @app.after_request
+    def mask_credentials_in_json(response):
+        """Mascara valores de credenciais que o erro original da AWS repita (12.1)."""
+        if response.mimetype == "application/json" and not response.direct_passthrough:
+            data = response.get_json(silent=True)
+            masked = mask_json(data)
+            if masked != data:
+                response.set_data(json.dumps(masked, ensure_ascii=False))
+        return response
 
     # ------------------------------------------------------------------
     # Erros
@@ -275,7 +307,7 @@ def create_app(config: Optional[dict] = None) -> Flask:
                 exc.description or exc.name,
                 exc.code or 500,
             )
-        logger.exception("Erro inesperado")
+        log_exception(logger, "Erro inesperado")
         return error_response("INTERNAL_ERROR", "Erro interno do servidor.", 500)
 
     return app

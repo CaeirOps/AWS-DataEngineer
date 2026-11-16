@@ -15,6 +15,7 @@ from botocore.exceptions import ClientError
 from app.lab_catalog import LabCatalog
 from app.progress_store import ProgressStore
 from app.server import create_app
+from tests.fixtures.http_client import workshop_client
 from app.validation_service import ValidationService
 from tests.fixtures import EXAMPLE_LAB_ID, LABS_FIXTURE_DIR, example_validator_loader
 
@@ -113,10 +114,11 @@ def env(tmp_path):
             "progress_file": str(progress_file),
             "session_factory": lambda: session,
             "static_folder": str(tmp_path / "static"),
+            "session_env": {"WORKSHOP_CREDENTIALS_EXPIRATION": "2999-01-01T00:00:00Z"},
         }
     )
     return {
-        "client": app.test_client(),
+        "client": workshop_client(app),
         "s3": s3,
         "cfn": cfn,
         "progress_file": progress_file,

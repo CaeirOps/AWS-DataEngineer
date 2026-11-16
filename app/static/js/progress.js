@@ -1,6 +1,6 @@
 // Acesso ao progresso via API e controle de steps alcançados na sessão.
 
-import { api } from "./dom.js";
+import { api } from "./api.js";
 
 export const PATHS = ["console", "cli"];
 

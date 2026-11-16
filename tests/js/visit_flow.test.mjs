@@ -63,6 +63,15 @@ function setupApi({ lab, visitResponse }) {
   events = [];
   currentFetch = async (url, options) => {
     const method = options.method || "GET";
+    const mutating = ["POST", "PUT", "DELETE"].includes(method);
+    if (mutating) {
+      assert.equal(options.headers["Content-Type"], "application/json");
+      assert.equal(options.headers["X-Workshop-Request"], "1");
+      assert.equal(options.credentials, "same-origin");
+      assert.equal(typeof options.body, "string");
+    } else {
+      assert.equal(options.body, undefined);
+    }
     calls.push({ method, url });
     events.push(["fetch", method, url]);
     if (method === "GET" && url === "/api/labs/lab-01") return jsonResponse(lab);

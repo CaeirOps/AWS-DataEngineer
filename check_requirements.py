@@ -15,6 +15,8 @@ import subprocess
 import sys
 from typing import Callable, Dict, List, Optional, Tuple
 
+import host_credentials
+
 DEFAULT_PROFILE = "default"
 DEFAULT_PORT = 5000
 COMMAND_TIMEOUT_S = 30
@@ -170,6 +172,26 @@ def check_credentials(run: RunFn, profile: str) -> Optional[Result]:
             name,
             "resposta inesperada do sts",
             "Verifique o profile '%s' com `aws sts get-caller-identity --profile %s`." % (profile, profile),
+            status="invalid",
+        )
+    # O workshop so aceita credenciais temporarias. As mensagens das excecoes
+    # nunca incluem valores de credenciais (ver host_credentials.py).
+    try:
+        host_credentials.export_credentials(profile, run)
+    except host_credentials.LongLivedCredentialsError as exc:
+        return _failure(
+            name,
+            "credenciais de longa duracao (sem SessionToken ou Expiration)",
+            "Use credenciais temporarias: `aws sso login --profile %s` "
+            "(AWS IAM Identity Center) ou `aws login`. Detalhe: %s" % (profile, exc),
+            status="long_lived",
+        )
+    except host_credentials.CredentialsExportError as exc:
+        return _failure(
+            name,
+            "nao foi possivel exportar as credenciais temporarias",
+            "Renove o login com `aws sso login --profile %s` ou `aws login`. "
+            "Detalhe: %s" % (profile, exc),
             status="invalid",
         )
     return None

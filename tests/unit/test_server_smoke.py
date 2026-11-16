@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.server import create_app
+from tests.fixtures.http_client import workshop_client
 
 DOCKERFILE = Path(__file__).resolve().parents[2] / "Dockerfile"
 
@@ -15,6 +16,7 @@ def _make_app(tmp_path, **extra):
     labs_dir.mkdir(exist_ok=True)
     config = {
         "labs_dir": str(labs_dir),
+        "session_env": {"WORKSHOP_CREDENTIALS_EXPIRATION": "2999-01-01T00:00:00Z"},
         "progress_file": str(tmp_path / "progress" / "progress.json"),
     }
     config.update(extra)
@@ -23,7 +25,7 @@ def _make_app(tmp_path, **extra):
 
 @pytest.fixture
 def client(tmp_path):
-    return _make_app(tmp_path).test_client()
+    return workshop_client(_make_app(tmp_path))
 
 
 def test_health_retorna_ok(client):
@@ -48,7 +50,7 @@ def test_erro_inesperado_vira_500_sem_traceback(tmp_path):
             raise RuntimeError("detalhe-interno-secreto")
 
     app = _make_app(tmp_path, validation_service=ValidacaoQuebrada())
-    response = app.test_client().post("/api/validate/lab/step", json={})
+    response = workshop_client(app).post("/api/validate/lab/step", json={})
     assert response.status_code == 500
     body = response.get_json()
     assert body["error"] is True
