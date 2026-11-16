@@ -60,6 +60,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 3. THE Dashboard SHALL identificar visualmente o ponto de retomada de cada lab iniciado mas não concluído.
 4. WHEN o usuário clica em um lab no Dashboard, THE Plataforma SHALL navegar para o step mais recente não concluído daquele lab, ou para o primeiro step caso o lab ainda não tenha sido iniciado.
 5. THE Progress Store SHALL persistir o estado de progresso localmente no arquivo `progress.json` em volume Docker, sem transmitir dados do usuário para servidores externos.
+6. WHEN o usuário avança de um step que não é do tipo tarefa, THE Plataforma SHALL registrar esse step como concluído no Progress Store, sem contar tentativa de validação, de modo que o ponto de retomada do lab avance para o próximo step não concluído.
 
 ---
 
@@ -70,7 +71,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 #### Acceptance Criteria
 
 1. THE Plataforma SHALL apresentar os steps de cada lab em formato wizard com navegação sequencial e lateral.
-2. WHEN o usuário já visitou um step anteriormente, THE Plataforma SHALL permitir navegação direta para aquele step a partir do indicador de progresso do wizard.
+2. WHEN o usuário já visitou um step anteriormente, conforme o status registrado no Progress Store, THE Plataforma SHALL permitir navegação direta para aquele step a partir do indicador de progresso do wizard.
 3. WHILE o usuário estiver no primeiro step de um lab, THE Plataforma SHALL desabilitar o botão de navegação para o step anterior.
 4. WHILE o usuário estiver no último step de um lab, THE Plataforma SHALL exibir o botão "Finalizar Lab" em substituição ao botão de avanço.
 5. THE Plataforma SHALL refletir em tempo real no indicador de progresso do wizard o status (concluído, em andamento, não visitado) de cada step.

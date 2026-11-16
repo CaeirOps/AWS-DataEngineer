@@ -1,0 +1,5 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Stack minima do lab de exemplo (somente testes, sem custo)
+Resources:
+  ExampleHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle

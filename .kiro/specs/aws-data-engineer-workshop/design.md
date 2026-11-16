@@ -141,6 +141,7 @@ Aplicação WSGI Flask que atua como API backend e servidor de arquivos estátic
 - A restrição a localhost é feita na publicação de porta do `gateway` (`127.0.0.1:${WORKSHOP_PORT:-5000}:8080`). O `workshop` não publica portas.
 - `debug=False` em produção (controlado por variável de ambiente `FLASK_ENV`)
 - CORS desabilitado (mesma origem: o browser acessa pelo `gateway`)
+- `create_app(config)` constrói a aplicação Flask e aceita em `config` o diretório de labs, o caminho do `progress.json` e `validator_loader` (função que carrega os módulos validadores). O `ValidationService` recebe esse `validator_loader` diretamente, sem depender de variável de ambiente ou de patch de módulo; quando ausente, usa o carregador padrão de `app/validators/`. O objeto `app` exposto ao gunicorn é `create_app(config_padrao)`.
 - Com 2 workers, o `ProgressStore` não pode depender apenas de `threading.Lock` em memória. A escrita de `progress.json` deve ser atômica (arquivo temporário + `os.replace`) e protegida por lock de arquivo (`fcntl.flock`) para evitar perda de atualização entre processos.
 
 **Rotas de API:**
@@ -159,6 +160,9 @@ Aplicação WSGI Flask que atua como API backend e servidor de arquivos estátic
 | `GET` | `/api/labs/<lab_id>` | Retorna metadados e steps de um lab, com as Trilhas disponíveis e indisponíveis de cada step `task` (11.1, 11.6) |
 | `GET` | `/api/labs/<lab_id>/steps/<step_id>/content?path=console\|cli` | Retorna o Markdown do cenário (`scenario.md`) concatenado ao da Trilha escolhida (11.1, 11.8, 11.7) |
 | `GET` | `/api/labs/<lab_id>/steps/<step_id>/hint?path=console\|cli` | Retorna a Dica Detalhada da Trilha escolhida (11.5) |
+| `POST` | `/api/labs/<lab_id>/steps/<step_id>/visit` | Marca como concluído um step que não é `task`, quando o usuário avança além dele (2.6) |
+
+`POST .../visit` só vale para steps `info`, `deploy`, `teardown` e `completion`. Para step `task`, retorna `STEP_REQUIRES_VALIDATION` (409), porque esses steps só passam por validação. A rota chama `ProgressStore.mark_visited`, é idempotente (repetir a chamada não altera `passed_at` nem `attempts`) e não aceita corpo. Lab ou step inexistente retorna `LAB_NOT_FOUND`/`STEP_NOT_FOUND` (404).
 
 `path` aceita somente `console` ou `cli`. Valor ausente ou inválido resulta em `INVALID_PATH` (400). Trilha válida mas ausente de `paths` do step resulta em `PATH_UNAVAILABLE` (409), com o motivo de `unavailable_paths` na mensagem. Rotas de conteúdo e dica só existem para steps do tipo `task`; para outros tipos, o conteúdo é único e vem de `GET /api/labs/<lab_id>`. A troca de Trilha é persistida por `PUT /api/progress` com `{"preferences": {"path": "cli"}}` (11.3). Nenhuma dessas rotas altera o status do step (11.2).
 
@@ -316,10 +320,12 @@ Arquivo JSON persistido em volume Docker local no host. Nunca entra no container
 
 ```
 not_visited → failed  (primeira tentativa falhou)
-not_visited → passed  (primeira tentativa passou)
+not_visited → passed  (primeira tentativa passou, ou step não-task visitado)
 failed      → passed  (retry bem-sucedido)
 passed      → passed  (retry após conclusão, sem regressão)
 ```
+
+**Steps que não são `task` (2.6):** `info`, `deploy`, `teardown` e `completion` não têm validação. Quando o usuário avança além deles, o frontend chama `POST /api/labs/<lab_id>/steps/<step_id>/visit` e o `ProgressStore.mark_visited` grava `status: "passed"` e `passed_at`, sem incrementar `attempts` (permanece 0). Com isso `get_resume_step` avança para o próximo step não concluído, e o indicador do wizard e a navegação direta (3.2) usam o status vindo do servidor, sem `sessionStorage`. `_compute_lab_status` continua considerando somente os steps `task` para `completed`; um step não-task `passed` só influencia a transição `not_started → in_progress` e o contador de steps concluídos (Property 2).
 
 **Regras de transição de estado de lab:**
 
@@ -369,6 +375,7 @@ Quando uma Trilha não está em `paths` de um step `task` (11.6), os arquivos de
   "cost_disclaimer": "Os recursos provisionados neste lab incorrem em custo...",
   "dea_domains": ["D2"],
   "dea_tasks": ["2.1", "2.2"],
+  "services": ["Amazon S3"],
   "prerequisites": {
     "hard": [],
     "recommended": []
@@ -397,6 +404,8 @@ Quando uma Trilha não está em `paths` de um step `task` (11.6), os arquivos de
   ]
 }
 ```
+
+**Campo `services` (5.7):** obrigatório, lista não vazia de strings não vazias com os nomes dos serviços AWS usados no lab (por exemplo `"Amazon S3"`, `"AWS Glue"`). O `LabCatalog` rejeita na carga um `metadata.json` sem `services`, com lista vazia ou com item que não seja string não vazia. A tela de conclusão exibe esta lista junto dos domínios DEA-C01 (`dea_domains`).
 
 **Campos de Trilha em steps `task`:**
 - `paths` (obrigatório em `task`): lista não vazia com `console` e/ou `cli`. Define as Trilhas disponíveis.
@@ -451,6 +460,7 @@ app/static/
 /lab/{lab_id}/{step} → Step específico (somente se visitado)
 ```
 
+**Navegação e retomada (2.4, 2.6, 3.2):** o frontend não usa `sessionStorage` nem outro armazenamento do browser para saber o que foi visitado. "Visitado" é o status do step em `GET /api/progress`: um step é navegável diretamente quando seu status é diferente de `not_visited` ou quando é o step de retomada. Ao clicar em "Avançar" (ou em "Finalizar Lab") a partir de um step que não é `task`, `lab.js` chama `POST /api/labs/<lab_id>/steps/<step_id>/visit`, atualiza o estado local com a resposta e só então navega. Falha da chamada exibe o erro e mantém o usuário no step atual. Steps `task` seguem marcados somente pela validação. A tela de conclusão (step `completion`) lista os `services` e os `dea_domains` do lab, vindos de `GET /api/labs/<lab_id>` (5.7).
 **Seletor de Trilha (`lab.js`, 11.2, 11.3, 11.5, 11.6):**
 - Em steps `task`, o frontend exibe abas `Console | CLI` na mesma tela, acima das instruções.
 - A aba inicial é `preferences.path` de `GET /api/progress`. Se o step não oferece essa Trilha, abre a outra disponível sem alterar a preferência.
@@ -643,6 +653,7 @@ access_log stdio:/var/log/squid/access.log squid
       "title": "Fundamentos de S3 e Data Lake",
       "difficulty": "iniciante",
       "dea_domains": ["D2"],
+      "services": ["Amazon S3"],
       "total_steps": 5,
       "completed_steps": 3,
       "status": "in_progress"
@@ -653,12 +664,14 @@ access_log stdio:/var/log/squid/access.log squid
 
 **GET /api/labs/{lab_id}**
 
-Para cada step `task`, `paths` lista as Trilhas disponíveis e `unavailable_paths` os motivos das indisponíveis. Steps de outros tipos não trazem esses campos.
+Para cada step `task`, `paths` lista as Trilhas disponíveis e `unavailable_paths` os motivos das indisponíveis. Steps de outros tipos não trazem esses campos. A resposta inclui `dea_domains` e `services` do lab, usados pela tela de conclusão (5.7).
 
 ```json
 {
   "lab_id": "lab-01",
   "title": "Fundamentos de S3 e Data Lake",
+  "dea_domains": ["D2"],
+  "services": ["Amazon S3"],
   "steps": [
     {
       "step_id": "step-02",
@@ -703,6 +716,23 @@ Para cada step `task`, `paths` lista as Trilhas disponíveis e `unavailable_path
   "hint": "<conteúdo de hint-cli.md>"
 }
 ```
+
+**POST /api/labs/{lab_id}/steps/{step_id}/visit**
+
+Sem corpo. Resposta (step não `task`):
+
+```json
+{
+  "lab_id": "lab-01",
+  "step_id": "step-01",
+  "step_status": "passed",
+  "attempt_count": 0,
+  "lab_status": "in_progress",
+  "resume_step": "step-02"
+}
+```
+
+Para step `task`, a resposta é o erro `STEP_REQUIRES_VALIDATION` (409).
 
 **POST /api/validate/{lab_id}/{step_id}**
 
@@ -812,6 +842,7 @@ Todos os erros da API seguem o formato:
 | `STEP_NOT_FOUND` | 404 | step_id inválido para o lab |
 | `INVALID_PATH` | 400 | `path` ausente ou diferente de `console`/`cli` |
 | `PATH_UNAVAILABLE` | 409 | Trilha válida, mas ausente de `paths` do step; a mensagem traz o motivo de `unavailable_paths` |
+| `STEP_REQUIRES_VALIDATION` | 409 | `POST .../visit` em step do tipo `task`; esse step só passa por validação |
 | `STACK_NOT_FOUND` | 404 | Stack CloudFormation não existe |
 | `STACK_DEPLOY_FAILED` | 422 | Deploy CloudFormation falhou |
 | `INTERNAL_ERROR` | 500 | Erro interno não classificado |
@@ -843,12 +874,15 @@ class LabMetadata:
     cost_disclaimer: str
     dea_domains: list[str]
     dea_tasks: list[str]
+    services: list[str]  # obrigatório, não vazio: serviços AWS usados no lab (5.7)
     prerequisites: dict
     steps: list[StepMetadata]
     residual_resources: list[str]
 
 class LabCatalog:
-    """Singleton carregado na inicialização do Flask."""
+    """Singleton carregado na inicialização do Flask.
+    Rejeita na carga metadata.json sem `services` ou com `services` vazio
+    ou com itens que não sejam strings não vazias, além das regras de Trilha."""
     
     def __init__(self, labs_dir: str):
         self._labs: dict[str, LabMetadata] = {}
@@ -896,6 +930,13 @@ class ProgressStore:
                     status: str, increment_attempts: bool = True) -> None:
         """Atualiza status e tentativas de um step atomicamente."""
     
+    def mark_visited(self, lab_id: str, step_id: str,
+                     lab_metadata: LabMetadata) -> None:
+        """Marca um step que não é `task` como `passed` (com passed_at) sem
+        incrementar attempts. Levanta StepRequiresValidationError para `task`
+        e LabNotFoundError (`LAB_NOT_FOUND` ou `STEP_NOT_FOUND`) para ids inválidos. Idempotente:
+        não altera passed_at de um step já `passed`. Não altera steps `task` (2.6)."""
+
     def get_resume_step(self, lab_id: str, 
                         lab_metadata: LabMetadata) -> str:
         """Retorna o step_id de retomada (primeiro não concluído)."""
@@ -913,10 +954,12 @@ class ValidationService:
     """Orquestra a execução de validadores e atualização de progresso."""
     
     def __init__(self, lab_catalog: LabCatalog, 
-                 progress_store: ProgressStore):
+                 progress_store: ProgressStore,
+                 validator_loader: Optional[Callable[[], dict]] = None):
         self._catalog = lab_catalog
         self._progress = progress_store
-        self._validators = self._load_validators()
+        # validator_loader injetável (create_app o repassa); padrão: app/validators/
+        self._validators = (validator_loader or self._load_validators)()
     
     def validate(self, lab_id: str, step_id: str, 
                  context: dict) -> dict:
@@ -990,6 +1033,11 @@ class InvalidPathError(WorkshopError):
 class PathUnavailableError(WorkshopError):
     """Trilha ausente de paths do step; a mensagem traz o motivo."""
     code = "PATH_UNAVAILABLE"
+    http_status = 409
+
+class StepRequiresValidationError(WorkshopError):
+    """Visita registrada em step task; ele só passa por validação."""
+    code = "STEP_REQUIRES_VALIDATION"
     http_status = 409
 
 class StackDeployError(WorkshopError):
@@ -1098,6 +1146,7 @@ Exemplos de propriedades a serem testadas com geração aleatória de inputs:
 - Diagnóstico de timeout (Property 15): gerar saídas arbitrárias de `docker compose ps`/`logs` e estados de porta via mocks de `subprocess`/`urllib`/relógio, e verificar exit code 1 e conteúdo do diagnóstico
 - Completude de conteúdo por Trilha (Property 16): percorrer o catálogo real e `metadata.json` gerados com `hypothesis` (combinações de `paths` e `unavailable_paths`) e verificar `scenario.md`, arquivos por Trilha e motivos não vazios
 - Troca de Trilha (Property 17): gerar progressos válidos e sequências de `console`/`cli`, aplicar `set_preferred_path` e comparar `preferences.path` e os campos dos steps antes e depois
+- Steps não-`task` visitados (Property 19): gerar labs com tipos de step mistos e progressos válidos, aplicar `mark_visited` em subconjuntos de steps não-`task` e comparar status e `attempts` dos steps `task` antes e depois, além do `get_resume_step`
 - Sem credenciais na Trilha CLI (Property 18): varrer todos os `cli.md` do repositório e testar o detector (regex) com textos gerados que contêm ou não os padrões `AKIA`/`ASIA` + 16 caracteres, `aws_secret_access_key` e `aws_session_token`
 - Matcher de allowlist (apoio à Property 13): função pura que espelha a regra `dstdomain` (`.amazonaws.com`, `.api.aws`), testada com domínios gerados, incluindo sufixos enganosos como `amazonaws.com.evil.example`
 
@@ -1115,6 +1164,10 @@ Usados para cenários específicos, pontos de integração e edge cases:
 - `GET .../hint?path=cli` retorna `hint-cli.md` e `path=console` retorna `hint-console.md` (11.5)
 - `POST /api/validate` com `path` no corpo: o validador recebe um `context` sem `path` e o resultado é idêntico para `console` e `cli` (11.4)
 - `progress.json` sem `preferences` é lido como `console`; `PUT /api/progress` com `preferences.path` inválido retorna `INVALID_PATH` (11.3)
+- `POST /api/labs/<lab_id>/steps/<step_id>/visit`: step `info`/`deploy`/`teardown`/`completion` vira `passed` com `attempt_count` 0 e `resume_step` avança; repetir a chamada não altera `passed_at`; step `task` retorna `STEP_REQUIRES_VALIDATION` (409); ids inválidos retornam 404 (2.6)
+- `create_app({... "validator_loader": fn})` usa o carregador injetado sem variável de ambiente (2.6, suporte aos testes)
+- `metadata.json` sem `services`, com `services` vazio ou com item não string/vazio é rejeitado na carga do `LabCatalog`; `GET /api/labs` e `GET /api/labs/<lab_id>` retornam `services` (5.7)
+- Frontend (teste de DOM): ao avançar de um step não-`task`, `lab.js` chama a rota `visit`; a navegação direta usa o status do servidor e não há uso de `sessionStorage`; a tela de conclusão lista `services` e `dea_domains` (2.6, 3.2, 5.7)
 - Frontend (teste de DOM): aba de Trilha indisponível fica desabilitada e exibe o motivo; clicar em uma aba carrega o conteúdo via `fetch` sem recarregar a página e mantém o resultado da última validação (11.2, 11.6)
 - `check_requirements.py` com `subprocess` mockado: Docker 18 reprovado, daemon parado, Compose v1 reprovado, AWS CLI 1.x reprovado, `sts` com erro, porta ocupada (1.2, 1.3)
 
@@ -1144,6 +1197,16 @@ Executados com a stack no ar (`docker compose up -d --build`), com poucos exempl
 - A partir do container `workshop`, uma conexão direta sem proxy a um IP público falha, porque a rede é `internal`.
 - A partir do host, `http://127.0.0.1:${WORKSHOP_PORT}/health` responde 200, e o serviço não é alcançável pelo IP não-loopback do host.
 - Verificação do risco de credenciais: com um profile SSO e `~/.aws` em `:ro`, executar uma validação e observar se a renovação de token falha.
+
+### Verificação de ambiente com Docker e AWS real (somente leitura)
+
+Executada uma vez, antes do primeiro lab real (tarefas 15C), com Docker instalado e um profile SSO válido (`AWS_PROFILE=Caeiro-Admin`). Nenhuma etapa cria recurso AWS nem faz deploy de stack; só chamadas de leitura.
+- `docker compose config`, `docker compose build` e `squid -k parse` executado com a imagem fixada do gateway sobre `gateway/squid.conf`
+- CIDR da ACL `from_internal` conferido com `docker network inspect` da rede `workshop-internal`; `squid.conf` ajustado se o CIDR não cobrir a sub-rede real
+- `python check_requirements.py` com `AWS_PROFILE=Caeiro-Admin` e `WORKSHOP_PORT` livre
+- `python start.py` sobe a plataforma, `http://127.0.0.1:${WORKSHOP_PORT}/health` responde pelo gateway e `docker compose down` encerra a stack ao final
+- Testes de integração de egress (`WORKSHOP_EGRESS_TEST=1`) e de SSO com `~/.aws:ro` (`WORKSHOP_SSO_TEST_PROFILE=Caeiro-Admin`), com o resultado registrado na seção "Credenciais SSO" do README
+- Chamada real somente leitura dentro do container `workshop` (`sts:GetCallerIdentity` via boto3), passando pelo proxy do gateway
 
 ### Estratégia de Mock para Testes de Validadores
 
@@ -1312,3 +1375,11 @@ def test_validate_step_handles_any_bucket_name(bucket_name):
 *Para qualquer* arquivo `cli.md` (ou `hint-cli.md`) do repositório, o texto não deve conter `AKIA` ou `ASIA` seguidos de 16 caracteres alfanuméricos maiúsculos, nem as strings `aws_secret_access_key` e `aws_session_token` (sem diferenciar maiúsculas de minúsculas). *Para qualquer* texto gerado que contenha um desses padrões, o detector deve sinalizá-lo, e *para qualquer* texto gerado sem eles, não deve sinalizar.
 
 **Validates: Requirements 11.7, 9.3**
+
+---
+
+### Property 19: Marcar steps não-task não altera os steps task e avança a retomada
+
+*Para qualquer* lab com steps de tipos mistos e qualquer progresso válido, aplicar `mark_visited` a qualquer subconjunto de steps que não são `task` deve (a) manter inalterados `status`, `attempts`, `last_attempt_at` e `passed_at` de todos os steps `task`, (b) deixar `attempts` dos steps marcados em 0, com `status == "passed"`, e (c) fazer `get_resume_step` retornar o primeiro step, pela ordem de `metadata.json`, cujo status não é `"passed"`. `_compute_lab_status` só retorna `"completed"` quando todos os steps `task` estão `passed`, independentemente dos steps não-task marcados. Chamar `mark_visited` em um step `task` levanta `StepRequiresValidationError` e não altera o progresso.
+
+**Validates: Requirements 2.4, 2.6, 3.2**

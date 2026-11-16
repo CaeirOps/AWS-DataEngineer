@@ -1,0 +1,42 @@
+{
+  "lab_id": "lab-example",
+  "title": "Lab de exemplo (somente testes)",
+  "description": "Lab fictício usado pelos testes da plataforma. Não faz parte do catálogo real.",
+  "difficulty": "iniciante",
+  "estimated_duration_minutes": 10,
+  "estimated_cost_usd": 0.0,
+  "cost_disclaimer": "Lab fictício de teste. A stack usa somente um WaitConditionHandle, sem custo.",
+  "dea_domains": ["D2"],
+  "dea_tasks": ["2.1"],
+  "services": ["Amazon S3", "AWS CloudFormation"],
+  "prerequisites": {
+    "hard": [],
+    "recommended": []
+  },
+  "steps": [
+    {"step_id": "step-01", "title": "Introdução", "type": "info"},
+    {"step_id": "step-02", "title": "Deploy da stack de exemplo", "type": "deploy"},
+    {
+      "step_id": "step-03",
+      "title": "Criar bucket S3 de exemplo",
+      "type": "task",
+      "hint_threshold": 3,
+      "paths": ["console", "cli"]
+    },
+    {
+      "step_id": "step-04",
+      "title": "Explorar painel interativo",
+      "type": "task",
+      "hint_threshold": 2,
+      "paths": ["console"],
+      "unavailable_paths": {
+        "cli": "Esta tarefa de exemplo depende de uma visualização interativa que não existe na API."
+      }
+    },
+    {"step_id": "step-05", "title": "Teardown da stack de exemplo", "type": "teardown"},
+    {"step_id": "step-06", "title": "Conclusão", "type": "completion"}
+  ],
+  "residual_resources": [
+    "Bucket S3 de exemplo (fictício, criado manualmente e não gerenciado pela stack)"
+  ]
+}

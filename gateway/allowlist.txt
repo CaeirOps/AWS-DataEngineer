@@ -1,0 +1,2 @@
+.amazonaws.com
+.api.aws

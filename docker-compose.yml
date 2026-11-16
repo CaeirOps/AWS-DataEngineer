@@ -1,0 +1,53 @@
+# Sem a chave "version" (obsoleta no Compose v2).
+
+services:
+  workshop:
+    build: .
+    # Sem "ports:". Conectado somente a rede internal; a entrada do browser
+    # passa pelo gateway.
+    networks:
+      - workshop-internal
+    volumes:
+      - "${HOME}/.aws:/root/.aws:ro"   # credenciais AWS, read-only
+      - "./progress:/app/progress"     # progress.json persistido no host
+    environment:
+      - FLASK_ENV=production
+      - AWS_PROFILE=${AWS_PROFILE:-default}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
+      # Toda saida para a internet passa pelo Squid (allowlist)
+      - HTTPS_PROXY=http://gateway:3128
+      - HTTP_PROXY=http://gateway:3128
+      - NO_PROXY=localhost,127.0.0.1,gateway
+    healthcheck:
+      # python:3.11-slim nao inclui curl; usa a stdlib
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: on-failure:3
+
+  gateway:
+    # Tag fixada (Ubuntu 24.04 LTS, Squid 6.6). Nunca usar "latest".
+    image: ubuntu/squid:6.6-24.04_beta
+    depends_on:
+      workshop:
+        condition: service_healthy
+    networks:
+      - workshop-internal
+      - egress
+    ports:
+      # Unica porta publicada, somente em loopback do host
+      - "127.0.0.1:${WORKSHOP_PORT:-5000}:8080"
+    volumes:
+      - "./gateway/squid.conf:/etc/squid/squid.conf:ro"
+      - "./gateway/allowlist.txt:/etc/squid/allowlist.txt:ro"
+    restart: on-failure:3
+
+networks:
+  # Sem rota para a internet
+  workshop-internal:
+    internal: true
+  # Unica rede com saida para a internet (usada somente pelo gateway)
+  egress:
+    driver: bridge

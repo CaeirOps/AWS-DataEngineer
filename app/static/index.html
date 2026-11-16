@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workshop AWS Data Engineer</title>
+  <!-- Somente recursos locais (requisito 8.2): sem CDN, sem fontes externas. -->
+  <link rel="stylesheet" href="/static/css/workshop.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <!--
+    Nota para a task 14.2: todos os scripts abaixo sao ES modules
+    (type="module", executados de forma diferida). Cada arquivo deve usar
+    import/export. Apenas app.js e carregado aqui como ponto de entrada;
+    os demais sao importados por ele. Os modulos ficam listados com
+    modulepreload so para documentar o conjunto esperado:
+    app.js, progress.js, dashboard.js, lab.js, validator.js,
+    cloudformation.js e markdown.js (renderizador de Markdown local).
+  -->
+  <link rel="modulepreload" href="/static/js/progress.js">
+  <link rel="modulepreload" href="/static/js/markdown.js">
+  <link rel="modulepreload" href="/static/js/dashboard.js">
+  <link rel="modulepreload" href="/static/js/lab.js">
+  <link rel="modulepreload" href="/static/js/validator.js">
+  <link rel="modulepreload" href="/static/js/cloudformation.js">
+  <script type="module" src="/static/js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#app">Pular para o conteúdo</a>
+
+  <header class="site-header">
+    <a class="site-header__brand" href="/" data-link>
+      <span class="site-header__logo" aria-hidden="true">&#9729;</span>
+      <span>Workshop AWS Data Engineer</span>
+    </a>
+    <span class="site-header__tag">Preparação DEA-C01</span>
+  </header>
+
+  <main id="app" class="site-main" tabindex="-1" aria-live="polite">
+    <noscript>
+      <p class="banner banner--warning">Esta plataforma precisa de JavaScript habilitado.</p>
+    </noscript>
+    <p class="loading">Carregando...</p>
+  </main>
+
+  <footer class="site-footer">
+    <p>Este projeto é independente e não é afiliado, patrocinado ou endossado pela Amazon Web Services, Inc. ou suas afiliadas. AWS e as marcas relacionadas são marcas registradas da Amazon.com, Inc. ou de suas afiliadas.</p>
+  </footer>
+</body>
+</html>

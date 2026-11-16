@@ -37,3 +37,5 @@ Thumbs.db
 # --- Logs e temporários ---
 *.log
 tmp/
+# --- Lock do ProgressStore ---
+*.lock

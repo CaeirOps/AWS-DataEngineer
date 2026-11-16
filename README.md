@@ -59,6 +59,30 @@ A progressão vai do iniciante absoluto ao pipeline completo, cobrindo os quatro
 
 ---
 
+## Credenciais SSO
+
+O container monta `~/.aws` como somente leitura. Por decisão de segurança, **a renovação do token é sempre manual e feita pelo usuário no host**: a plataforma nunca renova sessões nem grava em `~/.aws`. Quando a sessão expirar, rode `aws sso login --profile <profile>` (ou `aws login`) no seu terminal e clique em **Validar** novamente.
+
+Para verificar, com Docker instalado e uma sessão válida:
+
+```
+aws sso login --profile <profile>
+WORKSHOP_SSO_TEST_PROFILE=<profile> python -m pytest tests/integration/test_sso_readonly.py -q -rs
+```
+
+Para testar também a sessão expirada, defina `WORKSHOP_SSO_TEST_EXPIRED_PROFILE` com um profile cujo token expirou. Sem essas variáveis o teste é ignorado.
+
+Se a sessão expirar durante um lab, renove no host (`aws sso login --profile <profile>` ou `aws login`) e clique em **Validar** novamente. A plataforma mostra o erro original da AWS seguido de uma orientação para verificar as credenciais.
+
+Resultado do teste (2026-11-15):
+
+- Profile testado: `Caeiro-Admin` (tipo SSO), com token válido.
+- Sessão válida: dentro do container, com `~/.aws` montado como `:ro`, `sts:GetCallerIdentity` retornou sucesso. Não houve erro `Read-only file system`, nem traceback, e nenhum arquivo de `~/.aws` foi alterado (o teste compara o snapshot de caminhos e mtimes antes e depois).
+- Sessão expirada: **não testada**. Não havia profile com token expirado disponível, então `test_expired_session_reports_original_aws_error` foi ignorado.
+- Limite do resultado: o token estava válido. A renovação automática dentro do container não é suportada por design; com a sessão expirada, o esperado é a plataforma mostrar o erro original da AWS e o usuário renovar no host.
+
+---
+
 ## Custos
 
 **Os labs criam recursos reais na sua conta AWS e podem gerar cobrança.** Cada lab mostra uma estimativa de custo antes do deploy. Faça um lab por vez e sempre use **Finalizar Lab** ao terminar. A responsabilidade pelos custos da conta é sua.
@@ -70,6 +94,10 @@ A progressão vai do iniciante absoluto ao pipeline completo, cobrindo os quatro
 - Suas credenciais ficam no seu `~/.aws`, montado como somente leitura no container. Elas não são copiadas para a imagem nem enviadas a terceiros.
 - A interface fica acessível apenas em `127.0.0.1`.
 - O container da aplicação não tem acesso direto à internet. Toda saída passa por um proxy que só permite domínios da AWS.
+- A restrição de saída vale apenas em runtime. Os downloads do build (`docker compose build`), como o pull da imagem base e o `pip install`, ocorrem fora dessa restrição.
+- O log do proxy registra horário e destino de cada conexão, sem cabeçalhos de autenticação.
+- Verificado em rede real (2026-11-15, `tests/integration/test_egress.py`): `sts.amazonaws.com` e `s3.us-east-1.amazonaws.com` na porta 443 são aceitos (apenas handshake TLS, sem chamada de API). `example.com` e `amazonaws.com.evil.example` recebem 403 e aparecem no log como `TCP_DENIED/403`.
+- Verificado com credenciais SSO reais (2026-11-16): dentro do container, `sts:GetCallerIdentity` via boto3 com o profile SSO funcionou e aparece no log do proxy como `TCP_TUNNEL/200 CONNECT sts.us-east-1.amazonaws.com:443`. Uma conexão TCP direta do container para `sts.amazonaws.com:443`, sem proxy, falhou (sem resolução de nome, rede `internal`). `/health` e `/api/labs` responderam pelo gateway. Nenhum recurso foi criado.
 
 ---
 
