@@ -36,7 +36,7 @@ jobs:
       - name: pytest (unitários)
         run: python -m pytest tests/unit tests/security -q
       - name: Testes JavaScript
-        run: node --test tests/js/
+        run: node --test "tests/js/*.test.mjs"
 
   # Verifica Signed-off-by em todos os commits do PR (ou do push em main).
   dco:

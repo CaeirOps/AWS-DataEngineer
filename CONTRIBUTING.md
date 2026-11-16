@@ -39,7 +39,7 @@ Os testes em `tests/integration` precisam de Docker e, em alguns casos, de crede
 Testes JavaScript (usam o test runner nativo do Node.js, sem dependências extras):
 
 ```
-node --test tests/js/
+node --test "tests/js/*.test.mjs"
 ```
 
 ## DCO

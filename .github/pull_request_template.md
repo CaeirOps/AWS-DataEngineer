@@ -13,7 +13,7 @@
 ## Checklist geral
 
 - [ ] Todos os commits têm assinatura DCO (`git commit -s`).
-- [ ] Os testes passam localmente (`python -m pytest tests/unit -q` e `node --test tests/js/`).
+- [ ] Os testes passam localmente (`python -m pytest tests/unit -q` e `node --test "tests/js/*.test.mjs"`).
 - [ ] Usei apenas dados fictícios, sem dados pessoais ou de empresas reais.
 - [ ] Não incluí credenciais, tokens, chaves de acesso nem IDs de conta reais, nem em exemplos, logs ou capturas de tela.
 - [ ] Atualizei a documentação afetada.
