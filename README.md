@@ -110,8 +110,8 @@ O container não precisa acessar o portal SSO (`portal.sso.*`). Ele recebe somen
 ## Como contribuir
 
 1. Faça um *fork* do repositório.
-2. Crie uma *branch* descritiva, por exemplo `lab/04-athena`.
-3. Abra um *Pull Request* explicando o que foi adicionado.
+2. Descubra a release ativa e crie sua *branch* a partir dela, por exemplo `lab/04-athena` (veja o [fluxo de trabalho](#fluxo-de-trabalho-gitflow)).
+3. Abra um *Pull Request* para a release ativa, explicando o que foi adicionado.
 
 Todo commit precisa da assinatura do **DCO** ([Developer Certificate of Origin](https://developercertificate.org/)). Com ela, você declara que tem o direito de enviar a contribuição sob as licenças do projeto. Basta usar `git commit -s`, que adiciona ao commit uma linha como:
 
@@ -126,6 +126,51 @@ Ao contribuir, você concorda que o código enviado fica sob a Apache 2.0 e o co
 - Apenas dados fictícios.
 - Nunca inclua credenciais, tokens ou informações sensíveis.
 - Prefira recursos AWS de baixo custo e sempre inclua o teardown.
+
+### Fluxo de trabalho (gitflow)
+
+O projeto usa um GitFlow simplificado com branches de release. A `main` é a única branch permanente e está sempre estável. Cada versão é integrada em uma branch `release/vX.Y.Z`, e o trabalho do dia a dia chega a ela por Pull Requests.
+
+```
+main       o-----------------------------o---------->  (tag vX.Y.Z)
+            \                           /
+release      o---o---o---o---o---o---o              (release/vX.Y.Z)
+                  \     /     \     /
+trabalho           o---o       o---o                (feat/, fix/, docs/, chore/, lab/NN-)
+```
+
+| Branch | Criada a partir de | Destino do PR | Quando apagar |
+|---|---|---|---|
+| `main` | n/a | recebe PRs de `release/vX.Y.Z`, `hotfix/vX.Y.Z` e do Dependabot | nunca |
+| `release/vX.Y.Z` | `main` | `main` | depois do merge na `main` |
+| `feat/<descricao>`, `fix/<descricao>`, `docs/<descricao>`, `chore/<descricao>`, `lab/NN-<descricao>` | release ativa | release ativa | depois do merge na release |
+| `hotfix/vX.Y.Z` | `main` | `main` | depois do merge; a correção é levada também para a release ativa |
+
+A `main` só aceita PR com os checks verdes. A release ativa é a branch `release/*` aberta mais recente:
+
+```
+git ls-remote --heads origin 'release/*'
+```
+
+Se não houver release aberta, abra uma issue antes. O mantenedor cria a release.
+
+**Passo a passo de uma contribuição:**
+
+1. Faça um *fork* e clone o seu fork.
+2. Descubra a release ativa e crie a branch de trabalho a partir dela, por exemplo `git switch -c lab/04-athena origin/release/vX.Y.Z`.
+3. Faça os commits com `git commit -s`, no padrão Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `test:`, `refactor:`).
+4. Abra o Pull Request para a release ativa, não para a `main`.
+5. Aguarde o CI ficar verde e corrija o que falhar.
+6. Se a release andar enquanto o PR está aberto, atualize a sua branch com `git rebase origin/release/vX.Y.Z` e envie com `git push --force-with-lease`. Não use merge para atualizar a branch.
+
+**Método de merge:** o único método usado é *rebase and merge*. Ele preserva cada commit com o próprio `Signed-off-by` e mantém o histórico linear. O *squash* cria um commit novo com o e-mail padrão do GitHub do autor, que pode divergir do sign-off e quebrar o DCO. O *merge commit* quebra o histórico linear.
+
+**Como sai uma versão:**
+
+1. O mantenedor abre o PR de `release/vX.Y.Z` para a `main`.
+2. Com o CI verde, o PR é integrado por *rebase and merge*.
+3. O mantenedor cria a tag anotada `vX.Y.Z` (SemVer) na `main` e publica o GitHub Release com as notas.
+4. A branch da release é apagada.
 
 ---
 

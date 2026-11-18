@@ -2,6 +2,12 @@
 
 <!-- O que mudou e por quê? Cite issues relacionadas. -->
 
+## Branch base
+Veja o [fluxo de trabalho (gitflow)](../README.md#fluxo-de-trabalho-gitflow). Descubra a release ativa com `git ls-remote --heads origin 'release/*'`.
+- [ ] Este PR aponta para a release ativa (`release/vX.Y.Z`) e a minha branch foi criada a partir dela.
+- [ ] Este PR aponta para a `main` e é de uma branch `release/vX.Y.Z` ou `hotfix/vX.Y.Z` (só mantenedores).
+- [ ] A minha branch está atualizada por rebase, sem commits de merge.
+
 ## Tipo de mudança
 
 - [ ] Lab ou conteúdo didático

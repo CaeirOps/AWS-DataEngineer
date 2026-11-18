@@ -7,10 +7,19 @@ Para reportar uma vulnerabilidade, **não abra issue pública**. Siga o [SECURIT
 ## Fluxo de contribuição
 
 1. Faça um *fork* do repositório.
-2. Crie uma *branch* descritiva, por exemplo `lab/04-athena` ou `fix/validator-timeout`.
+2. Crie uma *branch* descritiva a partir da release ativa, por exemplo `lab/04-athena` ou `fix/validator-timeout`.
 3. Faça suas alterações e rode os testes localmente.
 4. Assine os commits (veja [DCO](#dco)).
-5. Abra um *Pull Request* explicando o que mudou e por quê.
+5. Abra um *Pull Request* para a release ativa, explicando o que mudou e por quê.
+
+## Fluxo de trabalho (gitflow)
+O fluxo completo está na seção [Fluxo de trabalho (gitflow)](README.md#fluxo-de-trabalho-gitflow) do README. As regras práticas:
+- **Branch base correta:** crie a branch de trabalho (`feat/`, `fix/`, `docs/`, `chore/`, `lab/NN-`) a partir da release ativa, a branch `release/*` aberta mais recente (`git ls-remote --heads origin 'release/*'`), e abra o PR para ela. A `main` só recebe PRs de `release/vX.Y.Z` e `hotfix/vX.Y.Z`.
+- **Sem release aberta:** abra uma issue antes. O mantenedor cria a release.
+- **Rebase em vez de merge:** para atualizar a sua branch quando a release andar, use `git rebase origin/release/vX.Y.Z` e `git push --force-with-lease`. Não faça merge da release na sua branch.
+- **Um assunto por PR:** PRs pequenos e focados são revisados mais rápido.
+- **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `test:`, `refactor:`), sempre com `git commit -s`.
+- **Merge:** o único método usado é *rebase and merge*, que preserva o `Signed-off-by` de cada commit.
 
 ## Preparando o ambiente
 
@@ -81,7 +90,7 @@ Mudanças nos arquivos abaixo exigem revisão e aprovação do mantenedor, e a d
 O `requirements.txt` tem hashes de todas as dependências, inclusive as transitivas, e é instalado com `pip install --require-hashes`. Não o edite à mão. Para adicionar, remover ou atualizar uma dependência:
 
 1. Edite `requirements.in`.
-2. Rode `scripts/compile-requirements.sh`, que executa `pip-compile --generate-hashes` dentro da imagem `python:3.11-slim` fixada por digest, para que o resultado seja reproduzível.
+2. Rode `scripts/compile-requirements.sh`, que executa `pip-compile --generate-hashes` dentro da imagem `python:3.15-slim` fixada por digest, para que o resultado seja reproduzível.
 3. Faça o commit de `requirements.in` e `requirements.txt` juntos e explique a mudança no Pull Request.
 
 ## Diretrizes de conteúdo
