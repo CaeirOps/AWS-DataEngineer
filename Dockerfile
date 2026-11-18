@@ -28,7 +28,7 @@ USER 10001:10001
 
 EXPOSE 5000
 
-# python:3.11-slim nao inclui curl; o healthcheck usa a biblioteca padrao
+# python:3.15-slim nao inclui curl; o healthcheck usa a biblioteca padrao
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)"]
 
