@@ -13,14 +13,19 @@ from app.lab_catalog import LabCatalog
 from app.models import ValidationResult
 from app.progress_store import ProgressStore
 from app.validation_service import ValidationService
+from tests.fixtures import INFRA_FIELDS, write_stack
 
 LAB_ID = "lab-01"
 NON_TASK_TYPES = ["info", "deploy", "teardown", "completion"]
 
 
 def _build_catalog(root: str, task_count: int, extra_types: list) -> LabCatalog:
-    """Cria um lab temporário com steps de tipos mistos."""
-    steps = [{"step_id": "s-info", "title": "Info", "type": "info"}]
+    """Cria um módulo temporário com infraestrutura e steps de tipos mistos."""
+    steps = [
+        {"step_id": "s-info", "title": "Info", "type": "info"},
+        {"step_id": "s-deploy", "title": "Deploy", "type": "deploy"},
+        {"step_id": "s-teardown", "title": "Teardown", "type": "teardown"},
+    ]
     for i, t in enumerate(extra_types):
         steps.append({"step_id": f"s-{t}-{i}", "title": t, "type": t})
     for i in range(task_count):
@@ -43,10 +48,12 @@ def _build_catalog(root: str, task_count: int, extra_types: list) -> LabCatalog:
         "dea_domains": [],
         "dea_tasks": [],
         "services": ["Amazon S3"],
+        **INFRA_FIELDS,
         "steps": steps,
     }
     lab_dir = os.path.join(root, LAB_ID)
     os.makedirs(lab_dir)
+    write_stack(lab_dir)
     with open(os.path.join(lab_dir, "metadata.json"), "w", encoding="utf-8") as fh:
         json.dump(meta, fh)
     return LabCatalog(root)

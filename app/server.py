@@ -5,9 +5,12 @@ estática e registra os serviços como singletons por processo. CORS fica
 desabilitado: o browser acessa a mesma origem, via gateway.
 
 Decisão sobre `content.md`: `GET /api/labs/<lab_id>` inclui o campo
-`content` em cada step que não é `task` (info, deploy, teardown e
-completion). Steps `task` não trazem `content`; o conteúdo deles vem das
-rotas `.../content?path=` e `.../hint?path=`.
+`content` nos steps info, deploy, teardown e completion. Steps `task` não
+trazem `content`; o conteúdo deles vem das rotas `.../content?path=` e
+`.../hint?path=`. Steps `quiz` também não: as questões vêm das rotas de quiz.
+
+Os nomes `lab_id` e `/api/labs` ficam por compatibilidade; na documentação
+cada lab é um módulo. `estimated_cost_usd` não é exposto (19.4).
 """
 
 import json
@@ -19,7 +22,12 @@ from typing import Optional
 from flask import Flask, jsonify, request, send_from_directory
 
 from app.cloudformation_service import CloudFormationService
-from app.errors import InvalidPayloadError, LabNotFoundError, WorkshopError
+from app.errors import (
+    InvalidPayloadError,
+    LabNotFoundError,
+    NoInfrastructureError,
+    WorkshopError,
+)
 from app.http_security import register_request_guards
 from app.lab_catalog import LabCatalog
 from app.models import LabMetadata, StepMetadata
@@ -45,11 +53,30 @@ def _step_to_dict(step: StepMetadata) -> dict:
         "title": step.title,
         "type": step.type,
         "hint_threshold": step.hint_threshold,
+        "skills": list(step.skills),
     }
     if step.type == "task":
         data["paths"] = list(step.paths or [])
         data["unavailable_paths"] = dict(step.unavailable_paths or {})
+        data["optional"] = step.optional
+        if step.optional:
+            data["cost_note"] = step.cost_note
+    if step.type == "quiz":
+        data["pass_score"] = step.pass_score
     return data
+
+
+def _module_fields(lab: LabMetadata) -> dict:
+    """Campos de módulo comuns à listagem e ao detalhe."""
+    return {
+        "skills": list(lab.skills),
+        "has_infrastructure": lab.has_infrastructure,
+        "cost_notice": {
+            "services": [dict(s) for s in lab.cost_notice.get("services", [])]
+        }
+        if lab.cost_notice
+        else {},
+    }
 
 
 def create_app(config: Optional[dict] = None) -> Flask:
@@ -106,6 +133,16 @@ def create_app(config: Optional[dict] = None) -> Flask:
             raise LabNotFoundError(f"Lab '{lab_id}' não encontrado.")
         return lab
 
+    def require_infrastructure(lab_id: str) -> LabMetadata:
+        """Módulo sem infraestrutura responde 409 antes de qualquer chamada AWS (6.8)."""
+        lab = require_lab(lab_id)
+        if not lab.has_infrastructure:
+            raise NoInfrastructureError(
+                f"O módulo '{lab_id}' não tem infraestrutura: não há stack para criar, "
+                "consultar ou excluir."
+            )
+        return lab
+
     # ------------------------------------------------------------------
     # Páginas e saúde
     # ------------------------------------------------------------------
@@ -155,9 +192,9 @@ def create_app(config: Optional[dict] = None) -> Flask:
                     "description": lab.description,
                     "difficulty": lab.difficulty,
                     "estimated_duration_minutes": lab.estimated_duration_minutes,
-                    "estimated_cost_usd": lab.estimated_cost_usd,
                     "dea_domains": lab.dea_domains,
                     "services": lab.services,
+                    **_module_fields(lab),
                     "total_steps": total,
                     "completed_steps": completed,
                     "status": store.get_lab_progress(lab.lab_id)["status"],
@@ -173,7 +210,7 @@ def create_app(config: Optional[dict] = None) -> Flask:
         steps = []
         for step in lab.steps:
             data = _step_to_dict(step)
-            if step.type != "task":
+            if step.type not in ("task", "quiz"):
                 data["content"] = catalog.get_step_single_content(lab_id, step.step_id)
             data["status"] = progress["steps"].get(step.step_id, {}).get("status", "not_visited")
             data["attempts"] = progress["steps"].get(step.step_id, {}).get("attempts", 0)
@@ -185,8 +222,8 @@ def create_app(config: Optional[dict] = None) -> Flask:
                 "description": lab.description,
                 "difficulty": lab.difficulty,
                 "estimated_duration_minutes": lab.estimated_duration_minutes,
-                "estimated_cost_usd": lab.estimated_cost_usd,
                 "cost_disclaimer": lab.cost_disclaimer,
+                **_module_fields(lab),
                 "dea_domains": lab.dea_domains,
                 "dea_tasks": lab.dea_tasks,
                 "services": lab.services,
@@ -248,13 +285,13 @@ def create_app(config: Optional[dict] = None) -> Flask:
     @app.post("/api/deploy/<lab_id>")
     def deploy(lab_id):
         guard_session()
-        lab = require_lab(lab_id)
+        lab = require_infrastructure(lab_id)
         return jsonify(cfn.deploy(lab_id, lab))
 
     @app.post("/api/teardown/<lab_id>")
     def teardown(lab_id):
         guard_session()
-        require_lab(lab_id)
+        require_infrastructure(lab_id)
         if _json_body().get("confirm") is not True:
             raise InvalidPayloadError(
                 'Confirmação obrigatória. Envie {"confirm": true} para excluir a stack.'
@@ -264,6 +301,7 @@ def create_app(config: Optional[dict] = None) -> Flask:
     @app.get("/api/stack-status/<lab_id>")
     def stack_status(lab_id):
         guard_session()
+        require_infrastructure(lab_id)
         return jsonify(cfn.get_status(lab_id))
 
     @app.get("/api/session")

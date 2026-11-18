@@ -7,12 +7,18 @@ Estrutura esperada em disco (ver design.md, seção Lab Content):
     <labs_dir>/<lab_id>/steps/<step_id>/scenario.md         (steps task)
     <labs_dir>/<lab_id>/steps/<step_id>/{console,cli}.md    (instruções por Trilha)
     <labs_dir>/<lab_id>/steps/<step_id>/hint-{console,cli}.md
+    <labs_dir>/<lab_id>/steps/<step_id>/quiz.json           (steps quiz)
+    <labs_dir>/<lab_id>/cloudformation/stack.yaml           (só com infraestrutura)
+
+Os `skills` declarados precisam existir na Matriz de cobertura
+(`docs/exam-coverage.json`, ver design.md seção 5a).
 """
 
 import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Optional
 
 from app.errors import (
@@ -25,9 +31,17 @@ from app.errors import (
 from app.models import LabMetadata, StepMetadata
 
 VALID_PATHS = ("console", "cli")
-STEP_TYPES = ("info", "deploy", "task", "teardown", "completion")
+STEP_TYPES = ("info", "deploy", "task", "quiz", "teardown", "completion")
 CONTENT_SEPARATOR = "\n\n---\n\n"
 DEFAULT_HINT_THRESHOLD = 3
+DEFAULT_PASS_SCORE = 0.7
+PRICING_URL_PREFIX = "https://aws.amazon.com/"
+PRICING_HOST = "aws.amazon.com"
+ENV_COVERAGE_FILE = "WORKSHOP_COVERAGE_FILE"
+
+_SKILL_RE = re.compile(r"^[1-9]\.[1-9]\.[1-9][0-9]?$")
+# Caracteres proibidos em `pricing_url`: espaços, controle e barra invertida.
+_URL_FORBIDDEN_RE = re.compile(r"[\s\x00-\x1f\x7f\\]")
 
 # Ids viram nomes de diretório: aceitar somente este formato evita path traversal.
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
@@ -55,6 +69,14 @@ def default_labs_dir() -> str:
     return str(Path(__file__).resolve().parent.parent / "labs")
 
 
+def default_coverage_file() -> str:
+    """Matriz de cobertura: `WORKSHOP_COVERAGE_FILE` ou `docs/exam-coverage.json`."""
+    env = os.environ.get(ENV_COVERAGE_FILE)
+    if env:
+        return env
+    return str(Path(__file__).resolve().parent.parent / "docs" / "exam-coverage.json")
+
+
 def _is_valid_id(value: object) -> bool:
     return isinstance(value, str) and _ID_RE.match(value) is not None
 
@@ -62,8 +84,12 @@ def _is_valid_id(value: object) -> bool:
 class LabCatalog:
     """Carrega e consulta os labs. Instanciado uma vez por processo."""
 
-    def __init__(self, labs_dir: Optional[str] = None):
+    def __init__(self, labs_dir: Optional[str] = None, coverage_file: Optional[str] = None):
         self._labs_dir = Path(labs_dir if labs_dir is not None else default_labs_dir())
+        self._coverage_file = Path(
+            coverage_file if coverage_file is not None else default_coverage_file()
+        )
+        self._matrix_skills: Optional[frozenset[str]] = None
         self._labs: dict[str, LabMetadata] = {}
         self._load_all()
 
@@ -106,7 +132,7 @@ class LabCatalog:
                 dir_name, f"lab_id '{lab_id}' difere do nome do diretório"
             )
 
-        for key in ("title", "description", "difficulty", "cost_disclaimer"):
+        for key in ("title", "description", "difficulty"):
             if not isinstance(raw.get(key), str):
                 raise InvalidLabMetadataError(lab_id, f"campo '{key}' ausente ou não é texto")
         for key in ("dea_domains", "dea_tasks"):
@@ -122,17 +148,29 @@ class LabCatalog:
                 lab_id, "'services' deve conter somente textos não vazios"
             )
         duration = raw.get("estimated_duration_minutes")
-        cost = raw.get("estimated_cost_usd")
         if isinstance(duration, bool) or not isinstance(duration, int):
             raise InvalidLabMetadataError(lab_id, "estimated_duration_minutes deve ser inteiro")
-        if isinstance(cost, bool) or not isinstance(cost, (int, float)):
+
+        # Campos legados: aceitos, mas não obrigatórios (19.4: USD não é exibido).
+        cost = raw.get("estimated_cost_usd")
+        if cost is not None and (isinstance(cost, bool) or not isinstance(cost, (int, float))):
             raise InvalidLabMetadataError(lab_id, "estimated_cost_usd deve ser numérico")
+        disclaimer = raw.get("cost_disclaimer", "")
+        if not isinstance(disclaimer, str):
+            raise InvalidLabMetadataError(lab_id, "cost_disclaimer deve ser texto")
+
         prerequisites = raw.get("prerequisites", {})
         if not isinstance(prerequisites, dict):
             raise InvalidLabMetadataError(lab_id, "prerequisites deve ser um objeto")
         residual = raw.get("residual_resources", [])
         if not isinstance(residual, list):
             raise InvalidLabMetadataError(lab_id, "residual_resources deve ser uma lista")
+
+        skills = self._parse_skills(lab_id, raw.get("skills"), None, required=True)
+        has_infra = raw.get("has_infrastructure", True)
+        if not isinstance(has_infra, bool):
+            raise InvalidLabMetadataError(lab_id, "has_infrastructure deve ser booleano")
+        cost_notice = self._parse_cost_notice(lab_id, raw.get("cost_notice"), has_infra)
 
         raw_steps = raw.get("steps")
         if not isinstance(raw_steps, list):
@@ -144,7 +182,16 @@ class LabCatalog:
             if step.step_id in seen:
                 raise InvalidLabMetadataError(lab_id, "step_id duplicado", step.step_id)
             seen.add(step.step_id)
+            outside = [s for s in step.skills if s not in skills]
+            if outside:
+                raise InvalidLabMetadataError(
+                    lab_id, f"skills do step fora dos skills do módulo: {outside}", step.step_id
+                )
+            if step.type == "quiz":
+                self._check_quiz_file(lab_id, step.step_id)
             steps.append(step)
+
+        self._check_infrastructure(lab_id, has_infra, steps)
 
         return LabMetadata(
             lab_id=lab_id,
@@ -152,18 +199,145 @@ class LabCatalog:
             description=raw["description"],
             difficulty=raw["difficulty"],
             estimated_duration_minutes=duration,
-            estimated_cost_usd=float(cost),
-            cost_disclaimer=raw["cost_disclaimer"],
+            estimated_cost_usd=None if cost is None else float(cost),
+            cost_disclaimer=disclaimer,
             dea_domains=list(raw["dea_domains"]),
             dea_tasks=list(raw["dea_tasks"]),
             services=list(services),
             prerequisites=prerequisites,
             steps=steps,
             residual_resources=list(residual),
+            skills=skills,
+            has_infrastructure=has_infra,
+            cost_notice=cost_notice,
         )
 
+    # ------------------------------------------------------------------
+    # Regras dos campos de módulo (Requirements 6.8, 19.3, 20.3)
+    # ------------------------------------------------------------------
+
+    def _matrix(self, lab_id: str) -> frozenset[str]:
+        """Ids das skills da Matriz de cobertura, lidos uma vez (fail-closed)."""
+        if self._matrix_skills is None:
+            try:
+                with open(self._coverage_file, encoding="utf-8") as fh:
+                    data = json.load(fh)
+                ids = frozenset(s["id"] for s in data["skills"])
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                raise InvalidLabMetadataError(
+                    lab_id,
+                    f"Matriz de cobertura indisponível em '{self._coverage_file}': {exc}",
+                )
+            self._matrix_skills = ids
+        return self._matrix_skills
+
+    def _parse_skills(
+        self, lab_id: str, value: object, step_id: Optional[str], required: bool
+    ) -> list[str]:
+        if value is None and not required:
+            return []
+        if not isinstance(value, list) or not value:
+            raise InvalidLabMetadataError(
+                lab_id, "skills deve ser uma lista não vazia de ids 'N.N.N'", step_id
+            )
+        if any(not isinstance(s, str) or not _SKILL_RE.match(s) for s in value):
+            raise InvalidLabMetadataError(
+                lab_id, f"skills com id fora do formato 'N.N.N': {value!r}", step_id
+            )
+        if len(set(value)) != len(value):
+            raise InvalidLabMetadataError(lab_id, "skills com id repetido", step_id)
+        unknown = [s for s in value if s not in self._matrix(lab_id)]
+        if unknown:
+            raise InvalidLabMetadataError(
+                lab_id, f"skills ausentes da Matriz de cobertura: {unknown}", step_id
+            )
+        return list(value)
+
     @staticmethod
-    def _parse_step(lab_id: str, raw: object) -> StepMetadata:
+    def _valid_pricing_url(url: object) -> bool:
+        """`https://aws.amazon.com/...` sem userinfo, porta, espaço ou barra invertida."""
+        if not isinstance(url, str) or not url.startswith(PRICING_URL_PREFIX):
+            return False
+        if _URL_FORBIDDEN_RE.search(url):
+            return False
+        parts = urlsplit(url)
+        return parts.scheme == "https" and parts.netloc == PRICING_HOST
+
+    def _parse_cost_notice(self, lab_id: str, value: object, has_infra: bool) -> dict:
+        if value is None:
+            if has_infra:
+                raise InvalidLabMetadataError(
+                    lab_id, "cost_notice é obrigatório em módulo com infraestrutura"
+                )
+            return {}
+        if not isinstance(value, dict) or set(value) != {"services"}:
+            raise InvalidLabMetadataError(
+                lab_id, "cost_notice deve ser um objeto apenas com 'services'"
+            )
+        services = value["services"]
+        if not isinstance(services, list) or not services:
+            raise InvalidLabMetadataError(
+                lab_id, "cost_notice.services deve ser uma lista não vazia"
+            )
+        result = []
+        for item in services:
+            if not isinstance(item, dict) or set(item) != {"name", "pricing_url"}:
+                raise InvalidLabMetadataError(
+                    lab_id, "cada item de cost_notice.services deve ter só 'name' e 'pricing_url'"
+                )
+            name = item["name"]
+            if not isinstance(name, str) or not name.strip():
+                raise InvalidLabMetadataError(lab_id, "cost_notice.services[].name vazio")
+            if not self._valid_pricing_url(item["pricing_url"]):
+                raise InvalidLabMetadataError(
+                    lab_id,
+                    f"pricing_url deve começar com '{PRICING_URL_PREFIX}': "
+                    f"{item['pricing_url']!r}",
+                )
+            result.append({"name": name, "pricing_url": item["pricing_url"]})
+        return {"services": result}
+
+    def _check_quiz_file(self, lab_id: str, step_id: str) -> None:
+        """`quiz.json` existe e tem `questions` não vazio (formato completo na 15N)."""
+        file = self._labs_dir / lab_id / "steps" / step_id / "quiz.json"
+        try:
+            with open(file, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, ValueError) as exc:
+            raise InvalidLabMetadataError(lab_id, f"quiz.json ausente ou inválido: {exc}", step_id)
+        questions = data.get("questions") if isinstance(data, dict) else None
+        if not isinstance(questions, list) or not questions:
+            raise InvalidLabMetadataError(
+                lab_id, "quiz.json deve ter 'questions' como lista não vazia", step_id
+            )
+
+    def _check_infrastructure(
+        self, lab_id: str, has_infra: bool, steps: list[StepMetadata]
+    ) -> None:
+        stack = (self._labs_dir / lab_id / "cloudformation" / "stack.yaml").is_file()
+        types = {s.type for s in steps}
+        if has_infra:
+            if not stack:
+                raise InvalidLabMetadataError(
+                    lab_id, "has_infrastructure é true, mas cloudformation/stack.yaml não existe"
+                )
+            for kind in ("deploy", "teardown"):
+                if kind not in types:
+                    raise InvalidLabMetadataError(
+                        lab_id, f"has_infrastructure é true, mas não há step '{kind}'"
+                    )
+            return
+        if stack:
+            raise InvalidLabMetadataError(
+                lab_id, "has_infrastructure é false, mas cloudformation/stack.yaml existe"
+            )
+        for kind in ("deploy", "teardown"):
+            if kind in types:
+                raise InvalidLabMetadataError(
+                    lab_id, f"has_infrastructure é false, mas há step '{kind}'"
+                )
+
+    def _parse_step(self, lab_id: str, raw: object) -> StepMetadata:
         if not isinstance(raw, dict):
             raise InvalidLabMetadataError(lab_id, "cada step deve ser um objeto")
         step_id = raw.get("step_id")
@@ -179,6 +353,18 @@ class LabCatalog:
             raise InvalidLabMetadataError(
                 lab_id, "hint_threshold deve ser inteiro >= 1", step_id
             )
+        skills = self._parse_skills(lab_id, raw.get("skills"), step_id, required=False)
+
+        if "pass_score" in raw and step_type != "quiz":
+            raise InvalidLabMetadataError(
+                lab_id, "pass_score só é permitido em steps do tipo quiz", step_id
+            )
+        if step_type != "task":
+            for key in ("optional", "cost_note"):
+                if key in raw:
+                    raise InvalidLabMetadataError(
+                        lab_id, f"{key} só é permitido em steps do tipo task", step_id
+                    )
 
         paths = raw.get("paths")
         unavailable = raw.get("unavailable_paths")
@@ -190,7 +376,34 @@ class LabCatalog:
                     "paths/unavailable_paths só são permitidos em steps do tipo task",
                     step_id,
                 )
-            return StepMetadata(step_id, raw["title"], step_type, threshold)
+            pass_score = None
+            if step_type == "quiz":
+                pass_score = raw.get("pass_score", DEFAULT_PASS_SCORE)
+                if (
+                    isinstance(pass_score, bool)
+                    or not isinstance(pass_score, (int, float))
+                    or not 0 < pass_score <= 1
+                ):
+                    raise InvalidLabMetadataError(
+                        lab_id, "pass_score deve ser número maior que 0 e até 1", step_id
+                    )
+            return StepMetadata(
+                step_id, raw["title"], step_type, threshold, skills=skills, pass_score=pass_score
+            )
+
+        optional = raw.get("optional", False)
+        if not isinstance(optional, bool):
+            raise InvalidLabMetadataError(lab_id, "optional deve ser booleano", step_id)
+        cost_note = raw.get("cost_note")
+        if optional:
+            if not isinstance(cost_note, str) or not cost_note.strip():
+                raise InvalidLabMetadataError(
+                    lab_id, "Prática opcional exige cost_note não vazio", step_id
+                )
+        elif cost_note is not None:
+            raise InvalidLabMetadataError(
+                lab_id, "cost_note só é permitido em step com optional: true", step_id
+            )
 
         if not isinstance(paths, list) or not paths:
             raise InvalidLabMetadataError(lab_id, "paths deve ser uma lista não vazia", step_id)
@@ -222,7 +435,17 @@ class LabCatalog:
                     f"Trilha '{trail}' ausente de paths e sem motivo em unavailable_paths",
                     step_id,
                 )
-        return StepMetadata(step_id, raw["title"], step_type, threshold, list(paths), dict(unavailable))
+        return StepMetadata(
+            step_id,
+            raw["title"],
+            step_type,
+            threshold,
+            list(paths),
+            dict(unavailable),
+            skills=skills,
+            optional=optional,
+            cost_note=cost_note if optional else None,
+        )
 
     # ------------------------------------------------------------------
     # Consultas de metadados
@@ -298,10 +521,11 @@ class LabCatalog:
         return self._read(lab_id, step_id, f"hint-{path}.md")
 
     def get_step_single_content(self, lab_id: str, step_id: str) -> str:
-        """Retorna `content.md` de steps que não são task (info, deploy, teardown, completion)."""
+        """Retorna `content.md` de steps info, deploy, teardown e completion."""
         step = self.get_step(lab_id, step_id)
-        if step.type == "task":
+        if step.type in ("task", "quiz"):
             raise StepNotFoundError(
-                f"Step '{step_id}' do lab '{lab_id}' é do tipo task e não tem content.md único."
+                f"Step '{step_id}' do lab '{lab_id}' é do tipo {step.type} e não tem "
+                "content.md único."
             )
         return self._read(lab_id, step_id, "content.md")

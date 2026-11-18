@@ -21,6 +21,7 @@ from app.errors import (
     CredentialsError,
     CredentialsMissingError,
     LabNotFoundError,
+    NoInfrastructureError,
     PermissionsError,
     StackDeployError,
     StackNotFoundError,
@@ -226,9 +227,15 @@ class CloudFormationService:
         return self._catalog.labs_dir / lab_id / "cloudformation" / "stack.yaml"
 
     def _require_lab(self, lab_id: str, lab_metadata: Optional[LabMetadata]) -> LabMetadata:
+        """Lab existente e com infraestrutura; checado antes de criar cliente boto3."""
         lab = lab_metadata or self._catalog.get_lab(lab_id)
         if lab is None:
             raise LabNotFoundError(f"Lab '{lab_id}' não encontrado.")
+        if not lab.has_infrastructure:
+            raise NoInfrastructureError(
+                f"O módulo '{lab_id}' não tem infraestrutura: não há stack para criar, "
+                "consultar ou excluir."
+            )
         return lab
 
     def _read_template(self, lab_id: str) -> str:

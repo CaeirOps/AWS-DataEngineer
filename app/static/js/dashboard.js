@@ -1,7 +1,7 @@
 // Dashboard: lista os labs com progresso e ponto de retomada.
 
 import { api } from "./api.js";
-import { el, errorBanner, formatCost, domainBadge, difficultyBadge } from "./dom.js";
+import { el, errorBanner, domainBadge, difficultyBadge } from "./dom.js";
 
 const STATUS_LABELS = {
   completed: "Concluído",
@@ -37,7 +37,7 @@ function labCard(lab) {
     el(
       "p",
       { class: "card__meta" },
-      `${lab.estimated_duration_minutes} min · custo estimado ${formatCost(lab.estimated_cost_usd)}`
+      `${lab.estimated_duration_minutes} min`
     ),
     el(
       "div",

@@ -22,6 +22,7 @@ from app.errors import (
 )
 from app.lab_catalog import LabCatalog
 from app.validators.base import CREDENTIAL_HINT
+from tests.fixtures import INFRA_FIELDS, write_stack
 
 LAB_ID = "lab-a"
 STACK = "workshop-lab-a"
@@ -37,7 +38,11 @@ NOW = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
 
 def make_catalog(tmp_path, template=PLAIN_TEMPLATE, residual=None):
-    """Monta um lab mínimo em `tmp_path`; `template=None` omite o stack.yaml."""
+    """Monta um módulo mínimo com infraestrutura em `tmp_path`.
+
+    `template=None` remove o stack.yaml depois da carga do catálogo, para
+    simular o arquivo apagado com o servidor no ar.
+    """
     lab_dir = tmp_path / LAB_ID
     lab_dir.mkdir()
     meta = {
@@ -51,14 +56,20 @@ def make_catalog(tmp_path, template=PLAIN_TEMPLATE, residual=None):
         "dea_domains": [],
         "dea_tasks": [],
         "services": ["Amazon S3"],
-        "steps": [{"step_id": "i1", "title": "Info", "type": "info"}],
+        **INFRA_FIELDS,
+        "steps": [
+            {"step_id": "i1", "title": "Info", "type": "info"},
+            {"step_id": "d1", "title": "Deploy", "type": "deploy"},
+            {"step_id": "x1", "title": "Teardown", "type": "teardown"},
+        ],
         "residual_resources": RESIDUAL if residual is None else residual,
     }
     (lab_dir / "metadata.json").write_text(json.dumps(meta), encoding="utf-8")
-    if template is not None:
-        (lab_dir / "cloudformation").mkdir()
-        (lab_dir / "cloudformation" / "stack.yaml").write_text(template, encoding="utf-8")
-    return LabCatalog(str(tmp_path))
+    write_stack(lab_dir, template if template is not None else PLAIN_TEMPLATE)
+    catalog = LabCatalog(str(tmp_path))
+    if template is None:
+        (lab_dir / "cloudformation" / "stack.yaml").unlink()
+    return catalog
 
 
 class Harness:

@@ -32,7 +32,6 @@ function makeLab(overrides = {}) {
     description: "Descrição",
     difficulty: "iniciante",
     estimated_duration_minutes: 10,
-    estimated_cost_usd: 0,
     dea_domains: ["D1", "D3"],
     dea_tasks: ["1.1"],
     services: ["Amazon S3", "AWS Glue"],
