@@ -2,14 +2,22 @@
 
 ## Introduction
 
-Este documento define os requisitos para a Plataforma de Workshop AWS Data Engineer: uma plataforma de treinamento interativa, open source e self-paced voltada para a comunidade AWS brasileira. A plataforma prepara candidatos para a certificação AWS Certified Data Engineer - Associate (DEA-C01) por meio de 10 laboratórios práticos que utilizam recursos reais na AWS. A solução é distribuída via `git clone` e executada localmente com Docker Compose, sem autenticação, sem servidor externo e sem rastreamento de dados do usuário.
+Este documento define os requisitos para a Plataforma de Workshop AWS Data Engineer: uma plataforma de treinamento interativa, open source e self-paced voltada para a comunidade AWS brasileira. A plataforma prepara candidatos para a certificação AWS Certified Data Engineer - Associate (DEA-C01) por meio de 19 módulos de treinamento hands-on (Módulo 00 a Módulo 18), em que cada módulo intercala conteúdo teórico, práticas em recursos reais na AWS e uma verificação de conhecimento, e de um simulado final no formato do exame. Todos os módulos usam o mesmo cenário fictício, a varejista AnyCompany. A solução é distribuída via `git clone` e executada localmente com Docker Compose, sem autenticação, sem servidor externo e sem rastreamento de dados do usuário.
 
 ## Glossary
 
 - **Plataforma**: A aplicação web local composta por Flask (backend), HTML/CSS/JS estático (frontend) e scripts Python de validação.
-- **Workshop**: O conjunto completo de 10 laboratórios de treinamento para a certificação DEA-C01.
-- **Lab**: Um laboratório individual contendo cenário, steps, validações e recursos de infraestrutura CloudFormation.
-- **Step**: Uma etapa atômica dentro de um lab, com cenário, tarefa e botão de validação.
+- **Workshop**: O conjunto completo dos 19 módulos de treinamento e do simulado final para a certificação DEA-C01.
+- **Módulo**: Uma unidade de treinamento hands-on com objetivos, conteúdo teórico intercalado com práticas, verificação de conhecimento, resumo e links para a documentação oficial. Nos identificadores técnicos (`lab_id`, diretório `labs/`, rotas `/api/labs`), o termo histórico "lab" é mantido por compatibilidade e designa um Módulo.
+- **Lab**: Sinônimo histórico de Módulo, usado nos identificadores técnicos.
+- **Step**: Uma etapa atômica dentro de um módulo: conteúdo teórico (`info`), provisionamento (`deploy`), prática validada (`task`), verificação de conhecimento (`quiz`), remoção de recursos (`teardown`) ou conclusão (`completion`).
+- **Verificação de conhecimento**: Step do tipo `quiz` com questões no estilo do exame (escolha única e múltipla escolha), corrigido no servidor, com explicação de cada alternativa.
+- **Simulado**: Módulo especial `mock-exam` que sorteia questões das Verificações de conhecimento com a distribuição de pesos dos domínios do exame e mostra a nota por domínio.
+- **Prática opcional**: Step `task` marcado com `optional: true`, em geral porque usa um serviço de custo elevado; registra progresso, mas não conta para a conclusão do módulo.
+- **Aviso de custo**: Texto do módulo ou do step que informa que a prática gera cobrança na conta do usuário, cita os serviços cobrados e aponta para a página oficial de preços de cada um, sem valores estimados.
+- **Destaque**: Bloco do conteúdo marcado como "Na prova", "Custo", "Boas práticas" ou "Atenção", renderizado com estilo próprio.
+- **AnyCompany**: Varejista fictícia (pedidos, clientes, estoque, cliques e pagamentos) usada como cenário contínuo em todos os módulos.
+- **Matriz de cobertura**: Arquivo versionado `docs/exam-coverage.json` que liga cada skill do guia oficial do exame (1.1.1 a 4.5.7) aos módulos que a cobrem.
 - **Validador**: O módulo Python com boto3 que verifica o estado real dos recursos AWS para um determinado step.
 - **Dashboard**: A tela inicial da plataforma que exibe o progresso consolidado de todos os labs.
 - **Progress Store**: O arquivo `progress.json` armazenado em volume local (gitignored) que persiste o estado de progresso do usuário.
@@ -61,7 +69,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 #### Acceptance Criteria
 
-1. WHEN o usuário acessa `http://localhost:${WORKSHOP_PORT}` (padrão 5000), THE Dashboard SHALL exibir todos os 10 labs com seus respectivos títulos, domínios DEA-C01 e níveis de complexidade.
+1. WHEN o usuário acessa `http://localhost:${WORKSHOP_PORT}` (padrão 5000), THE Dashboard SHALL exibir todos os módulos do catálogo e o Simulado, com seus respectivos títulos, domínios DEA-C01 e níveis de complexidade.
 2. THE Dashboard SHALL exibir, para cada lab, o número de steps concluídos sobre o total de steps disponíveis.
 3. THE Dashboard SHALL identificar visualmente o ponto de retomada de cada lab iniciado mas não concluído.
 4. WHEN o usuário clica em um lab no Dashboard, THE Plataforma SHALL navegar para o step mais recente não concluído daquele lab, ou para o primeiro step caso o lab ainda não tenha sido iniciado.
@@ -85,17 +93,20 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 ---
 
-### Requirement 4: Exibição de Laboratório
+### Requirement 4: Exibição do Módulo (teoria e prática intercaladas)
 
-**User Story:** Como usuário da plataforma, quero ler o cenário e as instruções de cada step com clareza, para que eu saiba exatamente o que precisa ser feito na minha conta AWS.
+**User Story:** Como usuário da plataforma, quero ler o conteúdo teórico e executar as práticas na mesma sequência, para que eu aprenda os conceitos e os aplique na minha conta AWS enquanto leio.
 
 #### Acceptance Criteria
 
-1. THE Plataforma SHALL exibir, para cada step, um cenário narrativo contextualizado, as tarefas a serem executadas na AWS, apresentadas nas duas Trilhas conforme o Requirement 11, e os critérios de aceitação esperados.
-2. THE Plataforma SHALL exibir um disclaimer de custos AWS obrigatório no início de cada lab, antes de qualquer step de provisionamento de recursos.
-3. THE Plataforma SHALL exibir a estimativa de custo (calculada via AWS Pricing Calculator) para cada lab antes de o usuário iniciar o provisionamento de infraestrutura.
-4. THE Plataforma SHALL exibir os domínios DEA-C01 cobertos por cada lab (D1, D2, D3, D4) com as respectivas tasks do exame.
+1. THE Plataforma SHALL exibir, para cada step `task`, um cenário narrativo da AnyCompany, as tarefas a serem executadas na AWS, apresentadas nas duas Trilhas conforme o Requirement 11, e os critérios de aceitação esperados.
+2. THE Plataforma SHALL exibir um disclaimer de custos AWS obrigatório no início de cada módulo que tenha prática paga, antes de qualquer step de provisionamento de recursos.
+3. WHEN um módulo tiver prática paga, THE Plataforma SHALL exibir, antes do step `deploy`, o Aviso de custo do módulo com os serviços cobrados e os links das páginas oficiais de preços da AWS, sem exibir valores estimados.
+4. THE Plataforma SHALL exibir os domínios DEA-C01, as tasks e as skills do exame cobertas por cada módulo e, em cada step, as skills que ele cobre.
 5. THE Plataforma SHALL preservar os termos técnicos em inglês na documentação redigida em português.
+6. THE Plataforma SHALL organizar cada módulo na sequência: objetivos com as skills do exame, seções de conceito (steps `info`) intercaladas com práticas (steps `task`), Verificação de conhecimento, resumo e links para a documentação oficial da AWS.
+7. THE Plataforma SHALL renderizar os Destaques "Na prova", "Custo", "Boas práticas" e "Atenção" com estilo visual distinto, sem interpretar HTML vindo do conteúdo.
+8. THE Plataforma SHALL exibir imagens do conteúdo somente quando o caminho apontar para um arquivo do diretório `assets/` do próprio módulo, com tipo permitido (SVG ou PNG) e texto alternativo não vazio, e SHALL exibir apenas o texto alternativo em qualquer outro caso.
 
 ---
 
@@ -111,7 +122,8 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 4. THE Plataforma SHALL permitir retry ilimitado de validação sem penalidade para o usuário.
 5. WHEN o usuário falhar na validação de um step por X vezes consecutivas (configurável por lab), THE Plataforma SHALL exibir o botão "Ver Dica Detalhada" com orientações contextuais para aquele step específico.
 6. IF uma chamada AWS do Validador falhar por erro de credenciais (credenciais ausentes, inválidas ou expiradas), THEN THE Validador SHALL retornar o código e a mensagem de erro originais da chamada AWS, sem alteração, acompanhados da sugestão de verificar as credenciais AWS do profile em uso e de renovar o login no host e executar `python start.py --refresh`, sem incluir valores de credenciais na mensagem.
-7. WHEN a validação de todos os steps de um lab for concluída com sucesso, THE Plataforma SHALL exibir tela de conclusão do lab com resumo dos serviços utilizados e domínios DEA-C01 cobertos.
+7. WHEN todos os steps obrigatórios de um módulo forem concluídos, THE Plataforma SHALL exibir tela de conclusão do módulo com resumo dos serviços utilizados e domínios DEA-C01 cobertos.
+8. THE Plataforma SHALL considerar obrigatórios para a conclusão de um módulo os steps `task` sem `optional: true` e os steps `quiz`.
 
 ---
 
@@ -121,27 +133,29 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 #### Acceptance Criteria
 
-1. THE Plataforma SHALL fornecer um template CloudFormation para cada um dos 10 labs, contendo os recursos de infraestrutura necessários para a realização dos exercícios.
+1. THE Plataforma SHALL fornecer um template CloudFormation para cada módulo com prática na AWS, contendo os recursos de infraestrutura necessários para a realização dos exercícios.
 2. WHEN o usuário inicia um lab, THE Plataforma SHALL apresentar as instruções para implantação da CloudFormation Stack do lab antes do primeiro step de tarefa.
 3. WHILE a CloudFormation Stack de um lab estiver sendo provisionada, THE Plataforma SHALL exibir o status de provisionamento com atualização periódica.
 4. IF a implantação da CloudFormation Stack falhar, THEN THE Plataforma SHALL exibir o motivo da falha obtido via API CloudFormation e orientar o usuário sobre as próximas ações.
 5. WHEN o usuário clica no botão "Finalizar Lab", THE Plataforma SHALL solicitar confirmação explícita do usuário antes de iniciar a exclusão da CloudFormation Stack.
 6. WHEN o usuário confirma a finalização, THE Plataforma SHALL executar a exclusão da CloudFormation Stack do lab e exibir tela de aviso listando recursos residuais que podem gerar custos adicionais e requerem verificação manual.
 7. THE Plataforma SHALL permitir a exibição da tela de aviso de recursos residuais independentemente do estado real da exclusão da CloudFormation Stack (não confirmada, não executada, em andamento, concluída ou com falha).
+8. IF um módulo não tiver template CloudFormation, THEN THE Plataforma SHALL omitir os steps `deploy` e `teardown` desse módulo e THE Flask App SHALL responder às rotas de deploy, teardown e stack-status do módulo com o código `NO_INFRASTRUCTURE`, sem chamar a AWS.
 
 ---
 
-### Requirement 7: Catálogo de Laboratórios
+### Requirement 7: Catálogo de Módulos
 
-**User Story:** Como candidato à certificação DEA-C01, quero acessar 10 laboratórios progressivos cobrindo todos os domínios do exame, para que eu possa praticar as habilidades avaliadas na prova.
+**User Story:** Como candidato à certificação DEA-C01, quero um treinamento completo em módulos progressivos cobrindo todo o conteúdo do exame, para que eu estude a teoria e pratique as habilidades avaliadas na prova.
 
 #### Acceptance Criteria
 
-1. THE Workshop SHALL disponibilizar os seguintes 10 labs na ordem listada: Lab 01 - Fundamentos de S3 e Data Lake (D2, iniciante), Lab 02 - Catalogação e descoberta de dados (D2), Lab 03 - Transformação ETL com AWS Glue (D1), Lab 04 - Consultas analíticas com Athena (D3), Lab 05 - Qualidade de dados com DataBrew (D3), Lab 06 - Ingestão de streaming com Kinesis (D1), Lab 07 - Data Warehouse com Redshift (D2), Lab 08 - Orquestração de pipelines (D3), Lab 09 - Segurança e Governança (D4), Lab 10 - Pipeline end-to-end (D1, D2, D3, D4).
-2. THE Workshop SHALL garantir que cada lab seja independente e possa ser executado sem dependência de outros labs, exceto o Lab 10.
-3. THE Workshop SHALL garantir que o Lab 10 documente explicitamente sua dependência dos Labs 01 a 09 como pré-requisito recomendado.
-4. THE Workshop SHALL cobrir os domínios do exame DEA-C01 nas seguintes proporções: D1 (Ingestão e Transformação, 34%), D2 (Gerenciamento de Armazenamento, 26%), D3 (Operações e Suporte, 22%) e D4 (Segurança e Governança, 18%).
-5. THE Plataforma SHALL exibir, para o Lab 01, os seguintes pré-requisitos ao usuário: conta AWS ativa com acesso administrativo, conhecimento básico de SQL, familiaridade com linha de comando, Docker instalado e Git básico.
+1. THE Workshop SHALL disponibilizar os seguintes 19 módulos na ordem listada: 00 Fundamentos de engenharia de dados (somente teoria), 01 S3 e data lake, 02 Catálogo de dados, 03 Athena e SQL analítico, 04 ETL com Glue e PySpark, 05 EMR Serverless e escolha do motor de processamento, 06 Qualidade de dados, 07 Streaming, 08 DynamoDB e bancos operacionais, 09 Migração e CDC, 10 Redshift, 11 Open table formats, 12 Orquestração, 13 Observabilidade e operação, 14 Segurança, 15 Governança, 16 Dados para IA, 17 Data APIs, IaC e CI/CD, e 18 Projeto final.
+2. THE Workshop SHALL garantir que cada módulo seja independente, provisione os recursos de que precisa e possa ser executado sem dependência de outros módulos, exceto o Módulo 18.
+3. THE Workshop SHALL garantir que o Módulo 18 documente explicitamente a recomendação de concluir os Módulos 00 a 17 antes.
+4. THE Workshop SHALL refletir os pesos do exame DEA-C01 na distribuição do Simulado: D1 (Ingestão e Transformação, 34%), D2 (Gerenciamento de Armazenamento, 26%), D3 (Operações e Suporte, 22%) e D4 (Segurança e Governança, 18%).
+5. THE Plataforma SHALL exibir, para o Módulo 00, os pré-requisitos do workshop: conta AWS ativa com acesso administrativo, conhecimento básico de SQL, familiaridade com linha de comando, Docker instalado e Git básico.
+6. THE Workshop SHALL usar a AnyCompany como cenário contínuo de todos os módulos, com datasets fictícios coerentes entre módulos e sem dados pessoais reais.
 
 ---
 
@@ -176,17 +190,17 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 
 ---
 
-### Requirement 10: Cobertura dos Domínios DEA-C01
+### Requirement 10: Cobertura do Exame DEA-C01 por Skill
 
-**User Story:** Como candidato à certificação DEA-C01, quero que cada laboratório esteja mapeado explicitamente aos domínios e tasks do exame, para que eu possa identificar quais competências estou desenvolvendo.
+**User Story:** Como candidato à certificação DEA-C01, quero que o workshop cubra todas as skills do guia oficial do exame e mostre onde cada uma é ensinada, para que eu não deixe lacunas no estudo.
 
 #### Acceptance Criteria
 
-1. THE Plataforma SHALL exibir, em cada lab, o mapeamento explícito para os domínios DEA-C01 (D1, D2, D3, D4) e as tasks específicas do exame cobertas.
-2. THE Workshop SHALL incluir labs que cubram as tasks do Domínio D1 (Ingestão e Transformação de Dados): tasks 1.1, 1.2, 1.3 e 1.4.
-3. THE Workshop SHALL incluir labs que cubram as tasks do Domínio D2 (Gerenciamento de Armazenamento de Dados): tasks 2.1, 2.2, 2.3 e 2.4.
-4. THE Workshop SHALL incluir labs que cubram as tasks do Domínio D3 (Operações e Suporte de Dados): tasks 3.1, 3.2, 3.3 e 3.4.
-5. THE Workshop SHALL incluir labs que cubram as tasks do Domínio D4 (Segurança e Governança de Dados): tasks 4.1, 4.2, 4.3, 4.4 e 4.5.
+1. THE Plataforma SHALL exibir, em cada módulo, o mapeamento explícito para os domínios DEA-C01 (D1, D2, D3, D4), as tasks e as skills do exame cobertas.
+2. THE Workshop SHALL manter a Matriz de cobertura com todas as skills do guia oficial do exame DEA-C01, de 1.1.1 a 4.5.7, com o texto conferido nas páginas oficiais de cada domínio.
+3. THE Workshop SHALL ligar cada skill da Matriz de cobertura a pelo menos um módulo, pela teoria, pela prática ou pela Verificação de conhecimento.
+4. IF uma skill da Matriz de cobertura não estiver ligada a nenhum módulo, ou um módulo citar uma skill inexistente na Matriz, ou o campo `skills` de um metadata divergir da Matriz, THEN THE suíte de testes SHALL falhar indicando a skill e o módulo.
+5. WHEN o guia oficial do exame for revisado pela AWS, THE mantenedor SHALL atualizar a Matriz de cobertura e os módulos afetados.
 
 ---
 
@@ -276,6 +290,7 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 17. THE Plataforma SHALL aceitar um único método de merge, rebase and merge, com squash e merge commit desabilitados, para preservar cada commit com seu `Signed-off-by` e manter o histórico linear.
 18. THE mantenedor SHALL aplicar um segundo ruleset a `release/**` e `hotfix/**` com pull request obrigatório e os mesmos 8 status checks, sem regra de non-fast-forward (para permitir atualizar por rebase) e sem regra de exclusão (para apagar a branch após o merge), e SHALL configurar o repositório com `allow_rebase_merge: true`, `allow_squash_merge: false`, `allow_merge_commit: false`, `delete_branch_on_merge: true`, wiki e projects desligados.
 19. THE Plataforma SHALL exigir que as mensagens de commit sigam Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `test:`, `refactor:`) e contenham `Signed-off-by` (`git commit -s`).
+20. WHEN uma nova `release/vX.Y.Z` for criada, THE mantenedor SHALL criá-la apontando para o commit atual de `main`, que já tem os status checks obrigatórios aprovados, e SHALL levar qualquer mudança para a release por pull request de uma branch de trabalho.
 
 ---
 
@@ -289,3 +304,58 @@ Este documento define os requisitos para a Plataforma de Workshop AWS Data Engin
 2. THE Plataforma SHALL incluir `CONTRIBUTING.md` com o uso de DCO (`git commit -s`), como rodar os testes, a exigência de que o CI passe, a exigência de revisão do mantenedor para arquivos sensíveis e as diretrizes de dados fictícios, ausência de credenciais e preservação de termos técnicos em inglês.
 3. THE README SHALL NOT conter instruções de configuração administrativa do repositório no GitHub.
 4. THE README SHALL conter a seção "Fluxo de trabalho (gitflow)" com as branches, a branch base de cada tipo de branch de trabalho, o método de merge e as mensagens de commit, e o `CONTRIBUTING.md` e o `.github/pull_request_template.md` SHALL referenciá-la e indicar a branch base correta do PR.
+
+---
+
+### Requirement 17: Verificação de Conhecimento
+
+**User Story:** Como candidato, quero responder questões no estilo da prova ao fim de cada módulo e entender por que cada alternativa está certa ou errada, para fixar o conteúdo e me acostumar com o formato do exame.
+
+#### Acceptance Criteria
+
+1. THE Plataforma SHALL oferecer em cada módulo um step `quiz` com questões de escolha única (uma resposta correta e três distratores) e de múltipla escolha (duas ou mais respostas corretas entre cinco ou mais alternativas), no formato do exame.
+2. THE Flask App SHALL entregar ao frontend as questões sem o gabarito e sem as explicações antes de o usuário responder.
+3. WHEN o usuário enviar as respostas de um step `quiz`, THE Flask App SHALL corrigir no servidor, retornar a nota, o resultado por questão e a explicação de cada alternativa, e registrar a tentativa no Progress Store.
+4. THE Flask App SHALL considerar correta uma questão de múltipla escolha somente quando o conjunto de alternativas marcadas for igual ao conjunto de alternativas corretas.
+5. WHEN a nota de uma tentativa for maior ou igual à nota mínima do step (padrão 70%, configurável no metadata), THE Plataforma SHALL marcar o step `quiz` como concluído no Progress Store.
+6. THE Plataforma SHALL permitir tentativas ilimitadas de cada step `quiz` e SHALL corrigir o quiz sem chamar a AWS.
+
+---
+
+### Requirement 18: Simulado Final
+
+**User Story:** Como candidato, quero fazer um simulado no formato do exame com a distribuição dos domínios, para medir meu preparo antes da prova.
+
+#### Acceptance Criteria
+
+1. THE Workshop SHALL oferecer o Simulado como módulo especial `mock-exam`, sem infraestrutura e sem chamadas à AWS.
+2. WHEN o usuário iniciar o Simulado, THE Flask App SHALL sortear questões das Verificações de conhecimento, sem repetição, respeitando a distribuição D1 34%, D2 26%, D3 22% e D4 18% com arredondamento documentado, e SHALL entregá-las sem gabarito.
+3. WHEN o usuário finalizar o Simulado, THE Flask App SHALL corrigir no servidor e retornar a nota geral, a nota por domínio e as explicações de cada questão.
+4. THE Plataforma SHALL oferecer cronômetro opcional para o Simulado, cuja duração padrão segue o exame e cujo uso não é obrigatório.
+5. THE Progress Store SHALL registrar as tentativas do Simulado com data, nota geral e nota por domínio.
+
+---
+
+### Requirement 19: Prática Opcional e Aviso de Custo
+
+**User Story:** Como usuário com orçamento limitado, quero ser avisado antes de cada prática paga e poder pular práticas de serviços caros, para estudar sem gastos inesperados.
+
+#### Acceptance Criteria
+
+1. THE Plataforma SHALL marcar visualmente como "Opcional" todo step `task` com `optional: true` e SHALL exibir junto o aviso de custo reforçado do step.
+2. THE Plataforma SHALL permitir concluir um módulo sem concluir as práticas opcionais.
+3. IF um módulo tiver prática paga, THEN o metadata do módulo SHALL conter `cost_notice` com os serviços cobrados e, para cada um, a URL `https` da página oficial de preços em `aws.amazon.com`, e THE LabCatalog SHALL rejeitar o metadata quando alguma URL não for `https://aws.amazon.com/`.
+4. THE Plataforma SHALL NOT exibir valores de custo estimados em USD enquanto não houver um método reprodutível de estimativa, pois a AWS Pricing Calculator pública não oferece API para gerar estimativas nem links, e a estimativa a partir de preços unitários depende de premissas de uso. A estimativa em USD fica registrada no roadmap de melhorias futuras.
+5. THE Plataforma SHALL usar como prática padrão as opções de menor custo que cumpram o objetivo de aprendizado e SHALL usar Prática opcional para serviços de custo elevado, como Amazon MWAA, Amazon MSK, Amazon OpenSearch Service, AWS CloudTrail Lake, Amazon QuickSight e Amazon SageMaker Unified Studio.
+
+---
+
+### Requirement 20: Matriz de Cobertura Testada
+
+**User Story:** Como mantenedor, quero que a cobertura do exame seja verificada automaticamente, para que nenhuma skill do guia oficial fique sem conteúdo à medida que os módulos são escritos.
+
+#### Acceptance Criteria
+
+1. THE Plataforma SHALL manter `docs/exam-coverage.json` com, para cada skill do guia oficial, o identificador (por exemplo `1.1.6`), o domínio, a task, o texto da skill e a lista de módulos planejados ou existentes que a cobrem.
+2. THE suíte de testes SHALL verificar que toda skill da Matriz tem ao menos um módulo, que todo módulo citado existe no catálogo planejado e que o campo `skills` dos metadatas existentes é igual ao conjunto de skills atribuídas ao módulo na Matriz.
+3. THE Plataforma SHALL rejeitar na carga do catálogo um metadata cujo campo `skills` cite uma skill inexistente na Matriz.

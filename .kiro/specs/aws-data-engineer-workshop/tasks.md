@@ -2,9 +2,9 @@
 
 ## Overview
 
-Implementação de uma plataforma web local de workshop para a certificação DEA-C01, composta por: infraestrutura Docker Compose com dois containers (`workshop` em rede interna e `gateway` Squid com allowlist de saída), scripts de host em stdlib (`check_requirements.py` e `start.py`), servidor Flask executado por gunicorn com API REST, módulos Python de validação com boto3, frontend SPA em HTML/CSS/JS puro e estrutura de conteúdo para 10 labs com CloudFormation. Cada step `task` oferece as Trilhas Console e CLI (Requirement 11): metadados `paths`/`unavailable_paths`, conteúdo e dica por Trilha servidos pela API, preferência de Trilha persistida no `progress.json` e abas `Console | CLI` no frontend.
+Implementação de uma plataforma web local de workshop para a certificação DEA-C01, composta por: infraestrutura Docker Compose com dois containers (`workshop` em rede interna e `gateway` Squid com allowlist de saída), scripts de host em stdlib (`check_requirements.py` e `start.py`), servidor Flask executado por gunicorn com API REST, módulos Python de validação com boto3, frontend SPA em HTML/CSS/JS puro e estrutura de conteúdo para 19 módulos com teoria, prática e Verificação de conhecimento, mais um Simulado final. Cada step `task` oferece as Trilhas Console e CLI (Requirement 11): metadados `paths`/`unavailable_paths`, conteúdo e dica por Trilha servidos pela API, preferência de Trilha persistida no `progress.json` e abas `Console | CLI` no frontend.
 
-O plano está dividido em três partes: **Parte 1 (tasks 1 a 15)** constrói a plataforma completa e a valida com um lab de exemplo usado só em testes; **Parte 2 (tasks 16 a 25)** cria os 10 labs reais, um por vez, com aprovação do usuário antes (proposta) e depois (revisão) de cada lab; **Parte 3 (tasks 26 e 27)** verifica o catálogo completo. Entre a Parte 1 e a Parte 2 entram os ajustes 15A a 15H: retomada com steps não-task, campo `services`, verificação de ambiente, e as tasks de segurança (credenciais temporárias e sessão, proteção da API local, endurecimento do container, CI e governança, validação final e configuração do GitHub), seguindo o princípio "security first".
+O plano está dividido em três partes: **Parte 1 (tasks 1 a 15)** constrói a plataforma completa e a valida com um lab de exemplo usado só em testes; **Parte 1B (tasks 15J a 15Q)** prepara a plataforma para módulos (Matriz de cobertura, metadata, Destaques, imagens locais, quiz, prática opcional, Aviso de custo e Simulado) e publica a `v0.2.0`; **Parte 2 (tasks 16 a 34)** cria os 19 módulos reais, um por vez, com aprovação do mantenedor antes (proposta) e depois (revisão) de cada módulo; **Parte 3 (tasks 35 e 36)** valida o Simulado com as questões reais e verifica o catálogo completo. Entre a Parte 1 e a Parte 2 entram os ajustes 15A a 15H: retomada com steps não-task, campo `services`, verificação de ambiente, e as tasks de segurança (credenciais temporárias e sessão, proteção da API local, endurecimento do container, CI e governança, validação final e configuração do GitHub), seguindo o princípio "security first".
 
 ## Tasks
 
@@ -595,341 +595,650 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Criar a tag anotada `v0.1.0` em `main`, publicar o GitHub Release com notas e confirmar que a branch da release foi apagada
     - _Requirements: 15.16, 15.17_
 
-## Parte 2: Labs (um por task, com revisão do usuário entre eles)
+## Parte 1B: Plataforma para módulos com teoria e prática (release v0.2.0)
 
-- [ ] 16. Lab 01 - Fundamentos de S3 e Data Lake (D2, iniciante)
-  - [ ] 16.1 Checkpoint de proposta do Lab 01
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (S3) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - Depende das tarefas 15A, 15B e 15C (retomada, campo `services` e verificação de ambiente) e das tarefas 15D a 15I (credenciais, sessão, proteção da API, endurecimento, CI, GitHub e release v0.1.0) concluídas
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
+- [ ] 15J. Abrir a release v0.2.0 e atualizar o spec
+  - [x] 15J.1 Criar a branch `release/v0.2.0`
+    - Criar a branch no GitHub apontando para o commit atual de `origin/main`, que já tem os 8 checks aprovados, porque o ruleset de `release/**` recusa push de commits sem checks
+    - Levar o `tasks.md` com o status pós `v0.1.0` por PR de uma branch de trabalho (`chore/...`) para `release/v0.2.0`
+    - _Requirements: 15.15, 15.20_
+  - [x] 15J.2 Atualizar o spec para a estrutura em módulos
+    - Reescrever os requisitos 4, 7 e 10, ajustar 2, 5 e 6 e criar os requisitos 17 a 20; atualizar o design (seção 5a e Properties 23 a 28) e substituir as tasks 16 a 27 não iniciadas pela estrutura em módulos
+    - Apresentar o resumo ao mantenedor e abrir o PR `docs/spec-modulos` para `release/v0.2.0` só depois da aprovação
+    - _Requirements: 4.6, 7.1, 10.2, 17.1, 18.1, 19.1, 20.1_
 
-  - [ ] 16.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - Listar em `prerequisites` os cinco pré-requisitos do requisito 7.5 (conta AWS ativa com acesso administrativo, conhecimento básico de SQL, familiaridade com linha de comando, Docker instalado e Git básico)
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 7.5, 10.1, 10.2, 10.3, 10.4, 10.5_
+- [ ] 15K. Matriz de cobertura do exame
+  - [ ] 15K.1 Criar `docs/exam-coverage.json`
+    - Listar todas as skills do guia oficial (1.1.1 a 4.5.7) com domínio, task e texto conferido nas páginas oficiais de cada domínio, e ligar cada skill aos módulos planejados (`lab-00` a `lab-18`)
+    - Registrar `source` e `retrieved_at`
+    - _Requirements: 10.2, 10.3, 20.1_
+  - [ ] 15K.2 Escrever os testes da Matriz de cobertura
+    - **Property 26: Toda skill do guia oficial está coberta**
+    - Falhar se alguma skill ficar sem módulo, se um módulo citado não existir em `modules`, se houver id duplicado ou fora do formato `N.N.N`, ou se o `skills` de um metadata existente divergir da Matriz
+    - Gerar um relatório de skills por módulo e por domínio (por exemplo `python scripts/coverage_report.py`)
+    - **Validates: Requirements 10.2, 10.3, 10.4, 20.2**
 
-  - [ ] 16.3 Criar o conteúdo dos steps em `labs/lab-01/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
+- [ ] 15L. Metadata e catálogo de módulos
+  - [ ] 15L.1 Escrever primeiro os testes das novas regras do catálogo
+    - `skills` válidos e existentes na Matriz, `has_infrastructure` coerente com `stack.yaml` e com steps `deploy`/`teardown`, `cost_notice` obrigatório com infraestrutura e `pricing_url` `https://aws.amazon.com/`, `optional` só em `task` e com `cost_note`, `quiz` com `quiz.json` e `pass_score` válidos
+    - _Requirements: 6.8, 19.3, 20.3_
+  - [ ] 15L.2 Implementar as regras no `LabCatalog`, no modelo de dados e na API
+    - Expor `skills`, `cost_notice`, `has_infrastructure`, `optional` e `cost_note` em `GET /api/labs` e `GET /api/labs/<lab_id>`, mantendo os nomes `lab_id` e `/api/labs`
+    - `CloudFormationService` e rotas de deploy, teardown e stack-status respondem `NO_INFRASTRUCTURE` (409) sem cliente boto3 em módulo sem infraestrutura
+    - `_compute_lab_status` passa a considerar obrigatórios só os steps `task` não opcionais e os steps `quiz`
+    - _Requirements: 4.4, 5.8, 6.8, 19.2_
+  - [ ] 15L.3 Atualizar o fixture `lab-example` e criar o fixture `lab-theory`
+    - `lab-example` ganha `skills`, `cost_notice`, um step opcional e um step `quiz`; `lab-theory` só tem steps `info`, `quiz` e `completion`, sem infraestrutura
+    - _Requirements: 4.6, 6.8_
+  - [ ]* 15L.4 Escrever teste de propriedade da conclusão com prática opcional
+    - **Property 28: Prática opcional não bloqueia a conclusão**
+    - **Validates: Requirements 5.8, 19.2**
 
-  - [ ] 16.4 Criar `app/validators/lab01.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 01 (S3), usando `@_safe_validate` em todas as funções internas
+- [ ] 15M. Destaques e imagens locais no conteúdo
+  - [ ] 15M.1 Implementar os Destaques no `markdown.js`
+    - `> [!EXAM]`, `> [!COST]`, `> [!TIP]` e `> [!WARNING]` viram `aside.callout` com os títulos "Na prova", "Custo", "Boas práticas" e "Atenção"; texto sempre escapado; estilos em `components.css`
+    - _Requirements: 4.7_
+  - [ ] 15M.2 Implementar imagens locais e a rota de assets
+    - Renderizar `<img>` só para `assets/<nome>.svg|png` com texto alternativo não vazio; rota `GET /api/labs/<lab_id>/assets/<nome>` com validação do nome, proteção contra path traversal, `nosniff` e CSP `sandbox` para SVG
+    - _Requirements: 4.8, 8.2_
+  - [ ]* 15M.3 Escrever testes do renderizador e da rota de assets
+    - **Property 27: Imagens do conteúdo são sempre locais**
+    - JS: escape de HTML, cada Destaque, imagem local aceita, imagem externa, `data:`, `..` e alternativo vazio recusados. Python: nomes inválidos, path traversal, tipos e cabeçalhos
+    - **Validates: Requirements 4.7, 4.8, 8.2**
+
+- [ ] 15N. Verificação de conhecimento (step `quiz`)
+  - [ ] 15N.1 Implementar o carregamento e a validação do `quiz.json`
+    - Escolha única com 4 alternativas e 1 correta; múltipla com 5 ou mais alternativas e 2 ou mais corretas; ids únicos; `domain` e `skills` válidos
+    - _Requirements: 17.1_
+  - [ ] 15N.2 Implementar as rotas e o Progress Store do quiz
+    - `GET .../quiz` sem gabarito e sem explicações; `POST .../quiz` corrige no servidor, retorna nota, resultado por questão e explicações, registra `attempts`, `last_score`, `best_score` e `passed_at`; `INVALID_ANSWER` (400) para alternativa inexistente
+    - _Requirements: 17.2, 17.3, 17.4, 17.5, 17.6_
+  - [ ] 15N.3 Implementar a interface do quiz
+    - Questões com rádio ou caixas de seleção conforme o tipo, aviso de quantas marcar, envio via `api.js`, resultado com explicações por alternativa, nova tentativa
+    - _Requirements: 17.1, 17.3_
+  - [ ]* 15N.4 Escrever testes de propriedade e de unidade do quiz
+    - **Property 23: O gabarito nunca chega ao browser antes da resposta**
+    - **Property 24: A nota é calculada corretamente para escolha única e múltipla**
+    - Mais testes das rotas e de DOM da interface
+    - **Validates: Requirements 17.2, 17.3, 17.4, 17.5**
+
+- [ ] 15O. Prática opcional e Aviso de custo na interface
+  - [ ] 15O.1 Exibir o selo "Opcional" e o aviso de custo do step
+    - _Requirements: 19.1_
+  - [ ] 15O.2 Exibir o Aviso de custo antes do `deploy`
+    - Serviços cobrados com os links das páginas oficiais de preços, sem valores em USD; módulo sem infraestrutura não mostra disclaimer nem controles de stack
+    - _Requirements: 4.2, 4.3, 6.8_
+  - [ ]* 15O.3 Escrever testes de DOM do selo, do Aviso de custo e da conclusão sem prática opcional
+    - _Requirements: 4.3, 19.1, 19.2_
+
+- [ ] 15P. Simulado final
+  - [ ] 15P.1 Implementar o sorteio, as rotas e o Progress Store do Simulado
+    - `POST /api/mock-exam` sorteia sem repetição com a cota por domínio e a regra de arredondamento do design; `POST /api/mock-exam/<attempt_id>/submit` corrige e retorna nota geral e por domínio; últimas 20 tentativas no Progress Store
+    - _Requirements: 18.1, 18.2, 18.3, 18.5_
+  - [ ] 15P.2 Implementar a interface do Simulado
+    - Rota `/mock-exam`, cronômetro opcional de 130 minutos, navegação entre questões, resultado por domínio e histórico de tentativas
+    - _Requirements: 18.3, 18.4_
+  - [ ]* 15P.3 Escrever testes de propriedade e de unidade do Simulado
+    - **Property 25: O Simulado respeita os pesos dos domínios e não repete questões**
+    - **Validates: Requirements 7.4, 18.2**
+
+- [ ] 15Q. Integração, documentação e release v0.2.0
+  - [ ] 15Q.1 Executar a suíte completa, os testes com Docker e o `start.py` real
+    - `env -u WORKSHOP_PORT .venv/bin/python -m pytest tests -q -rs`, `node --test "tests/js/*.test.mjs"`, testes com Docker separados por arquivo e `start.py` com `AWS_PROFILE=Caeiro-Admin WORKSHOP_PORT=5050`; conferir no browser os fixtures de ponta a ponta
+    - _Requirements: 1.4, 17.1, 18.1_
+  - [ ] 15Q.2 Atualizar README e `CONTRIBUTING.md`
+    - README: lista dos 19 módulos, Verificação de conhecimento, Simulado, prática opcional, Aviso de custo, criação de release a partir do commit da `main` no gitflow e seção "Melhorias futuras" com a estimativa de custo em USD. `CONTRIBUTING.md`: como escrever um módulo (estrutura, Destaques, imagens, quiz, Aviso de custo, cenário AnyCompany, Matriz de cobertura)
+    - _Requirements: 16.2, 19.4_
+  - [ ] 15Q.3 Publicar a release v0.2.0
+    - PR de `release/v0.2.0` para `main` com os 8 checks verdes, merge por rebase com `--admin`, tag anotada `v0.2.0` e GitHub Release
+    - _Requirements: 15.16_
+
+## Parte 2: Módulos (um por task, com proposta e revisão do mantenedor)
+
+- [ ] 16. Módulo 00 - Fundamentos de engenharia de dados (D1, D2)
+  - [ ] 16.1 Checkpoint de proposta do Módulo 00
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende da task 15Q (release v0.2.0 publicada)
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 16.2 Criar `labs/lab-00/metadata.json`
+    - Módulo sem infraestrutura: `has_infrastructure: false`, sem `stack.yaml`, sem steps `deploy`/`teardown`; listar os pré-requisitos do workshop em `prerequisites`
+    - _Requirements: 4.4, 6.8, 7.5, 20.2_
+  - [ ] 16.3 Escrever o conteúdo teórico em `labs/lab-00/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 16.5 Escrever a Verificação de conhecimento do Módulo 00
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 16.8 Checkpoint de revisão do Módulo 00
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
+
+- [ ] 17. Módulo 01 - S3 e data lake (D2, D1)
+  - [ ] 17.1 Checkpoint de proposta do Módulo 01
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 00
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 17.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 17.3 Escrever o conteúdo teórico em `labs/lab-01/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 17.4 Escrever as práticas (steps `task`) do Módulo 01
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 17.5 Escrever a Verificação de conhecimento do Módulo 01
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 17.6 Criar `app/validators/lab01.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
-
-  - [ ]* 16.5 Escrever testes de unidade do validador do Lab 01
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+  - [ ]* 17.7 Escrever testes de unidade do validador do Módulo 01
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 17.8 Checkpoint de revisão do Módulo 01
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 16.6 Checkpoint de revisão do Lab 01
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 02
-    - _Requirements: 7.1_
-
-- [ ] 17. Lab 02 - Catalogação e descoberta de dados (D2)
-  - [ ] 17.1 Checkpoint de proposta do Lab 02
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Glue Data Catalog e crawlers) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 17.2 Criar `labs/lab-02/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 17.3 Criar o conteúdo dos steps em `labs/lab-02/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 17.4 Criar `app/validators/lab02.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 02 (Glue Data Catalog e crawlers), usando `@_safe_validate` em todas as funções internas
+- [ ] 18. Módulo 02 - Catálogo de dados (D2)
+  - [ ] 18.1 Checkpoint de proposta do Módulo 02
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 01
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 18.2 Criar `labs/lab-02/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 18.3 Escrever o conteúdo teórico em `labs/lab-02/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 18.4 Escrever as práticas (steps `task`) do Módulo 02
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 18.5 Escrever a Verificação de conhecimento do Módulo 02
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 18.6 Criar `app/validators/lab02.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
-
-  - [ ]* 17.5 Escrever testes de unidade do validador do Lab 02
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+  - [ ]* 18.7 Escrever testes de unidade do validador do Módulo 02
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 18.8 Checkpoint de revisão do Módulo 02
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 17.6 Checkpoint de revisão do Lab 02
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 03
-    - _Requirements: 7.1_
-
-- [ ] 18. Lab 03 - Transformação ETL com AWS Glue (D1)
-  - [ ] 18.1 Checkpoint de proposta do Lab 03
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Glue ETL jobs) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 18.2 Criar `labs/lab-03/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 18.3 Criar o conteúdo dos steps em `labs/lab-03/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 18.4 Criar `app/validators/lab03.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 03 (Glue ETL jobs), usando `@_safe_validate` em todas as funções internas
+- [ ] 19. Módulo 03 - Athena e SQL analítico (D3)
+  - [ ] 19.1 Checkpoint de proposta do Módulo 03
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 02
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 19.2 Criar `labs/lab-03/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 19.3 Escrever o conteúdo teórico em `labs/lab-03/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 19.4 Escrever as práticas (steps `task`) do Módulo 03
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 19.5 Escrever a Verificação de conhecimento do Módulo 03
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 19.6 Criar `app/validators/lab03.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
-
-  - [ ]* 18.5 Escrever testes de unidade do validador do Lab 03
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+  - [ ]* 19.7 Escrever testes de unidade do validador do Módulo 03
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 19.8 Checkpoint de revisão do Módulo 03
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 18.6 Checkpoint de revisão do Lab 03
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 04
-    - _Requirements: 7.1_
-
-- [ ] 19. Lab 04 - Consultas analíticas com Athena (D3)
-  - [ ] 19.1 Checkpoint de proposta do Lab 04
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Athena) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 19.2 Criar `labs/lab-04/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 19.3 Criar o conteúdo dos steps em `labs/lab-04/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 19.4 Criar `app/validators/lab04.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 04 (Athena), usando `@_safe_validate` em todas as funções internas
+- [ ] 20. Módulo 04 - ETL com Glue e PySpark (D1, D3)
+  - [ ] 20.1 Checkpoint de proposta do Módulo 04
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 03
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 20.2 Criar `labs/lab-04/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 20.3 Escrever o conteúdo teórico em `labs/lab-04/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 20.4 Escrever as práticas (steps `task`) do Módulo 04
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 20.5 Escrever a Verificação de conhecimento do Módulo 04
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 20.6 Criar `app/validators/lab04.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
-
-  - [ ]* 19.5 Escrever testes de unidade do validador do Lab 04
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+  - [ ]* 20.7 Escrever testes de unidade do validador do Módulo 04
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 20.8 Checkpoint de revisão do Módulo 04
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 19.6 Checkpoint de revisão do Lab 04
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 05
-    - _Requirements: 7.1_
-
-- [ ] 20. Lab 05 - Qualidade de dados com DataBrew (D3)
-  - [ ] 20.1 Checkpoint de proposta do Lab 05
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Glue DataBrew) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 20.2 Criar `labs/lab-05/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 20.3 Criar o conteúdo dos steps em `labs/lab-05/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 20.4 Criar `app/validators/lab05.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 05 (Glue DataBrew), usando `@_safe_validate` em todas as funções internas
+- [ ] 21. Módulo 05 - EMR Serverless e escolha do motor de processamento (D1, D3)
+  - [ ] 21.1 Checkpoint de proposta do Módulo 05
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 04
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 21.2 Criar `labs/lab-05/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 21.3 Escrever o conteúdo teórico em `labs/lab-05/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 21.4 Escrever as práticas (steps `task`) do Módulo 05
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 21.5 Escrever a Verificação de conhecimento do Módulo 05
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 21.6 Criar `app/validators/lab05.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
-
-  - [ ]* 20.5 Escrever testes de unidade do validador do Lab 05
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+  - [ ]* 21.7 Escrever testes de unidade do validador do Módulo 05
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 21.8 Checkpoint de revisão do Módulo 05
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 20.6 Checkpoint de revisão do Lab 05
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 06
-    - _Requirements: 7.1_
-
-- [ ] 21. Lab 06 - Ingestão de streaming com Kinesis (D1)
-  - [ ] 21.1 Checkpoint de proposta do Lab 06
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Kinesis Data Streams) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 21.2 Criar `labs/lab-06/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 21.3 Criar o conteúdo dos steps em `labs/lab-06/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 21.4 Criar `app/validators/lab06.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 06 (Kinesis Data Streams), usando `@_safe_validate` em todas as funções internas
-    - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
-
-  - [ ]* 21.5 Escrever testes de unidade do validador do Lab 06
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+- [ ] 22. Módulo 06 - Qualidade de dados (D3)
+  - [ ] 22.1 Checkpoint de proposta do Módulo 06
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 05
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 22.2 Criar `labs/lab-06/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 22.3 Escrever o conteúdo teórico em `labs/lab-06/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 22.4 Escrever as práticas (steps `task`) do Módulo 06
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 22.5 Escrever a Verificação de conhecimento do Módulo 06
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 22.6 Criar `app/validators/lab06.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 22.7 Escrever testes de unidade do validador do Módulo 06
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 22.8 Checkpoint de revisão do Módulo 06
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 21.6 Checkpoint de revisão do Lab 06
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 07
-    - _Requirements: 7.1_
-
-- [ ] 22. Lab 07 - Data Warehouse com Redshift (D2)
-  - [ ] 22.1 Checkpoint de proposta do Lab 07
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Redshift) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 22.2 Criar `labs/lab-07/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 22.3 Criar o conteúdo dos steps em `labs/lab-07/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 22.4 Criar `app/validators/lab07.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 07 (Redshift), usando `@_safe_validate` em todas as funções internas
-    - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
-
-  - [ ]* 22.5 Escrever testes de unidade do validador do Lab 07
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+- [ ] 23. Módulo 07 - Streaming (D1)
+  - [ ] 23.1 Checkpoint de proposta do Módulo 07
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 06
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 23.2 Criar `labs/lab-07/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 23.3 Escrever o conteúdo teórico em `labs/lab-07/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 23.4 Escrever as práticas (steps `task`) do Módulo 07
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 23.5 Escrever a Verificação de conhecimento do Módulo 07
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 23.6 Criar `app/validators/lab07.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 23.7 Escrever testes de unidade do validador do Módulo 07
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 23.8 Checkpoint de revisão do Módulo 07
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 22.6 Checkpoint de revisão do Lab 07
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 08
-    - _Requirements: 7.1_
-
-- [ ] 23. Lab 08 - Orquestração de pipelines (D3)
-  - [ ] 23.1 Checkpoint de proposta do Lab 08
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Step Functions e EventBridge) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 23.2 Criar `labs/lab-08/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 23.3 Criar o conteúdo dos steps em `labs/lab-08/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 23.4 Criar `app/validators/lab08.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 08 (Step Functions e EventBridge), usando `@_safe_validate` em todas as funções internas
-    - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
-
-  - [ ]* 23.5 Escrever testes de unidade do validador do Lab 08
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+- [ ] 24. Módulo 08 - DynamoDB e bancos operacionais (D2, D1)
+  - [ ] 24.1 Checkpoint de proposta do Módulo 08
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 07
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 24.2 Criar `labs/lab-08/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 24.3 Escrever o conteúdo teórico em `labs/lab-08/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 24.4 Escrever as práticas (steps `task`) do Módulo 08
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 24.5 Escrever a Verificação de conhecimento do Módulo 08
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 24.6 Criar `app/validators/lab08.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 24.7 Escrever testes de unidade do validador do Módulo 08
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 24.8 Checkpoint de revisão do Módulo 08
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 23.6 Checkpoint de revisão do Lab 08
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 09
-    - _Requirements: 7.1_
-
-- [ ] 24. Lab 09 - Segurança e Governança (D4)
-  - [ ] 24.1 Checkpoint de proposta do Lab 09
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (IAM, Lake Formation e KMS) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 24.2 Criar `labs/lab-09/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 24.3 Criar o conteúdo dos steps em `labs/lab-09/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 24.4 Criar `app/validators/lab09.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 09 (IAM, Lake Formation e KMS), usando `@_safe_validate` em todas as funções internas
-    - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
-
-  - [ ]* 24.5 Escrever testes de unidade do validador do Lab 09
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+- [ ] 25. Módulo 09 - Migração e CDC (D1, D2, D4)
+  - [ ] 25.1 Checkpoint de proposta do Módulo 09
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 08
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 25.2 Criar `labs/lab-09/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 25.3 Escrever o conteúdo teórico em `labs/lab-09/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 25.4 Escrever as práticas (steps `task`) do Módulo 09
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 25.5 Escrever a Verificação de conhecimento do Módulo 09
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 25.6 Criar `app/validators/lab09.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 25.7 Escrever testes de unidade do validador do Módulo 09
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 25.8 Checkpoint de revisão do Módulo 09
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 24.6 Checkpoint de revisão do Lab 09
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 10
-    - _Requirements: 7.1_
-
-- [ ] 25. Lab 10 - Pipeline end-to-end (D1)
-  - [ ] 25.1 Checkpoint de proposta do Lab 10
-    - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (pipeline integrando os Labs 01 a 09) e estimativa de custo
-    - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 25.2 Criar `labs/lab-10/metadata.json` e `cloudformation/stack.yaml`
-    - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
-    - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
-    - Documentar em `metadata.json` (`prerequisites`) a dependência explícita dos Labs 01 a 09 como pré-requisito recomendado (7.3)
-    - _Requirements: 4.1, 6.1, 7.1, 5.7, 7.3, 10.1, 10.2, 10.3, 10.4, 10.5_
-
-  - [ ] 25.3 Criar o conteúdo dos steps em `labs/lab-10/steps/<step_id>/`
-    - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
-    - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
-    - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
-    - Manter termos técnicos em inglês no conteúdo em português
-    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
-
-  - [ ] 25.4 Criar `app/validators/lab10.py`
-    - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 10 (pipeline integrando os Labs 01 a 09), usando `@_safe_validate` em todas as funções internas
-    - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
-
-  - [ ]* 25.5 Escrever testes de unidade do validador do Lab 10
-    - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+- [ ] 26. Módulo 10 - Redshift (D2, D3, D4)
+  - [ ] 26.1 Checkpoint de proposta do Módulo 10
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 09
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 26.2 Criar `labs/lab-10/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 26.3 Escrever o conteúdo teórico em `labs/lab-10/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 26.4 Escrever as práticas (steps `task`) do Módulo 10
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 26.5 Escrever a Verificação de conhecimento do Módulo 10
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 26.6 Criar `app/validators/lab10.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 26.7 Escrever testes de unidade do validador do Módulo 10
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 26.8 Checkpoint de revisão do Módulo 10
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ] 25.6 Checkpoint de revisão do Lab 10
-    - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para a Parte 3
-    - _Requirements: 7.1_
+- [ ] 27. Módulo 11 - Open table formats (D2)
+  - [ ] 27.1 Checkpoint de proposta do Módulo 11
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 10
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 27.2 Criar `labs/lab-11/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 27.3 Escrever o conteúdo teórico em `labs/lab-11/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 27.4 Escrever as práticas (steps `task`) do Módulo 11
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 27.5 Escrever a Verificação de conhecimento do Módulo 11
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 27.6 Criar `app/validators/lab11.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 27.7 Escrever testes de unidade do validador do Módulo 11
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 27.8 Checkpoint de revisão do Módulo 11
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-## Parte 3: Verificação final do catálogo
+- [ ] 28. Módulo 12 - Orquestração (D1, D3)
+  - [ ] 28.1 Checkpoint de proposta do Módulo 12
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 11
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 28.2 Criar `labs/lab-12/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 28.3 Escrever o conteúdo teórico em `labs/lab-12/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 28.4 Escrever as práticas (steps `task`) do Módulo 12
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 28.5 Escrever a Verificação de conhecimento do Módulo 12
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 28.6 Criar `app/validators/lab12.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 28.7 Escrever testes de unidade do validador do Módulo 12
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 28.8 Checkpoint de revisão do Módulo 12
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-- [ ] 26. Verificação final do catálogo
-  - [ ]* 26.1 Escrever smoke tests para o catálogo de labs
-    - Verificar que exatamente 10 labs existem com os IDs esperados
-    - Verificar que todos os `metadata.json` possuem campos obrigatórios
-    - _Requirements: 7.1, 4.1_
+- [ ] 29. Módulo 13 - Observabilidade e operação (D3, D4)
+  - [ ] 29.1 Checkpoint de proposta do Módulo 13
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 12
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 29.2 Criar `labs/lab-13/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 29.3 Escrever o conteúdo teórico em `labs/lab-13/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 29.4 Escrever as práticas (steps `task`) do Módulo 13
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 29.5 Escrever a Verificação de conhecimento do Módulo 13
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 29.6 Criar `app/validators/lab13.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 29.7 Escrever testes de unidade do validador do Módulo 13
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 29.8 Checkpoint de revisão do Módulo 13
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ]* 26.2 Escrever smoke tests para cobertura de domínios DEA-C01
-    - **Property 10: Cobertura de domínios DEA-C01 é completa**
-    - **Validates: Requirements 10.2, 10.3, 10.4, 10.5**
+- [ ] 30. Módulo 14 - Segurança (D4)
+  - [ ] 30.1 Checkpoint de proposta do Módulo 14
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 13
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 30.2 Criar `labs/lab-14/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 30.3 Escrever o conteúdo teórico em `labs/lab-14/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 30.4 Escrever as práticas (steps `task`) do Módulo 14
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 30.5 Escrever a Verificação de conhecimento do Módulo 14
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 30.6 Criar `app/validators/lab14.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 30.7 Escrever testes de unidade do validador do Módulo 14
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 30.8 Checkpoint de revisão do Módulo 14
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ]* 26.3 Escrever smoke tests para templates CloudFormation
-    - Verificar que 10 arquivos `cloudformation/stack.yaml` existem com sintaxe YAML válida
-    - Parametrizar por lab, de modo que a falha aponte o lab com problema
-    - _Requirements: 6.1_
+- [ ] 31. Módulo 15 - Governança (D4)
+  - [ ] 31.1 Checkpoint de proposta do Módulo 15
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 14
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 31.2 Criar `labs/lab-15/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 31.3 Escrever o conteúdo teórico em `labs/lab-15/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 31.4 Escrever as práticas (steps `task`) do Módulo 15
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 31.5 Escrever a Verificação de conhecimento do Módulo 15
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 31.6 Criar `app/validators/lab15.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 31.7 Escrever testes de unidade do validador do Módulo 15
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 31.8 Checkpoint de revisão do Módulo 15
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
 
-  - [ ]* 26.4 Escrever teste de propriedade para o conteúdo completo por Trilha
+- [ ] 32. Módulo 16 - Dados para IA (D1, D2)
+  - [ ] 32.1 Checkpoint de proposta do Módulo 16
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 15
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 32.2 Criar `labs/lab-16/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 32.3 Escrever o conteúdo teórico em `labs/lab-16/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 32.4 Escrever as práticas (steps `task`) do Módulo 16
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 32.5 Escrever a Verificação de conhecimento do Módulo 16
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 32.6 Criar `app/validators/lab16.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 32.7 Escrever testes de unidade do validador do Módulo 16
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 32.8 Checkpoint de revisão do Módulo 16
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
+
+- [ ] 33. Módulo 17 - Data APIs, IaC e CI/CD (D1, D3)
+  - [ ] 33.1 Checkpoint de proposta do Módulo 17
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 16
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 33.2 Criar `labs/lab-17/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 33.3 Escrever o conteúdo teórico em `labs/lab-17/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 33.4 Escrever as práticas (steps `task`) do Módulo 17
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 33.5 Escrever a Verificação de conhecimento do Módulo 17
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 33.6 Criar `app/validators/lab17.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 33.7 Escrever testes de unidade do validador do Módulo 17
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 33.8 Checkpoint de revisão do Módulo 17
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - _Requirements: 7.1, 7.3, 19.4_
+
+- [ ] 34. Módulo 18 - Projeto final (D1, D2, D3, D4)
+  - [ ] 34.1 Checkpoint de proposta do Módulo 18
+    - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
+    - Aguardar a aprovação antes de escrever qualquer conteúdo
+    - Depende do checkpoint de revisão do Módulo 17
+    - _Requirements: 7.1, 7.6, 10.1, 10.3_
+  - [ ] 34.2 Criar `labs/lab-18/metadata.json` e `cloudformation/stack.yaml`
+    - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
+    - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
+  - [ ] 34.3 Escrever o conteúdo teórico em `labs/lab-18/steps/`
+    - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
+    - _Requirements: 4.5, 4.6, 4.7, 4.8_
+  - [ ] 34.4 Escrever as práticas (steps `task`) do Módulo 18
+    - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
+    - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
+  - [ ] 34.5 Escrever a Verificação de conhecimento do Módulo 18
+    - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
+    - _Requirements: 17.1, 18.2_
+  - [ ] 34.6 Criar `app/validators/lab18.py`
+    - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
+    - _Requirements: 5.1, 5.2, 5.3, 5.6_
+  - [ ]* 34.7 Escrever testes de unidade do validador do Módulo 18
+    - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 34.8 Checkpoint de revisão do Módulo 18
+    - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
+    - Documentar no módulo a recomendação de concluir os Módulos 00 a 17 antes
+    - _Requirements: 7.1, 7.3, 19.4_
+
+## Parte 3: Simulado com questões reais e verificação final
+
+- [ ] 35. Verificação final do catálogo
+  - [ ] 35.1 Validar o Simulado com as questões reais dos 19 módulos
+    - Conferir que o banco de questões permite a distribuição D1 34%, D2 26%, D3 22% e D4 18% com 65 questões e registrar os ajustes, se houver
+    - _Requirements: 7.4, 18.2_
+  - [ ]* 35.2 Escrever smoke tests do catálogo de módulos
+    - Os 19 módulos (`lab-00` a `lab-18`) e o `mock-exam` existem; todos os `metadata.json` têm os campos obrigatórios; todo módulo com infraestrutura tem `stack.yaml` válido; parametrizado por módulo
+    - _Requirements: 6.1, 7.1_
+  - [ ]* 35.3 Executar a verificação final da Matriz de cobertura com os módulos reais
+    - **Property 26: Toda skill do guia oficial está coberta**
+    - **Validates: Requirements 10.2, 10.3, 10.4, 20.2**
+  - [ ]* 35.4 Escrever teste de propriedade para o conteúdo completo por Trilha
     - **Property 16: Conteúdo completo por Trilha em todo step task**
-    - Percorrer o catálogo real (parametrizado por lab, para a falha apontar o lab) e `metadata.json` gerados com `hypothesis` (combinações de `paths` e `unavailable_paths`), verificando `scenario.md`, arquivos de instruções e dica não vazios por Trilha em `paths`, motivo não vazio por Trilha ausente e `paths` nunca vazio
-    - Verificar por presença que todo `cli.md` usa `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` (ou placeholders `<...>`) e todo `console.md` contém um caminho `Serviço > Menu > Botão` (11.7, 11.8; o conteúdo editorial é revisado manualmente)
     - **Validates: Requirements 11.1, 11.5, 11.6**
-
-  - [ ]* 26.5 Escrever teste de propriedade para ausência de credenciais na Trilha CLI
+  - [ ]* 35.5 Escrever teste de propriedade para ausência de credenciais na Trilha CLI
     - **Property 18: Trilha CLI não contém credenciais**
-    - Varrer todos os `cli.md` e `hint-cli.md` (parametrizado por lab) com o detector (regex `AKIA`/`ASIA` + 16 caracteres alfanuméricos maiúsculos, `aws_secret_access_key`, `aws_session_token`, sem diferenciar maiúsculas de minúsculas)
-    - Testar o detector com textos gerados que contêm ou não os padrões
     - **Validates: Requirements 11.7, 9.3**
 
-- [ ] 27. Checkpoint final — Garantir que todos os testes passam
+- [ ] 36. Checkpoint final: garantir que todos os testes passam
   - Garantir que todos os testes passam, perguntar ao usuário se houver dúvidas.
 
 ## Notes
@@ -966,96 +1275,159 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
 - O DCO é uma declaração de origem, não um controle de autenticidade; a proteção real é a revisão do code owner e os checks obrigatórios. A allowlist de bots da 15I.2 aceita um único par exato de autor e trailer
 - As tasks 15D.12 e 15H exigem Docker e, a 15H.2, um token SSO válido para o profile `Caeiro-Admin`; a task 15H.2 não cria recursos AWS
 
+- Reestruturação em módulos (Requirements 4, 7, 10 e 17 a 20): as antigas tasks 16 a 27 (10 labs) não iniciadas foram substituídas pela Parte 1B (15J a 15Q), pela Parte 2 (tasks 16 a 34, Módulos 00 a 18) e pela Parte 3 (tasks 35 e 36). Os nomes técnicos `lab_id`, `labs/` e `/api/labs` foram mantidos por compatibilidade
+- Cada grupo de módulos sai como uma release `release/vX.Y.Z`, seguindo o gitflow. A divisão exata é decidida pelo mantenedor conforme os módulos ficam prontos
+- A release é criada apontando para o commit atual de `main` (que já tem os checks aprovados) e as mudanças entram por PR de branches de trabalho, porque o ruleset de `release/**` recusa push de commits sem checks
+- Sem estimativa de custo em USD nesta versão: a AWS Pricing Calculator pública não tem API, e calcular a partir do AWS Price List API dependeria de premissas de uso. Os módulos exibem o Aviso de custo com links das páginas oficiais de preços, e a estimativa em USD fica em "Melhorias futuras"
+- O Módulo 00 não tem infraestrutura nem validador AWS; o Simulado (`mock-exam`) não tem infraestrutura nem `quiz.json` próprio
+- As tasks de módulo `.4`, `.6` e `.7` não existem no Módulo 00
 ## Task Dependency Graph
-
-```json{
+```json
+{
   "waves": [
-    { "id": 0, "tasks": ["1.1", "1.2", "1.3", "2.1", "3.1", "4.1"] },
-    { "id": 1, "tasks": ["1.4", "2.2", "3.2", "4.2", "5.1"] },
-    { "id": 2, "tasks": ["5.2", "5.3", "5.4", "5.5", "5.6", "7.1"] },
-    { "id": 3, "tasks": ["7.2", "8.1"] },
-    { "id": 4, "tasks": ["8.2", "9.1"] },
-    { "id": 5, "tasks": ["9.2", "9.3", "9.4", "9.6", "9.7", "10.1"] },
-    { "id": 6, "tasks": ["10.2", "12.1"] },
-    { "id": 7, "tasks": ["1.5", "9.5", "12.2", "12.3", "13.1", "14.1"] },
-    { "id": 8, "tasks": ["13.2", "14.2"] },
-    { "id": 9, "tasks": ["14.3", "14.4"] },
-    { "id": 10, "tasks": ["15A.1"] },
-    { "id": 11, "tasks": ["15A.3", "15B.1"] },
-    { "id": 12, "tasks": ["15A.2"] },
-    { "id": 13, "tasks": ["15A.4", "15B.2"] },
-    { "id": 14, "tasks": ["15B.3"] },
-    { "id": 15, "tasks": ["15C.1"] },
-    { "id": 16, "tasks": ["15C.2"] },
-    { "id": 17, "tasks": ["15C.3"] },
-    { "id": 18, "tasks": ["15C.4"] },
-    { "id": 19, "tasks": ["15D.1", "15D.5", "15F.2", "15G.1", "15G.4", "15G.5"] },
-    { "id": 20, "tasks": ["15D.2", "15D.3", "15D.4", "15D.6", "15E.1", "15F.1", "15G.2"] },
-    { "id": 21, "tasks": ["15D.7", "15D.8", "15D.9", "15D.10", "15D.11", "15D.12", "15E.2", "15E.3", "15E.4", "15F.5", "15G.3"] },
-    { "id": 22, "tasks": ["15E.5", "15E.6", "15F.3", "15F.4", "15G.6", "15G.7", "15G.8"] },
-    { "id": 23, "tasks": ["15F.6"] },
-    { "id": 24, "tasks": ["15H.1"] },
-    { "id": 25, "tasks": ["15H.2"] },
-    { "id": 26, "tasks": ["15H.3"] },
-    { "id": 27, "tasks": ["15H.4"] },
-    { "id": 28, "tasks": ["15I.1"] },
-    { "id": 29, "tasks": ["15I.2", "15I.4"] },
-    { "id": 30, "tasks": ["15I.3", "15I.5"] },
-    { "id": 31, "tasks": ["15I.6"] },
-    { "id": 32, "tasks": ["15I.7"] },
-    { "id": 33, "tasks": ["15H.5"] },
-    { "id": 34, "tasks": ["15I.8"] },
-    { "id": 35, "tasks": ["16.1"] },
-    { "id": 36, "tasks": ["16.2"] },
-    { "id": 37, "tasks": ["16.3", "16.4"] },
-    { "id": 38, "tasks": ["16.5"] },
-    { "id": 39, "tasks": ["16.6"] },
-    { "id": 40, "tasks": ["17.1"] },
-    { "id": 41, "tasks": ["17.2"] },
-    { "id": 42, "tasks": ["17.3", "17.4"] },
-    { "id": 43, "tasks": ["17.5"] },
-    { "id": 44, "tasks": ["17.6"] },
-    { "id": 45, "tasks": ["18.1"] },
-    { "id": 46, "tasks": ["18.2"] },
-    { "id": 47, "tasks": ["18.3", "18.4"] },
-    { "id": 48, "tasks": ["18.5"] },
-    { "id": 49, "tasks": ["18.6"] },
-    { "id": 50, "tasks": ["19.1"] },
-    { "id": 51, "tasks": ["19.2"] },
-    { "id": 52, "tasks": ["19.3", "19.4"] },
-    { "id": 53, "tasks": ["19.5"] },
-    { "id": 54, "tasks": ["19.6"] },
-    { "id": 55, "tasks": ["20.1"] },
-    { "id": 56, "tasks": ["20.2"] },
-    { "id": 57, "tasks": ["20.3", "20.4"] },
-    { "id": 58, "tasks": ["20.5"] },
-    { "id": 59, "tasks": ["20.6"] },
-    { "id": 60, "tasks": ["21.1"] },
-    { "id": 61, "tasks": ["21.2"] },
-    { "id": 62, "tasks": ["21.3", "21.4"] },
-    { "id": 63, "tasks": ["21.5"] },
-    { "id": 64, "tasks": ["21.6"] },
-    { "id": 65, "tasks": ["22.1"] },
-    { "id": 66, "tasks": ["22.2"] },
-    { "id": 67, "tasks": ["22.3", "22.4"] },
-    { "id": 68, "tasks": ["22.5"] },
-    { "id": 69, "tasks": ["22.6"] },
-    { "id": 70, "tasks": ["23.1"] },
-    { "id": 71, "tasks": ["23.2"] },
-    { "id": 72, "tasks": ["23.3", "23.4"] },
-    { "id": 73, "tasks": ["23.5"] },
-    { "id": 74, "tasks": ["23.6"] },
-    { "id": 75, "tasks": ["24.1"] },
-    { "id": 76, "tasks": ["24.2"] },
-    { "id": 77, "tasks": ["24.3", "24.4"] },
-    { "id": 78, "tasks": ["24.5"] },
-    { "id": 79, "tasks": ["24.6"] },
-    { "id": 80, "tasks": ["25.1"] },
-    { "id": 81, "tasks": ["25.2"] },
-    { "id": 82, "tasks": ["25.3", "25.4"] },
-    { "id": 83, "tasks": ["25.5"] },
-    { "id": 84, "tasks": ["25.6"] },
-    { "id": 85, "tasks": ["26.1", "26.2", "26.3", "26.4", "26.5"] }
+    {"id": 0, "tasks": ["1.1", "1.2", "1.3", "2.1", "3.1", "4.1"]},
+    {"id": 1, "tasks": ["1.4", "2.2", "3.2", "4.2", "5.1"]},
+    {"id": 2, "tasks": ["5.2", "5.3", "5.4", "5.5", "5.6", "7.1"]},
+    {"id": 3, "tasks": ["7.2", "8.1"]},
+    {"id": 4, "tasks": ["8.2", "9.1"]},
+    {"id": 5, "tasks": ["9.2", "9.3", "9.4", "9.6", "9.7", "10.1"]},
+    {"id": 6, "tasks": ["10.2", "12.1"]},
+    {"id": 7, "tasks": ["1.5", "9.5", "12.2", "12.3", "13.1", "14.1"]},
+    {"id": 8, "tasks": ["13.2", "14.2"]},
+    {"id": 9, "tasks": ["14.3", "14.4"]},
+    {"id": 10, "tasks": ["15A.1"]},
+    {"id": 11, "tasks": ["15A.3", "15B.1"]},
+    {"id": 12, "tasks": ["15A.2"]},
+    {"id": 13, "tasks": ["15A.4", "15B.2"]},
+    {"id": 14, "tasks": ["15B.3"]},
+    {"id": 15, "tasks": ["15C.1"]},
+    {"id": 16, "tasks": ["15C.2"]},
+    {"id": 17, "tasks": ["15C.3"]},
+    {"id": 18, "tasks": ["15C.4"]},
+    {"id": 19, "tasks": ["15D.1", "15D.5", "15F.2", "15G.1", "15G.4", "15G.5"]},
+    {"id": 20, "tasks": ["15D.2", "15D.3", "15D.4", "15D.6", "15E.1", "15F.1", "15G.2"]},
+    {"id": 21, "tasks": ["15D.7", "15D.8", "15D.9", "15D.10", "15D.11", "15D.12", "15E.2", "15E.3", "15E.4", "15F.5", "15G.3"]},
+    {"id": 22, "tasks": ["15E.5", "15E.6", "15F.3", "15F.4", "15G.6", "15G.7", "15G.8"]},
+    {"id": 23, "tasks": ["15F.6"]},
+    {"id": 24, "tasks": ["15H.1"]},
+    {"id": 25, "tasks": ["15H.2"]},
+    {"id": 26, "tasks": ["15H.3"]},
+    {"id": 27, "tasks": ["15H.4"]},
+    {"id": 28, "tasks": ["15I.1"]},
+    {"id": 29, "tasks": ["15I.2", "15I.4"]},
+    {"id": 30, "tasks": ["15I.3", "15I.5"]},
+    {"id": 31, "tasks": ["15I.6"]},
+    {"id": 32, "tasks": ["15I.7"]},
+    {"id": 33, "tasks": ["15H.5"]},
+    {"id": 34, "tasks": ["15I.8"]},
+    {"id": 35, "tasks": ["15J.1"]},
+    {"id": 36, "tasks": ["15J.2"]},
+    {"id": 37, "tasks": ["15K.1"]},
+    {"id": 38, "tasks": ["15K.2", "15L.1"]},
+    {"id": 39, "tasks": ["15L.2"]},
+    {"id": 40, "tasks": ["15L.3", "15L.4", "15M.1", "15N.1"]},
+    {"id": 41, "tasks": ["15M.2", "15N.2", "15O.1", "15O.2"]},
+    {"id": 42, "tasks": ["15M.3", "15N.3", "15O.3", "15P.1"]},
+    {"id": 43, "tasks": ["15N.4", "15P.2"]},
+    {"id": 44, "tasks": ["15P.3"]},
+    {"id": 45, "tasks": ["15Q.1"]},
+    {"id": 46, "tasks": ["15Q.2"]},
+    {"id": 47, "tasks": ["15Q.3"]},
+    {"id": 48, "tasks": ["16.1"]},
+    {"id": 49, "tasks": ["16.2"]},
+    {"id": 50, "tasks": ["16.3", "16.5"]},
+    {"id": 51, "tasks": ["16.8"]},
+    {"id": 52, "tasks": ["17.1"]},
+    {"id": 53, "tasks": ["17.2"]},
+    {"id": 54, "tasks": ["17.3", "17.4", "17.5", "17.6"]},
+    {"id": 55, "tasks": ["17.7"]},
+    {"id": 56, "tasks": ["17.8"]},
+    {"id": 57, "tasks": ["18.1"]},
+    {"id": 58, "tasks": ["18.2"]},
+    {"id": 59, "tasks": ["18.3", "18.4", "18.5", "18.6"]},
+    {"id": 60, "tasks": ["18.7"]},
+    {"id": 61, "tasks": ["18.8"]},
+    {"id": 62, "tasks": ["19.1"]},
+    {"id": 63, "tasks": ["19.2"]},
+    {"id": 64, "tasks": ["19.3", "19.4", "19.5", "19.6"]},
+    {"id": 65, "tasks": ["19.7"]},
+    {"id": 66, "tasks": ["19.8"]},
+    {"id": 67, "tasks": ["20.1"]},
+    {"id": 68, "tasks": ["20.2"]},
+    {"id": 69, "tasks": ["20.3", "20.4", "20.5", "20.6"]},
+    {"id": 70, "tasks": ["20.7"]},
+    {"id": 71, "tasks": ["20.8"]},
+    {"id": 72, "tasks": ["21.1"]},
+    {"id": 73, "tasks": ["21.2"]},
+    {"id": 74, "tasks": ["21.3", "21.4", "21.5", "21.6"]},
+    {"id": 75, "tasks": ["21.7"]},
+    {"id": 76, "tasks": ["21.8"]},
+    {"id": 77, "tasks": ["22.1"]},
+    {"id": 78, "tasks": ["22.2"]},
+    {"id": 79, "tasks": ["22.3", "22.4", "22.5", "22.6"]},
+    {"id": 80, "tasks": ["22.7"]},
+    {"id": 81, "tasks": ["22.8"]},
+    {"id": 82, "tasks": ["23.1"]},
+    {"id": 83, "tasks": ["23.2"]},
+    {"id": 84, "tasks": ["23.3", "23.4", "23.5", "23.6"]},
+    {"id": 85, "tasks": ["23.7"]},
+    {"id": 86, "tasks": ["23.8"]},
+    {"id": 87, "tasks": ["24.1"]},
+    {"id": 88, "tasks": ["24.2"]},
+    {"id": 89, "tasks": ["24.3", "24.4", "24.5", "24.6"]},
+    {"id": 90, "tasks": ["24.7"]},
+    {"id": 91, "tasks": ["24.8"]},
+    {"id": 92, "tasks": ["25.1"]},
+    {"id": 93, "tasks": ["25.2"]},
+    {"id": 94, "tasks": ["25.3", "25.4", "25.5", "25.6"]},
+    {"id": 95, "tasks": ["25.7"]},
+    {"id": 96, "tasks": ["25.8"]},
+    {"id": 97, "tasks": ["26.1"]},
+    {"id": 98, "tasks": ["26.2"]},
+    {"id": 99, "tasks": ["26.3", "26.4", "26.5", "26.6"]},
+    {"id": 100, "tasks": ["26.7"]},
+    {"id": 101, "tasks": ["26.8"]},
+    {"id": 102, "tasks": ["27.1"]},
+    {"id": 103, "tasks": ["27.2"]},
+    {"id": 104, "tasks": ["27.3", "27.4", "27.5", "27.6"]},
+    {"id": 105, "tasks": ["27.7"]},
+    {"id": 106, "tasks": ["27.8"]},
+    {"id": 107, "tasks": ["28.1"]},
+    {"id": 108, "tasks": ["28.2"]},
+    {"id": 109, "tasks": ["28.3", "28.4", "28.5", "28.6"]},
+    {"id": 110, "tasks": ["28.7"]},
+    {"id": 111, "tasks": ["28.8"]},
+    {"id": 112, "tasks": ["29.1"]},
+    {"id": 113, "tasks": ["29.2"]},
+    {"id": 114, "tasks": ["29.3", "29.4", "29.5", "29.6"]},
+    {"id": 115, "tasks": ["29.7"]},
+    {"id": 116, "tasks": ["29.8"]},
+    {"id": 117, "tasks": ["30.1"]},
+    {"id": 118, "tasks": ["30.2"]},
+    {"id": 119, "tasks": ["30.3", "30.4", "30.5", "30.6"]},
+    {"id": 120, "tasks": ["30.7"]},
+    {"id": 121, "tasks": ["30.8"]},
+    {"id": 122, "tasks": ["31.1"]},
+    {"id": 123, "tasks": ["31.2"]},
+    {"id": 124, "tasks": ["31.3", "31.4", "31.5", "31.6"]},
+    {"id": 125, "tasks": ["31.7"]},
+    {"id": 126, "tasks": ["31.8"]},
+    {"id": 127, "tasks": ["32.1"]},
+    {"id": 128, "tasks": ["32.2"]},
+    {"id": 129, "tasks": ["32.3", "32.4", "32.5", "32.6"]},
+    {"id": 130, "tasks": ["32.7"]},
+    {"id": 131, "tasks": ["32.8"]},
+    {"id": 132, "tasks": ["33.1"]},
+    {"id": 133, "tasks": ["33.2"]},
+    {"id": 134, "tasks": ["33.3", "33.4", "33.5", "33.6"]},
+    {"id": 135, "tasks": ["33.7"]},
+    {"id": 136, "tasks": ["33.8"]},
+    {"id": 137, "tasks": ["34.1"]},
+    {"id": 138, "tasks": ["34.2"]},
+    {"id": 139, "tasks": ["34.3", "34.4", "34.5", "34.6"]},
+    {"id": 140, "tasks": ["34.7"]},
+    {"id": 141, "tasks": ["34.8"]},
+    {"id": 142, "tasks": ["35.1", "35.2", "35.3", "35.4", "35.5"]}
   ]
 }
 ```
