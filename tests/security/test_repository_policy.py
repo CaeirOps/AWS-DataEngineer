@@ -193,3 +193,57 @@ def test_documentos_sem_em_dash_credenciais_ou_instrucoes_admin(doc):
         assert not padrao.search(texto), f"padrão de credencial AWS: {padrao.pattern}"
     for padrao in TERMOS_ADMINISTRATIVOS:
         assert not padrao.search(texto), f"instrução administrativa: {padrao.pattern}"
+
+
+SECAO_GITFLOW = "Fluxo de trabalho (gitflow)"
+ANCORA_GITFLOW = "#fluxo-de-trabalho-gitflow"
+RECOMENDA_MERGE_ERRADO = [
+    re.compile(r"(?i)(use|usar|usa|escolha|prefira|recomend\w+|fa[çc]a)\s+(o\s+)?(\*)?(squash|merge commit)"),
+    re.compile(r"(?i)squash (and|e) merge"),
+    re.compile(r"(?i)git merge\b"),
+]
+
+
+def test_readme_tem_secao_gitflow_completa():
+    texto = (RAIZ / "README.md").read_text(encoding="utf-8")
+    assert re.search(rf"(?m)^#+\s+{re.escape(SECAO_GITFLOW)}\s*$", texto)
+    for item in ("`main`", "`release/vX.Y.Z`", "`hotfix/vX.Y.Z`", "`lab/NN-<descricao>`",
+                 "rebase and merge", "git commit -s", "Conventional Commits", "`vX.Y.Z`"):
+        assert item in texto, f"README sem {item} na seção de gitflow"
+
+
+@pytest.mark.parametrize(
+    "doc",
+    [RAIZ / "CONTRIBUTING.md", RAIZ / ".github" / "pull_request_template.md"],
+    ids=lambda p: p.name,
+)
+def test_documentos_referenciam_secao_gitflow(doc):
+    texto = doc.read_text(encoding="utf-8")
+    assert ANCORA_GITFLOW in texto
+    assert "release" in texto
+
+
+def test_template_de_pr_indica_branch_base():
+    texto = (RAIZ / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
+    assert "release ativa" in texto and "`main`" in texto
+
+
+@pytest.mark.parametrize("doc", DOCUMENTOS, ids=lambda p: p.name)
+def test_documentos_nao_recomendam_squash_nem_merge_commit(doc):
+    texto = doc.read_text(encoding="utf-8")
+    for padrao in RECOMENDA_MERGE_ERRADO:
+        assert not padrao.search(texto), f"recomenda método de merge não suportado: {padrao.pattern}"
+
+
+def test_dependabot_ignora_major_e_minor_do_python():
+    dados = yaml.safe_load((RAIZ / ".github" / "dependabot.yml").read_text(encoding="utf-8"))
+    regras = [
+        r
+        for u in dados["updates"]
+        if u["package-ecosystem"] == "docker"
+        for r in u.get("ignore", [])
+        if r.get("dependency-name") == "python"
+    ]
+    assert regras, "docker sem regra de ignore para python"
+    tipos = set(regras[0]["update-types"])
+    assert {"version-update:semver-major", "version-update:semver-minor"} <= tipos
