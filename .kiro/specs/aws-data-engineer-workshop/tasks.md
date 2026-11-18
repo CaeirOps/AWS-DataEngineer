@@ -539,21 +539,61 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Executar os testes de integração com Docker de `tests/security/` (egress e ambiente do container) e uma chamada `sts:GetCallerIdentity` dentro do container, sem criar recursos AWS e sem imprimir credenciais
     - _Requirements: 1.2, 1.4, 1.5, 1.14, 1.15, 9.3, 12.1, 13.1, 13.2, 14.1, 14.6_
 
-  - [-] 15H.3 Fazer commit e push das mudanças
+  - [x] 15H.3 Fazer commit e push das mudanças
     - Adicionar os arquivos por nome (nunca `git add -A`), conferir com `git status` e `git diff --cached` que não há credenciais, `progress/*` nem `.env`, criar os commits com `git commit -s` (`Signed-off-by`) e fazer push em `main`
     - _Requirements: 1.13, 15.1_
 
-  - [~] 15H.4 Confirmar a execução do CI em `main` e obter os nomes dos status checks
+  - [x] 15H.4 Confirmar a execução do CI em `main` e obter os nomes dos status checks
     - Com `gh run list` e `gh run watch`, aguardar `ci.yml` e `codeql.yml` terminarem com sucesso em `main` e registrar os nomes exatos dos checks (`gh api repos/{owner}/{repo}/commits/<sha>/check-runs`) para uso no ruleset
     - Se algum job falhar, corrigir e repetir a partir da 15H.3
     - _Requirements: 15.3, 15.9_
 
   - [~] 15H.5 Configurar o repositório no GitHub com o `gh` CLI (autenticado como administrador)
-    - Ruleset em `main`: pull request obrigatório, status checks obrigatórios do CI (nomes da 15H.4), revisão de code owners obrigatória, resolução de conversas, bloqueio de force push e de exclusão, histórico linear; bypass somente do papel de administrador e somente via pull request
+    - Depende da 15I.7 (branch `release/v0.1.0` já enviada) e roda antes do PR da release, para que o próprio PR seja validado pelos rulesets
+    - Ruleset em `main`: pull request obrigatório (aprovação 0 e revisão de code owners obrigatória), resolução de conversas, os 8 status checks `tests`, `dco`, `secrets`, `dependencies`, `dockerfile`, `cloudformation`, `analyze (python)` e `analyze (javascript)` com política estrita, bloqueio de exclusão e de force push, histórico linear; bypass somente do papel admin e somente no modo `pull_request`
+    - Segundo ruleset para `release/**` e `hotfix/**`: pull request obrigatório e os mesmos 8 status checks, sem regra de non-fast-forward (para permitir atualizar por rebase) e sem regra de exclusão (para apagar a branch após o merge)
+    - Repositório: `allow_rebase_merge: true`, `allow_squash_merge: false`, `allow_merge_commit: false`, `delete_branch_on_merge: true`, wiki e projects desligados
     - Habilitar secret scanning e push protection, Dependabot alerts e security updates, e Private Vulnerability Reporting
-    - Actions: `default_workflow_permissions` igual a `read`, sem permissão de aprovar PR pelo Actions, aprovação obrigatória para workflows de fork de todos os colaboradores externos, e actions permitidas restritas às do GitHub e às fixadas por SHA usadas no CI
+    - Actions: `allowed_actions: selected` somente com ações do GitHub, `sha_pinning_required: true`, `default_workflow_permissions` igual a `read`, sem permissão de aprovar PR pelo Actions e aprovação obrigatória para workflows de fork de todos os colaboradores externos
     - Conferir cada configuração relendo-a pela API; registrar o resultado somente no relatório da execução, sem criar arquivo no repositório
-    - _Requirements: 15.9_
+    - _Requirements: 15.9, 15.17, 15.18_
+
+- [ ] 15I. Correção do DCO com Dependabot, alinhamento ao Python 3.15 e gitflow (release v0.1.0)
+  - [x] 15I.1 Criar a branch `release/v0.1.0` a partir de `origin/main`
+    - `git fetch origin` e `git switch -c release/v0.1.0 origin/main`; todos os commits desta task usam `git commit -s` e Conventional Commits
+    - _Requirements: 15.15, 15.19_
+
+  - [x] 15I.2 Corrigir `scripts/check_dco.py` para commits do Dependabot
+    - Adicionar uma allowlist explícita e mínima no próprio script com um único par: autor `dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>` e trailer `Signed-off-by: dependabot[bot] <support@github.com>`, ambos exatamente iguais; qualquer variação continua sujeita à regra de e-mail do sign-off igual ao do autor
+    - _Requirements: 15.3, 15.13, 15.14_
+
+  - [x]* 15I.3 Escrever testes de unidade do DCO com bots
+    - Em `tests/unit/` (ao lado dos testes existentes de `check_dco.py`), com repositório git temporário: o par do Dependabot é aceito; e-mail do sign-off diferente, sign-off de outra identidade e nome `dependabot[bot]` com e-mail diferente falham e são listados
+    - _Requirements: 15.13, 15.14_
+
+  - [x] 15I.4 Alinhar o repositório ao Python 3.15
+    - Validar em container real: `docker build` com `python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928`, instalação das dependências com `--require-hashes` e suíte de testes dentro da imagem 3.15; se algo falhar, reverter o `FROM` para 3.11 e registrar o motivo no relatório da execução
+    - Se passar: atualizar `python-version` nos 3 jobs de `.github/workflows/ci.yml`, a imagem de `scripts/compile-requirements.sh` (fixada por digest), o cabeçalho e o conteúdo de `requirements.txt` (recompilar com o script na imagem 3.15) e rodar `pip-audit`; atualizar os comentários do Dockerfile e do compose e o `CONTRIBUTING.md`
+    - Em `.github/dependabot.yml`, no ecossistema `docker`, ignorar `version-update:semver-major` e `version-update:semver-minor` da dependência `python`, mantendo patch e digest
+    - _Requirements: 14.4, 14.5, 15.10, 15.11, 15.12_
+
+  - [x] 15I.5 Documentar o gitflow
+    - No README, criar a seção "Fluxo de trabalho (gitflow)" para contribuidores: `main`, `release/vX.Y.Z`, branches de trabalho e `hotfix/vX.Y.Z`, branch base de cada uma, rebase and merge como único método (com o motivo: squash cria commit com o e-mail padrão do GitHub e pode quebrar o DCO; merge commit quebra o histórico linear), Conventional Commits e `git commit -s`; sem instruções administrativas do GitHub
+    - Referenciar a seção no `CONTRIBUTING.md` e no `.github/pull_request_template.md` (com a indicação da branch base correta); estender `tests/security/test_workflows.py` para verificar a seção do README, as referências e a ausência de instruções administrativas, e que o `dependabot.yml` contém as regras de `ignore` do Python
+    - _Requirements: 15.15, 15.16, 15.17, 15.19, 16.3, 16.4, 15.12_
+
+  - [x] 15I.6 Rodar a suíte completa localmente e no container 3.15
+    - `pytest` (incluindo `tests/security/`), suíte JS, `docker compose config` e `docker compose build`; repetir a suíte Python dentro da imagem 3.15
+    - _Requirements: 14.4, 14.5, 15.3, 15.10_
+
+  - [-] 15I.7 Fazer push da branch `release/v0.1.0`
+    - Adicionar os arquivos por nome, conferir `git status` e `git diff --cached` sem credenciais, `progress/*` nem `.env`, e `git push -u origin release/v0.1.0`
+    - _Requirements: 15.15_
+
+  - [~] 15I.8 Abrir o PR da release, integrar, criar a tag e o GitHub Release
+    - Depende da 15H.5 concluída. Abrir o PR de `release/v0.1.0` para `main`, aguardar os 8 checks, e fazer o merge por rebase and merge somente com autorização do mantenedor (o mantenedor aprova)
+    - Criar a tag anotada `v0.1.0` em `main`, publicar o GitHub Release com notas e confirmar que a branch da release foi apagada
+    - _Requirements: 15.16, 15.17_
 
 ## Parte 2: Labs (um por task, com revisão do usuário entre eles)
 
@@ -561,7 +601,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
   - [~] 16.1 Checkpoint de proposta do Lab 01
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (S3) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
-    - Depende das tarefas 15A, 15B e 15C (retomada, campo `services` e verificação de ambiente) e das tarefas 15D a 15H (credenciais, sessão, proteção da API, endurecimento, CI e GitHub) concluídas
+    - Depende das tarefas 15A, 15B e 15C (retomada, campo `services` e verificação de ambiente) e das tarefas 15D a 15I (credenciais, sessão, proteção da API, endurecimento, CI, GitHub e release v0.1.0) concluídas
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
   - [~] 16.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
@@ -922,12 +962,13 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
 - Os testes de segurança ficam em `tests/security/` (CODEOWNERS); a 15F.5 move para lá os testes existentes das Properties 13 e 14 e de egress
 - A 15F.3 ajusta `cap_add` do gateway ao mínimo que o Squid exigir; a lista final é confirmada com `docker compose up`
 - A 15H.3 e a 15H.5 alteram o estado remoto (push em `main` e configurações do GitHub). A 15H.5 só roda depois de a 15H.4 confirmar que o CI executou em `main`, e o resultado vai somente para o relatório da execução, não para o repositório
+- A task 15I (depois da 15H, antes da 16) corrige o DCO para commits do Dependabot, alinha o repositório ao Python 3.15 (com reversão para 3.11 se a imagem, a instalação com `--require-hashes` ou a suíte falharem em 3.15) e adota o gitflow simplificado com a release `v0.1.0`. A 15H.5 passa a depender da 15I.7 (a branch precisa existir antes dos rulesets, para o PR ser validado), a 15I.8 depende da 15H.5 e a 16.1 depende da 15I.8. A 15I.8 só faz o merge com autorização do mantenedor
+- O DCO é uma declaração de origem, não um controle de autenticidade; a proteção real é a revisão do code owner e os checks obrigatórios. A allowlist de bots da 15I.2 aceita um único par exato de autor e trailer
 - As tasks 15D.12 e 15H exigem Docker e, a 15H.2, um token SSO válido para o profile `Caeiro-Admin`; a task 15H.2 não cria recursos AWS
 
 ## Task Dependency Graph
 
-```json
-{
+```json{
   "waves": [
     { "id": 0, "tasks": ["1.1", "1.2", "1.3", "2.1", "3.1", "4.1"] },
     { "id": 1, "tasks": ["1.4", "2.2", "3.2", "4.2", "5.1"] },
@@ -957,58 +998,64 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     { "id": 25, "tasks": ["15H.2"] },
     { "id": 26, "tasks": ["15H.3"] },
     { "id": 27, "tasks": ["15H.4"] },
-    { "id": 28, "tasks": ["15H.5"] },
-    { "id": 29, "tasks": ["16.1"] },
-    { "id": 30, "tasks": ["16.2"] },
-    { "id": 31, "tasks": ["16.3", "16.4"] },
-    { "id": 32, "tasks": ["16.5"] },
-    { "id": 33, "tasks": ["16.6"] },
-    { "id": 34, "tasks": ["17.1"] },
-    { "id": 35, "tasks": ["17.2"] },
-    { "id": 36, "tasks": ["17.3", "17.4"] },
-    { "id": 37, "tasks": ["17.5"] },
-    { "id": 38, "tasks": ["17.6"] },
-    { "id": 39, "tasks": ["18.1"] },
-    { "id": 40, "tasks": ["18.2"] },
-    { "id": 41, "tasks": ["18.3", "18.4"] },
-    { "id": 42, "tasks": ["18.5"] },
-    { "id": 43, "tasks": ["18.6"] },
-    { "id": 44, "tasks": ["19.1"] },
-    { "id": 45, "tasks": ["19.2"] },
-    { "id": 46, "tasks": ["19.3", "19.4"] },
-    { "id": 47, "tasks": ["19.5"] },
-    { "id": 48, "tasks": ["19.6"] },
-    { "id": 49, "tasks": ["20.1"] },
-    { "id": 50, "tasks": ["20.2"] },
-    { "id": 51, "tasks": ["20.3", "20.4"] },
-    { "id": 52, "tasks": ["20.5"] },
-    { "id": 53, "tasks": ["20.6"] },
-    { "id": 54, "tasks": ["21.1"] },
-    { "id": 55, "tasks": ["21.2"] },
-    { "id": 56, "tasks": ["21.3", "21.4"] },
-    { "id": 57, "tasks": ["21.5"] },
-    { "id": 58, "tasks": ["21.6"] },
-    { "id": 59, "tasks": ["22.1"] },
-    { "id": 60, "tasks": ["22.2"] },
-    { "id": 61, "tasks": ["22.3", "22.4"] },
-    { "id": 62, "tasks": ["22.5"] },
-    { "id": 63, "tasks": ["22.6"] },
-    { "id": 64, "tasks": ["23.1"] },
-    { "id": 65, "tasks": ["23.2"] },
-    { "id": 66, "tasks": ["23.3", "23.4"] },
-    { "id": 67, "tasks": ["23.5"] },
-    { "id": 68, "tasks": ["23.6"] },
-    { "id": 69, "tasks": ["24.1"] },
-    { "id": 70, "tasks": ["24.2"] },
-    { "id": 71, "tasks": ["24.3", "24.4"] },
-    { "id": 72, "tasks": ["24.5"] },
-    { "id": 73, "tasks": ["24.6"] },
-    { "id": 74, "tasks": ["25.1"] },
-    { "id": 75, "tasks": ["25.2"] },
-    { "id": 76, "tasks": ["25.3", "25.4"] },
-    { "id": 77, "tasks": ["25.5"] },
-    { "id": 78, "tasks": ["25.6"] },
-    { "id": 79, "tasks": ["26.1", "26.2", "26.3", "26.4", "26.5"] }
+    { "id": 28, "tasks": ["15I.1"] },
+    { "id": 29, "tasks": ["15I.2", "15I.4"] },
+    { "id": 30, "tasks": ["15I.3", "15I.5"] },
+    { "id": 31, "tasks": ["15I.6"] },
+    { "id": 32, "tasks": ["15I.7"] },
+    { "id": 33, "tasks": ["15H.5"] },
+    { "id": 34, "tasks": ["15I.8"] },
+    { "id": 35, "tasks": ["16.1"] },
+    { "id": 36, "tasks": ["16.2"] },
+    { "id": 37, "tasks": ["16.3", "16.4"] },
+    { "id": 38, "tasks": ["16.5"] },
+    { "id": 39, "tasks": ["16.6"] },
+    { "id": 40, "tasks": ["17.1"] },
+    { "id": 41, "tasks": ["17.2"] },
+    { "id": 42, "tasks": ["17.3", "17.4"] },
+    { "id": 43, "tasks": ["17.5"] },
+    { "id": 44, "tasks": ["17.6"] },
+    { "id": 45, "tasks": ["18.1"] },
+    { "id": 46, "tasks": ["18.2"] },
+    { "id": 47, "tasks": ["18.3", "18.4"] },
+    { "id": 48, "tasks": ["18.5"] },
+    { "id": 49, "tasks": ["18.6"] },
+    { "id": 50, "tasks": ["19.1"] },
+    { "id": 51, "tasks": ["19.2"] },
+    { "id": 52, "tasks": ["19.3", "19.4"] },
+    { "id": 53, "tasks": ["19.5"] },
+    { "id": 54, "tasks": ["19.6"] },
+    { "id": 55, "tasks": ["20.1"] },
+    { "id": 56, "tasks": ["20.2"] },
+    { "id": 57, "tasks": ["20.3", "20.4"] },
+    { "id": 58, "tasks": ["20.5"] },
+    { "id": 59, "tasks": ["20.6"] },
+    { "id": 60, "tasks": ["21.1"] },
+    { "id": 61, "tasks": ["21.2"] },
+    { "id": 62, "tasks": ["21.3", "21.4"] },
+    { "id": 63, "tasks": ["21.5"] },
+    { "id": 64, "tasks": ["21.6"] },
+    { "id": 65, "tasks": ["22.1"] },
+    { "id": 66, "tasks": ["22.2"] },
+    { "id": 67, "tasks": ["22.3", "22.4"] },
+    { "id": 68, "tasks": ["22.5"] },
+    { "id": 69, "tasks": ["22.6"] },
+    { "id": 70, "tasks": ["23.1"] },
+    { "id": 71, "tasks": ["23.2"] },
+    { "id": 72, "tasks": ["23.3", "23.4"] },
+    { "id": 73, "tasks": ["23.5"] },
+    { "id": 74, "tasks": ["23.6"] },
+    { "id": 75, "tasks": ["24.1"] },
+    { "id": 76, "tasks": ["24.2"] },
+    { "id": 77, "tasks": ["24.3", "24.4"] },
+    { "id": 78, "tasks": ["24.5"] },
+    { "id": 79, "tasks": ["24.6"] },
+    { "id": 80, "tasks": ["25.1"] },
+    { "id": 81, "tasks": ["25.2"] },
+    { "id": 82, "tasks": ["25.3", "25.4"] },
+    { "id": 83, "tasks": ["25.5"] },
+    { "id": 84, "tasks": ["25.6"] },
+    { "id": 85, "tasks": ["26.1", "26.2", "26.3", "26.4", "26.5"] }
   ]
 }
 ```

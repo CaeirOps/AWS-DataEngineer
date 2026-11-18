@@ -2,7 +2,7 @@
 
 ## Overview
 
-A Plataforma de Workshop AWS Data Engineer é uma aplicação web local, distribuída via `git clone` e executada com Docker Compose. O backend é um servidor Flask (Python 3.11+) que serve conteúdo estático e expõe uma API REST para validação de steps, gerenciamento de progresso e operações CloudFormation. Toda a lógica de validação AWS é implementada em módulos Python com boto3, sem autenticação própria, sem banco de dados externo e sem telemetria.
+A Plataforma de Workshop AWS Data Engineer é uma aplicação web local, distribuída via `git clone` e executada com Docker Compose. O backend é um servidor Flask (Python 3.15) que serve conteúdo estático e expõe uma API REST para validação de steps, gerenciamento de progresso e operações CloudFormation. Toda a lógica de validação AWS é implementada em módulos Python com boto3, sem autenticação própria, sem banco de dados externo e sem telemetria.
 
 A stack é composta por dois containers: `workshop` (Flask + gunicorn, em rede Docker `internal`, sem acesso direto à internet) e `gateway` (Squid, único com porta publicada em `127.0.0.1` e único com saída para a internet, filtrada por Allowlist). Dois scripts no host, `check_requirements.py` e `start.py`, usam somente a biblioteca padrão do Python.
 
@@ -575,7 +575,7 @@ app/static/
 
 ```dockerfile
 # Fixada por digest (14.4); o digest real e definido na implementacao
-FROM python:3.11-slim@sha256:<digest>
+FROM python:3.15-slim@sha256:<digest>
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -601,7 +601,7 @@ USER 10001:10001
 
 EXPOSE 5000
 
-# python:3.11-slim nao inclui curl; o healthcheck usa a biblioteca padrao
+# python:3.15-slim nao inclui curl; o healthcheck usa a biblioteca padrao
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
   CMD python -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:5000/health', timeout=3)" || exit 1
 
@@ -742,8 +742,27 @@ access_log stdio:/var/log/squid/access.log squid
 
 **Arquivos de dependências:**
 - `requirements.in`: `flask`, `gunicorn`, `boto3` (dependências diretas)
-- `requirements.txt`: gerado a partir de `requirements.in` com hashes de todos os pacotes, instalado com `pip install --require-hashes` (14.5). A geração é reproduzível: `scripts/compile-requirements.sh` executa `pip-compile --generate-hashes` dentro da imagem `python:3.11-slim` fixada por digest, e o procedimento é descrito no `CONTRIBUTING.md`. O Dependabot atualiza `requirements.in`/`requirements.txt` e o CI roda `pip-audit`.
+- `requirements.txt`: gerado a partir de `requirements.in` com hashes de todos os pacotes, instalado com `pip install --require-hashes` (14.5). A geração é reproduzível: `scripts/compile-requirements.sh` executa `pip-compile --generate-hashes` dentro da imagem `python:3.15-slim` fixada por digest, e o procedimento é descrito no `CONTRIBUTING.md`. O Dependabot atualiza `requirements.in`/`requirements.txt` e o CI roda `pip-audit`.
 - `requirements-dev.txt`: `pytest`, `hypothesis`
+
+**Versão do Python (15.10, 15.11, 15.12):** a versão estável mais recente, 3.15, é usada em todo o repositório: imagem base fixada por digest, `python-version` dos três jobs do `ci.yml`, cabeçalho do `requirements.txt` (recompilado com `scripts/compile-requirements.sh` na imagem 3.15 e auditado com `pip-audit`), comentários do Dockerfile e do compose e `CONTRIBUTING.md`. O alinhamento só vale se a imagem construir, as dependências instalarem com `--require-hashes` e a suíte passar dentro da imagem; caso contrário, reverte-se para 3.11 e o motivo é registrado. No `dependabot.yml`, o ecossistema `docker` ignora `version-update:semver-major` e `version-update:semver-minor` da imagem `python`, de modo que a troca de versão do Python é sempre deliberada (exige recompilar dependências e mudar o CI); atualizações de patch e de digest continuam chegando.
+
+**DCO e bots (15.13, 15.14):** `scripts/check_dco.py` exige que o e-mail do `Signed-off-by` seja igual ao do autor. O Dependabot usa autor `dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>` e trailer `Signed-off-by: dependabot[bot] <support@github.com>`, o que reprova essa regra. O script mantém uma allowlist explícita e mínima no próprio código, com um único par aceito: autor e trailer exatamente iguais aos acima. Qualquer variação falha: e-mail diferente, sign-off de outra identidade, ou nome igual com e-mail diferente. O DCO é uma declaração de origem, não um controle de autenticidade (o autor de um commit é um texto livre); a proteção real é a revisão do code owner e os status checks obrigatórios.
+
+**Fluxo de trabalho, gitflow simplificado (15.15 a 15.19, 16.4):**
+
+| Branch | Origem | Destino do PR | Observação |
+|---|---|---|---|
+| `main` | n/a | n/a | única branch permanente e estável; recebe só PRs de `release/vX.Y.Z`, `hotfix/vX.Y.Z` e do Dependabot; cada release integrada recebe tag anotada `vX.Y.Z` (SemVer) e GitHub Release |
+| `release/vX.Y.Z` | `main` | `main` | integra as mudanças da versão; atualizada em relação a `main` por rebase; apagada após o merge |
+| `feat/`, `fix/`, `docs/`, `chore/`, `lab/NN-` | release ativa | release ativa | branches de trabalho |
+| `hotfix/vX.Y.Z` | `main` | `main` | correção urgente |
+
+- Método de merge único: rebase and merge, com squash e merge commit desabilitados. O squash cria um commit com o e-mail padrão do GitHub do autor, que pode divergir do e-mail do sign-off e quebrar o DCO; o merge commit quebra o histórico linear. O rebase preserva cada commit com seu `Signed-off-by`.
+- Mensagens seguem Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `ci:`, `test:`, `refactor:`) e sempre `git commit -s`.
+- Rulesets: o de `main` (PR obrigatório com aprovação 0 e code owner obrigatório, resolução de conversas, 8 status checks `tests`, `dco`, `secrets`, `dependencies`, `dockerfile`, `cloudformation`, `analyze (python)`, `analyze (javascript)` com política estrita, sem exclusão e sem force push, histórico linear, bypass do papel admin só em modo `pull_request`) e o de `release/**` e `hotfix/**` (PR obrigatório e os mesmos checks, sem regra de non-fast-forward para permitir rebase, sem regra de exclusão para apagar após o merge). Repositório com `allow_rebase_merge: true`, `allow_squash_merge: false`, `allow_merge_commit: false`, `delete_branch_on_merge: true`, wiki e projects desligados. Actions com `allowed_actions: selected`, somente ações do GitHub, `sha_pinning_required: true` e aprovação de workflows de fork para todos os colaboradores externos.
+- A documentação para contribuidores fica na seção "Fluxo de trabalho (gitflow)" do README, referenciada pelo `CONTRIBUTING.md` e pelo template de PR (que indica a branch base correta). Não há instruções administrativas do GitHub no README (16.3).
+- Primeira release: `release/v0.1.0`, com as correções desta etapa. Os rulesets são aplicados depois do push da branch e antes do PR, para que o próprio PR seja validado.
 
 **Estrutura de diretórios do repositório:**
 
@@ -1391,9 +1410,11 @@ Verificações estáticas de configuração executadas uma vez:
 - O README documenta que downloads do build ocorrem fora da restrição de runtime e que o Squid não registra cabeçalhos de autenticação (9.6, 9.7)
 - `requirements.txt` contém flask, gunicorn e boto3 com hashes (`--hash=sha256:`) em todas as entradas e o Dockerfile instala com `--require-hashes` (14.5); `requirements-dev.txt` contém pytest e hypothesis
 - Dockerfile define `USER` não root; o compose define `read_only: true`, `tmpfs` em `/tmp`, `cap_drop: [ALL]`, `no-new-privileges:true`, `mem_limit` e `pids_limit` nos dois serviços (14.1, 14.3)
-- As imagens `python:3.11-slim` e `ubuntu/squid` estão fixadas por `@sha256:` (14.4)
+- As imagens `python:3.15-slim` e `ubuntu/squid` estão fixadas por `@sha256:` (14.4)
 - Workflows em `.github/workflows/`: sem `pull_request_target`, `permissions` no topo restritas a `contents: read` (`security-events: write` só no job do CodeQL), todas as actions de terceiros fixadas por SHA de 40 caracteres e nenhuma referência a `secrets.` (15.1, 15.2, 15.4)
 - `.github/CODEOWNERS` cobre os caminhos sensíveis com `@CaeirOps`; `dependabot.yml` cobre `pip`, `docker` e `github-actions` com frequência semanal (15.5, 15.6)
+- `dependabot.yml` ignora `version-update:semver-major` e `version-update:semver-minor` da imagem `python` (15.12); `ci.yml` usa `python-version` 3.15 nos três jobs (15.10); o README tem a seção "Fluxo de trabalho (gitflow)" (16.4)
+- `scripts/check_dco.py` (testes de unidade): o par autor e sign-off do Dependabot é aceito; e-mail de sign-off diferente, sign-off de outra identidade e nome igual com e-mail diferente falham (15.13, 15.14)
 - `SECURITY.md`, `CONTRIBUTING.md` e `.github/pull_request_template.md` existem; o README não contém instruções de configuração administrativa do GitHub (16.1, 16.2, 16.3)
 - Todo `cli.md` usa `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` (ou placeholders `<...>`) e todo `console.md` contém um caminho de navegação `Serviço > Menu > Botão` (11.7, 11.8; verificação de presença, o conteúdo editorial é revisado manualmente)
 
