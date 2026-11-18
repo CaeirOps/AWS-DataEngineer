@@ -1,0 +1,1194 @@
+{
+  "source": "https://docs.aws.amazon.com/aws-certification/latest/data-engineer-associate-01/data-engineer-associate-01.html",
+  "retrieved_at": "2026-11-18",
+  "exam": "DEA-C01",
+  "modules": {
+    "lab-00": "Fundamentos de engenharia de dados",
+    "lab-01": "S3 e data lake",
+    "lab-02": "Catálogo de dados",
+    "lab-03": "Athena e SQL analítico",
+    "lab-04": "ETL com Glue e PySpark",
+    "lab-05": "EMR Serverless e escolha do motor de processamento",
+    "lab-06": "Qualidade de dados",
+    "lab-07": "Streaming",
+    "lab-08": "DynamoDB e bancos operacionais",
+    "lab-09": "Migração e CDC",
+    "lab-10": "Redshift",
+    "lab-11": "Open table formats",
+    "lab-12": "Orquestração",
+    "lab-13": "Observabilidade e operação",
+    "lab-14": "Segurança",
+    "lab-15": "Governança",
+    "lab-16": "Dados para IA",
+    "lab-17": "Data APIs, IaC e CI/CD",
+    "lab-18": "Projeto final"
+  },
+  "tasks": {
+    "1.1": "Perform data ingestion",
+    "1.2": "Transform and process data",
+    "1.3": "Orchestrate data pipelines",
+    "1.4": "Apply programming concepts",
+    "2.1": "Choose a data store",
+    "2.2": "Understand data cataloging systems",
+    "2.3": "Manage the lifecycle of data",
+    "2.4": "Design data models and schema evolution",
+    "3.1": "Automate data processing by using AWS services",
+    "3.2": "Analyze data by using AWS services",
+    "3.3": "Maintain and monitor data pipelines",
+    "3.4": "Ensure data quality",
+    "4.1": "Apply authentication mechanisms",
+    "4.2": "Apply authorization mechanisms",
+    "4.3": "Ensure data encryption and masking",
+    "4.4": "Prepare logs for audit",
+    "4.5": "Understand data privacy and governance"
+  },
+  "skills": [
+    {
+      "id": "1.1.1",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Read data from streaming sources (for example, Amazon Kinesis, Amazon Managed Streaming for Apache Kafka [Amazon MSK], Amazon DynamoDB Streams, AWS DMS, AWS Glue, Amazon Redshift).",
+      "modules": [
+        "lab-07",
+        "lab-08",
+        "lab-09"
+      ]
+    },
+    {
+      "id": "1.1.2",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Read data from batch sources (for example, Amazon S3, AWS Glue, Amazon EMR, AWS DMS, Amazon Redshift, AWS Lambda, Amazon AppFlow).",
+      "modules": [
+        "lab-01",
+        "lab-04",
+        "lab-05",
+        "lab-09"
+      ]
+    },
+    {
+      "id": "1.1.3",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Implement appropriate configuration options for batch ingestion.",
+      "modules": [
+        "lab-04",
+        "lab-09"
+      ]
+    },
+    {
+      "id": "1.1.4",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Consume data APIs.",
+      "modules": [
+        "lab-12",
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.1.5",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Set up schedulers by using Amazon EventBridge, Apache Airflow, or time-based schedules for jobs and crawlers.",
+      "modules": [
+        "lab-02",
+        "lab-12"
+      ]
+    },
+    {
+      "id": "1.1.6",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Set up event triggers (for example, Amazon S3 Event Notifications, EventBridge).",
+      "modules": [
+        "lab-01",
+        "lab-12"
+      ]
+    },
+    {
+      "id": "1.1.7",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Call a Lambda function from Kinesis.",
+      "modules": [
+        "lab-07"
+      ]
+    },
+    {
+      "id": "1.1.8",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Create allowlists for IP addresses to allow connections to data sources.",
+      "modules": [
+        "lab-09",
+        "lab-14"
+      ]
+    },
+    {
+      "id": "1.1.9",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Implement throttling and overcoming rate limits (for example, DynamoDB, Amazon RDS, Kinesis).",
+      "modules": [
+        "lab-07",
+        "lab-08"
+      ]
+    },
+    {
+      "id": "1.1.10",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Manage fan-in and fan-out for streaming data distribution.",
+      "modules": [
+        "lab-07"
+      ]
+    },
+    {
+      "id": "1.1.11",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Describe replayability of data ingestion pipelines.",
+      "modules": [
+        "lab-00",
+        "lab-07"
+      ]
+    },
+    {
+      "id": "1.1.12",
+      "domain": "D1",
+      "task": "1.1",
+      "text": "Define stateful and stateless data transactions.",
+      "modules": [
+        "lab-00",
+        "lab-07"
+      ]
+    },
+    {
+      "id": "1.2.1",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Optimize container usage for performance needs (for example, Amazon EKS, Amazon ECS).",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.2.2",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Connect to different data sources (for example, Java Database Connectivity [JDBC], Open Database Connectivity [ODBC]).",
+      "modules": [
+        "lab-02",
+        "lab-09"
+      ]
+    },
+    {
+      "id": "1.2.3",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Integrate data from multiple sources.",
+      "modules": [
+        "lab-04",
+        "lab-18"
+      ]
+    },
+    {
+      "id": "1.2.4",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Optimize costs while processing data.",
+      "modules": [
+        "lab-04",
+        "lab-05"
+      ]
+    },
+    {
+      "id": "1.2.5",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Implement data transformation services based on requirements (for example, Amazon EMR, AWS Glue, Lambda, Amazon Redshift).",
+      "modules": [
+        "lab-04",
+        "lab-05",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "1.2.6",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Transform data between formats (for example, from .csv to Apache Parquet).",
+      "modules": [
+        "lab-00",
+        "lab-04",
+        "lab-07"
+      ]
+    },
+    {
+      "id": "1.2.7",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Troubleshoot and debug common transformation failures and performance issues.",
+      "modules": [
+        "lab-04",
+        "lab-05",
+        "lab-13"
+      ]
+    },
+    {
+      "id": "1.2.8",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Create data APIs to make data available to other systems by using AWS services.",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.2.9",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Define volume, velocity, and variety of data (for example, structured data, unstructured data).",
+      "modules": [
+        "lab-00"
+      ]
+    },
+    {
+      "id": "1.2.10",
+      "domain": "D1",
+      "task": "1.2",
+      "text": "Integrate large language models (LLMs) for data processing.",
+      "modules": [
+        "lab-16"
+      ]
+    },
+    {
+      "id": "1.3.1",
+      "domain": "D1",
+      "task": "1.3",
+      "text": "Use orchestration services to build workflows for data ETL pipelines (for example, Lambda, EventBridge, Amazon Managed Workflows for Apache Airflow [Amazon MWAA], AWS Step Functions, AWS Glue workflows).",
+      "modules": [
+        "lab-12"
+      ]
+    },
+    {
+      "id": "1.3.2",
+      "domain": "D1",
+      "task": "1.3",
+      "text": "Build data pipelines for performance, availability, scalability, resiliency, and fault tolerance.",
+      "modules": [
+        "lab-12",
+        "lab-18"
+      ]
+    },
+    {
+      "id": "1.3.3",
+      "domain": "D1",
+      "task": "1.3",
+      "text": "Implement and maintain serverless workflows.",
+      "modules": [
+        "lab-12"
+      ]
+    },
+    {
+      "id": "1.3.4",
+      "domain": "D1",
+      "task": "1.3",
+      "text": "Use notification services to send alerts (for example, Amazon SNS, Amazon SQS).",
+      "modules": [
+        "lab-12",
+        "lab-13"
+      ]
+    },
+    {
+      "id": "1.4.1",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Optimize code to reduce runtime for data ingestion and transformation.",
+      "modules": [
+        "lab-04",
+        "lab-05"
+      ]
+    },
+    {
+      "id": "1.4.2",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Configure Lambda functions to meet concurrency and performance needs.",
+      "modules": [
+        "lab-07",
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.4.3",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Use programming languages and frameworks for data engineering (for example, Python, SQL, Scala, R, Java, Bash, PowerShell).",
+      "modules": [
+        "lab-00",
+        "lab-04"
+      ]
+    },
+    {
+      "id": "1.4.4",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Use software engineering best practices for data engineering (for example, version control, testing, logging, monitoring).",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.4.5",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Use Infrastructure as Code (IaC) to deploy data engineering solutions.",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.4.6",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Use AWS SAM to package and deploy serverless data pipelines (for example, Lambda functions, Step Functions, DynamoDB tables).",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.4.7",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Use and mount storage volumes from within Lambda functions.",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.4.8",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Use infrastructure as code (IaC) for repeatable resource deployment (for example, AWS CloudFormation and AWS CDK).",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.4.9",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Describe continuous integration and continuous delivery (CI/CD) (implementation, testing, and deployment of data pipelines).",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "1.4.10",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Define distributed computing.",
+      "modules": [
+        "lab-00",
+        "lab-05"
+      ]
+    },
+    {
+      "id": "1.4.11",
+      "domain": "D1",
+      "task": "1.4",
+      "text": "Describe data structures and algorithms (for example, graph data structures and tree data structures).",
+      "modules": [
+        "lab-00",
+        "lab-08"
+      ]
+    },
+    {
+      "id": "2.1.1",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Implement the appropriate storage services for specific cost and performance requirements (for example, Amazon Redshift, Amazon EMR, AWS Lake Formation, Amazon RDS, Amazon DynamoDB, Amazon Kinesis Data Streams, Amazon Managed Streaming for Apache Kafka [Amazon MSK]).",
+      "modules": [
+        "lab-01",
+        "lab-08",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "2.1.2",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Configure the appropriate storage services for specific access patterns and requirements (for example, Amazon Redshift, Amazon EMR, Lake Formation, Amazon RDS, DynamoDB).",
+      "modules": [
+        "lab-08",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "2.1.3",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Apply storage services to appropriate use cases (for example, using indexing algorithms like Hierarchical Navigable Small Worlds [HNSW] with Amazon Aurora PostgreSQL and using Amazon MemoryDB for fast key/value pair access).",
+      "modules": [
+        "lab-08",
+        "lab-16"
+      ]
+    },
+    {
+      "id": "2.1.4",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Integrate migration tools into data processing systems (for example, AWS Transfer Family).",
+      "modules": [
+        "lab-09"
+      ]
+    },
+    {
+      "id": "2.1.5",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Implement data migration or remote access methods (for example, Amazon Redshift federated queries, Amazon Redshift materialized views, Amazon Redshift Spectrum).",
+      "modules": [
+        "lab-10"
+      ]
+    },
+    {
+      "id": "2.1.6",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Manage locks to prevent access to data (for example, Amazon Redshift, Amazon RDS).",
+      "modules": [
+        "lab-08",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "2.1.7",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Manage open table formats (for example Apache Iceberg).",
+      "modules": [
+        "lab-11"
+      ]
+    },
+    {
+      "id": "2.1.8",
+      "domain": "D2",
+      "task": "2.1",
+      "text": "Describe vector index types (for example, HNSW, IVF).",
+      "modules": [
+        "lab-16"
+      ]
+    },
+    {
+      "id": "2.2.1",
+      "domain": "D2",
+      "task": "2.2",
+      "text": "Use data catalogs to consume data from the data's source.",
+      "modules": [
+        "lab-02",
+        "lab-03"
+      ]
+    },
+    {
+      "id": "2.2.2",
+      "domain": "D2",
+      "task": "2.2",
+      "text": "Build and reference a technical data catalog (for example, AWS Glue Data Catalog, Apache Hive metastore).",
+      "modules": [
+        "lab-02"
+      ]
+    },
+    {
+      "id": "2.2.3",
+      "domain": "D2",
+      "task": "2.2",
+      "text": "Discover schemas and use AWS Glue crawlers to populate data catalogs.",
+      "modules": [
+        "lab-02"
+      ]
+    },
+    {
+      "id": "2.2.4",
+      "domain": "D2",
+      "task": "2.2",
+      "text": "Synchronize partitions with a data catalog.",
+      "modules": [
+        "lab-02",
+        "lab-03"
+      ]
+    },
+    {
+      "id": "2.2.5",
+      "domain": "D2",
+      "task": "2.2",
+      "text": "Create new source or target connections for cataloging (for example, AWS Glue).",
+      "modules": [
+        "lab-02",
+        "lab-09"
+      ]
+    },
+    {
+      "id": "2.2.6",
+      "domain": "D2",
+      "task": "2.2",
+      "text": "Create and manage business data catalogs (for example, Amazon SageMaker Catalog).",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "2.3.1",
+      "domain": "D2",
+      "task": "2.3",
+      "text": "Perform load and unload operations to move data between Amazon S3 and Amazon Redshift.",
+      "modules": [
+        "lab-10"
+      ]
+    },
+    {
+      "id": "2.3.2",
+      "domain": "D2",
+      "task": "2.3",
+      "text": "Manage S3 Lifecycle policies to change the storage tier of S3 data.",
+      "modules": [
+        "lab-01"
+      ]
+    },
+    {
+      "id": "2.3.3",
+      "domain": "D2",
+      "task": "2.3",
+      "text": "Expire data when it reaches a specific age by using S3 Lifecycle policies.",
+      "modules": [
+        "lab-01"
+      ]
+    },
+    {
+      "id": "2.3.4",
+      "domain": "D2",
+      "task": "2.3",
+      "text": "Manage S3 versioning and DynamoDB TTL.",
+      "modules": [
+        "lab-01",
+        "lab-08"
+      ]
+    },
+    {
+      "id": "2.3.5",
+      "domain": "D2",
+      "task": "2.3",
+      "text": "Delete data to meet business and legal requirements.",
+      "modules": [
+        "lab-01",
+        "lab-15"
+      ]
+    },
+    {
+      "id": "2.3.6",
+      "domain": "D2",
+      "task": "2.3",
+      "text": "Protect data with appropriate resiliency and availability.",
+      "modules": [
+        "lab-01",
+        "lab-08"
+      ]
+    },
+    {
+      "id": "2.4.1",
+      "domain": "D2",
+      "task": "2.4",
+      "text": "Design schemas for Amazon Redshift, DynamoDB, and Lake Formation.",
+      "modules": [
+        "lab-08",
+        "lab-10",
+        "lab-15"
+      ]
+    },
+    {
+      "id": "2.4.2",
+      "domain": "D2",
+      "task": "2.4",
+      "text": "Address changes to the characteristics of data.",
+      "modules": [
+        "lab-02",
+        "lab-11"
+      ]
+    },
+    {
+      "id": "2.4.3",
+      "domain": "D2",
+      "task": "2.4",
+      "text": "Perform schema conversion (for example, by using AWS SCT and AWS DMS Schema Conversion).",
+      "modules": [
+        "lab-09"
+      ]
+    },
+    {
+      "id": "2.4.4",
+      "domain": "D2",
+      "task": "2.4",
+      "text": "Establish data lineage by using AWS tools (for example, Amazon SageMaker ML Lineage Tracking and Amazon SageMaker Catalog).",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "2.4.5",
+      "domain": "D2",
+      "task": "2.4",
+      "text": "Describe best practices for indexing, partitioning strategies, compression, and other data optimization techniques.",
+      "modules": [
+        "lab-00",
+        "lab-03",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "2.4.6",
+      "domain": "D2",
+      "task": "2.4",
+      "text": "Describe vectorization concepts (for example, Amazon Bedrock knowledge base).",
+      "modules": [
+        "lab-16"
+      ]
+    },
+    {
+      "id": "3.1.1",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Orchestrate data pipelines (for example, Amazon Managed Workflows for Apache Airflow [Amazon MWAA], AWS Step Functions).",
+      "modules": [
+        "lab-12"
+      ]
+    },
+    {
+      "id": "3.1.2",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Troubleshoot Amazon managed workflows.",
+      "modules": [
+        "lab-12",
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.1.3",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Call SDKs to access Amazon features from code.",
+      "modules": [
+        "lab-04",
+        "lab-17"
+      ]
+    },
+    {
+      "id": "3.1.4",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Use the features of AWS services to process data (for example, Amazon EMR, Amazon Redshift, AWS Glue).",
+      "modules": [
+        "lab-04",
+        "lab-05",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "3.1.5",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Consume and maintain data APIs.",
+      "modules": [
+        "lab-17"
+      ]
+    },
+    {
+      "id": "3.1.6",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Prepare data for transformation (for example, AWS Glue DataBrew and Amazon SageMaker Unified Studio).",
+      "modules": [
+        "lab-06",
+        "lab-15"
+      ]
+    },
+    {
+      "id": "3.1.7",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Query data (for example, Amazon Athena).",
+      "modules": [
+        "lab-03"
+      ]
+    },
+    {
+      "id": "3.1.8",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Use AWS Lambda to automate data processing.",
+      "modules": [
+        "lab-01",
+        "lab-12"
+      ]
+    },
+    {
+      "id": "3.1.9",
+      "domain": "D3",
+      "task": "3.1",
+      "text": "Manage events and schedulers (for example, Amazon EventBridge).",
+      "modules": [
+        "lab-12"
+      ]
+    },
+    {
+      "id": "3.2.1",
+      "domain": "D3",
+      "task": "3.2",
+      "text": "Visualize data by using AWS services and tools (for example, DataBrew, Amazon QuickSight).",
+      "modules": [
+        "lab-03",
+        "lab-06"
+      ]
+    },
+    {
+      "id": "3.2.2",
+      "domain": "D3",
+      "task": "3.2",
+      "text": "Verify and clean data (for example, Lambda, Athena, QuickSight, Jupyter Notebooks, Amazon SageMaker Data Wrangler).",
+      "modules": [
+        "lab-03",
+        "lab-06"
+      ]
+    },
+    {
+      "id": "3.2.3",
+      "domain": "D3",
+      "task": "3.2",
+      "text": "Use SQL in Amazon Redshift and Athena to query data or to create views.",
+      "modules": [
+        "lab-03",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "3.2.4",
+      "domain": "D3",
+      "task": "3.2",
+      "text": "Use Athena notebooks that use Apache Spark to explore data.",
+      "modules": [
+        "lab-03"
+      ]
+    },
+    {
+      "id": "3.2.5",
+      "domain": "D3",
+      "task": "3.2",
+      "text": "Describe tradeoffs between provisioned services and serverless services.",
+      "modules": [
+        "lab-05",
+        "lab-10"
+      ]
+    },
+    {
+      "id": "3.2.6",
+      "domain": "D3",
+      "task": "3.2",
+      "text": "Define data aggregation, rolling average, grouping, and pivoting.",
+      "modules": [
+        "lab-03"
+      ]
+    },
+    {
+      "id": "3.3.1",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Extract logs for audits.",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.3.2",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Deploy logging and monitoring solutions to facilitate auditing and traceability.",
+      "modules": [
+        "lab-13",
+        "lab-18"
+      ]
+    },
+    {
+      "id": "3.3.3",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Use notifications during monitoring to send alerts.",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.3.4",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Troubleshoot performance issues.",
+      "modules": [
+        "lab-04",
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.3.5",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Use AWS CloudTrail to track API calls.",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.3.6",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Troubleshoot and maintain pipelines (for example, AWS Glue, Amazon EMR).",
+      "modules": [
+        "lab-04",
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.3.7",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Use Amazon CloudWatch Logs to log application data (with a focus on configuration and automation).",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.3.8",
+      "domain": "D3",
+      "task": "3.3",
+      "text": "Analyze logs with AWS services (for example, Athena, Amazon EMR, Amazon OpenSearch Service, CloudWatch Logs Insights, big data application logs).",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "3.4.1",
+      "domain": "D3",
+      "task": "3.4",
+      "text": "Run data quality checks while processing the data (for example, checking for empty fields).",
+      "modules": [
+        "lab-06"
+      ]
+    },
+    {
+      "id": "3.4.2",
+      "domain": "D3",
+      "task": "3.4",
+      "text": "Define data quality rules (for example, DataBrew).",
+      "modules": [
+        "lab-06"
+      ]
+    },
+    {
+      "id": "3.4.3",
+      "domain": "D3",
+      "task": "3.4",
+      "text": "Investigate data consistency (for example, DataBrew).",
+      "modules": [
+        "lab-06"
+      ]
+    },
+    {
+      "id": "3.4.4",
+      "domain": "D3",
+      "task": "3.4",
+      "text": "Describe data sampling techniques.",
+      "modules": [
+        "lab-06"
+      ]
+    },
+    {
+      "id": "3.4.5",
+      "domain": "D3",
+      "task": "3.4",
+      "text": "Implement data skew mechanisms.",
+      "modules": [
+        "lab-05",
+        "lab-06"
+      ]
+    },
+    {
+      "id": "4.1.1",
+      "domain": "D4",
+      "task": "4.1",
+      "text": "Update VPC security groups.",
+      "modules": [
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.1.2",
+      "domain": "D4",
+      "task": "4.1",
+      "text": "Create and update IAM groups, roles, endpoints, and services.",
+      "modules": [
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.1.3",
+      "domain": "D4",
+      "task": "4.1",
+      "text": "Create and rotate credentials for password management (for example, AWS Secrets Manager).",
+      "modules": [
+        "lab-09",
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.1.4",
+      "domain": "D4",
+      "task": "4.1",
+      "text": "Set up IAM roles for access (for example, AWS Lambda, Amazon API Gateway, AWS CLI, AWS CloudFormation).",
+      "modules": [
+        "lab-14",
+        "lab-17"
+      ]
+    },
+    {
+      "id": "4.1.5",
+      "domain": "D4",
+      "task": "4.1",
+      "text": "Apply IAM policies to roles, endpoints, and services (for example, S3 Access Points, AWS PrivateLink).",
+      "modules": [
+        "lab-01",
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.1.6",
+      "domain": "D4",
+      "task": "4.1",
+      "text": "Describe the differences between managed services and unmanaged services.",
+      "modules": [
+        "lab-00",
+        "lab-05"
+      ]
+    },
+    {
+      "id": "4.1.7",
+      "domain": "D4",
+      "task": "4.1",
+      "text": "Use domain, domain units, and projects for SageMaker Unified Studio.",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.2.1",
+      "domain": "D4",
+      "task": "4.2",
+      "text": "Create custom IAM policies when a managed policy does not meet the needs.",
+      "modules": [
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.2.2",
+      "domain": "D4",
+      "task": "4.2",
+      "text": "Store application and database credentials (for example, Secrets Manager, AWS Systems Manager Parameter Store).",
+      "modules": [
+        "lab-09",
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.2.3",
+      "domain": "D4",
+      "task": "4.2",
+      "text": "Provide database users, groups, and roles access and authority in a database (for example, for Amazon Redshift).",
+      "modules": [
+        "lab-10"
+      ]
+    },
+    {
+      "id": "4.2.4",
+      "domain": "D4",
+      "task": "4.2",
+      "text": "Manage permissions through AWS Lake Formation (for Amazon Redshift, Amazon EMR, Amazon Athena, and Amazon S3).",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.2.5",
+      "domain": "D4",
+      "task": "4.2",
+      "text": "Apply authorization methods that address business needs (role-based, tag-based, and attribute-based).",
+      "modules": [
+        "lab-14",
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.2.6",
+      "domain": "D4",
+      "task": "4.2",
+      "text": "Construct custom policies that meet the principle of least privilege.",
+      "modules": [
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.3.1",
+      "domain": "D4",
+      "task": "4.3",
+      "text": "Apply data masking and anonymization according to compliance laws or company policies.",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.3.2",
+      "domain": "D4",
+      "task": "4.3",
+      "text": "Use encryption keys to encrypt or decrypt data (for example, AWS KMS).",
+      "modules": [
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.3.3",
+      "domain": "D4",
+      "task": "4.3",
+      "text": "Configure encryption across AWS account boundaries.",
+      "modules": [
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.3.4",
+      "domain": "D4",
+      "task": "4.3",
+      "text": "Enable encryption in transit or before transit for data.",
+      "modules": [
+        "lab-14"
+      ]
+    },
+    {
+      "id": "4.4.1",
+      "domain": "D4",
+      "task": "4.4",
+      "text": "Use AWS CloudTrail to track API calls.",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "4.4.2",
+      "domain": "D4",
+      "task": "4.4",
+      "text": "Use Amazon CloudWatch Logs to store application logs.",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "4.4.3",
+      "domain": "D4",
+      "task": "4.4",
+      "text": "Use AWS CloudTrail Lake for centralized logging queries.",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "4.4.4",
+      "domain": "D4",
+      "task": "4.4",
+      "text": "Analyze logs by using AWS services (for example, Athena, CloudWatch Logs Insights, Amazon OpenSearch Service).",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "4.4.5",
+      "domain": "D4",
+      "task": "4.4",
+      "text": "Integrate various AWS services to perform logging (for example, Amazon EMR in cases of large volumes of log data).",
+      "modules": [
+        "lab-13"
+      ]
+    },
+    {
+      "id": "4.5.1",
+      "domain": "D4",
+      "task": "4.5",
+      "text": "Grant permissions for data sharing (for example, data sharing for Amazon Redshift).",
+      "modules": [
+        "lab-10",
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.5.2",
+      "domain": "D4",
+      "task": "4.5",
+      "text": "Implement PII identification (for example, Amazon Macie with Lake Formation).",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.5.3",
+      "domain": "D4",
+      "task": "4.5",
+      "text": "Implement data privacy strategies to prevent backups or replications of data to disallowed AWS Regions.",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.5.4",
+      "domain": "D4",
+      "task": "4.5",
+      "text": "Viewing configuration changes that have occurred in an account (for example, AWS Config).",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.5.5",
+      "domain": "D4",
+      "task": "4.5",
+      "text": "Maintain data sovereignty.",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.5.6",
+      "domain": "D4",
+      "task": "4.5",
+      "text": "Manage data access through Amazon SageMaker Catalog projects.",
+      "modules": [
+        "lab-15"
+      ]
+    },
+    {
+      "id": "4.5.7",
+      "domain": "D4",
+      "task": "4.5",
+      "text": "Describe governance data framework and data sharing patterns.",
+      "modules": [
+        "lab-15",
+        "lab-18"
+      ]
+    }
+  ]
+}
