@@ -9,6 +9,8 @@ Regras:
 - O e-mail da linha precisa ser igual ao e-mail do autor do commit
   (comparação sem diferenciar maiúsculas de minúsculas).
 - Merge commits (mais de um pai) são ignorados.
+- Exceção: o par exato de autor e trailer do Dependabot em _BOT_ALLOWLIST
+  é aceito como DCO de bot. Qualquer outra combinação segue a regra normal.
 
 Código de saída: 0 se todos os commits estão assinados, 1 se algum falha,
 2 para erro de uso ou falha ao executar o git.
@@ -23,6 +25,21 @@ import sys
 # Separadores de campo e de registro que não aparecem em mensagens de commit
 _FIELD = "\x1f"
 _RECORD = "\x1e"
+
+# Allowlist explícita e mínima de identidades de bots. Um commit só é aceito
+# como DCO de bot se o autor tiver exatamente este nome e este e-mail (e-mail
+# sem diferenciar maiúsculas) E o corpo tiver uma linha igual ao trailer.
+# O Dependabot assina com support@github.com, que difere do e-mail do autor.
+# O DCO é uma declaração de origem, não um controle de autenticidade: a
+# proteção real contra commits forjados é a revisão do code owner e os checks
+# obrigatórios. Por isso a lista tem um único par e não aceita variações.
+_BOT_ALLOWLIST = (
+    {
+        "author_name": "dependabot[bot]",
+        "author_email": "49699333+dependabot[bot]@users.noreply.github.com",
+        "trailer": "Signed-off-by: dependabot[bot] <support@github.com>",
+    },
+)
 
 _SIGNOFF_RE = re.compile(r"^Signed-off-by:[ \t]+(\S.*?)[ \t]+<([^<>\s]+)>[ \t]*$", re.MULTILINE)
 
@@ -57,8 +74,23 @@ def _git_log(rev_range):
     return commits
 
 
+def _is_allowlisted_bot(commit):
+    """Indica se o commit é do par autor + trailer da allowlist de bots."""
+    lines = [line.rstrip("\r") for line in commit["body"].split("\n")]
+    for entry in _BOT_ALLOWLIST:
+        if (
+            commit["author_name"] == entry["author_name"]
+            and commit["author_email"].strip().lower() == entry["author_email"].lower()
+            and entry["trailer"] in lines
+        ):
+            return True
+    return False
+
+
 def check_commit(commit):
     """Retorna (ok, motivo) para um commit."""
+    if _is_allowlisted_bot(commit):
+        return True, "bot"
     signoffs = _SIGNOFF_RE.findall(commit["body"])
     if not signoffs:
         return False, "sem linha Signed-off-by: Nome <email>"
@@ -97,7 +129,8 @@ def main(argv=None):
             continue
         ok, reason = check_commit(commit)
         if ok:
-            print("OK   %s %s" % (short, commit["subject"]))
+            label = "OK (bot)" if reason == "bot" else "OK  "
+            print("%s %s %s" % (label, short, commit["subject"]))
         else:
             failed += 1
             print("FAIL %s %s: %s" % (short, commit["subject"], reason))
