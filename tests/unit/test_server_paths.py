@@ -13,12 +13,13 @@ from app.progress_store import ProgressStore
 from app.server import create_app
 from tests.fixtures.http_client import workshop_client
 from app.validation_service import ValidationService
+from tests.fixtures import INFRA_FIELDS, write_stack
 
 LAB = "lab-01"
 
 
 def _build_labs(root):
-    """Monta um catálogo mínimo em `root` (um lab, steps info e task)."""
+    """Monta um catálogo mínimo em `root` (um módulo com infraestrutura, steps info e task)."""
     lab_dir = root / LAB
     meta = {
         "lab_id": LAB,
@@ -31,8 +32,10 @@ def _build_labs(root):
         "dea_domains": ["1"],
         "dea_tasks": ["1.1"],
         "services": ["Amazon S3"],
+        **INFRA_FIELDS,
         "steps": [
             {"step_id": "intro", "title": "Intro", "type": "info"},
+            {"step_id": "deploy", "title": "Deploy", "type": "deploy"},
             {
                 "step_id": "both",
                 "title": "Ambas",
@@ -48,11 +51,16 @@ def _build_labs(root):
             },
         ],
     }
+    meta["steps"].append({"step_id": "teardown", "title": "Teardown", "type": "teardown"})
     lab_dir.mkdir(parents=True)
+    write_stack(lab_dir)
     (lab_dir / "metadata.json").write_text(json.dumps(meta), encoding="utf-8")
     steps = lab_dir / "steps"
     (steps / "intro").mkdir(parents=True)
     (steps / "intro" / "content.md").write_text("# Intro", encoding="utf-8")
+    for sid in ("deploy", "teardown"):
+        (steps / sid).mkdir(parents=True)
+        (steps / sid / "content.md").write_text(f"# {sid}", encoding="utf-8")
     for sid, trails in (("both", ("console", "cli")), ("console-only", ("console",))):
         d = steps / sid
         d.mkdir(parents=True)

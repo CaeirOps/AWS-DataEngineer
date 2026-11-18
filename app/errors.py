@@ -132,3 +132,10 @@ class MissingWorkshopHeaderError(WorkshopError):
 
     code = "MISSING_WORKSHOP_HEADER"
     http_status = 403
+
+
+class NoInfrastructureError(WorkshopError):
+    """Módulo sem infraestrutura: rotas de stack não se aplicam (6.8)."""
+
+    code = "NO_INFRASTRUCTURE"
+    http_status = 409

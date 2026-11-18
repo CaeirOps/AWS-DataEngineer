@@ -1,0 +1,18 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "domain": "D1",
+      "skills": ["1.1.2"],
+      "prompt": "A AnyCompany exporta um arquivo CSV de pedidos fictícios uma vez por dia. Como essa ingestão é classificada?",
+      "options": [
+        {"id": "a", "text": "Streaming", "explanation": "Streaming processa eventos contínuos, não um arquivo diário."},
+        {"id": "b", "text": "Batch", "explanation": "Correta. Um arquivo diário é ingestão em lote."},
+        {"id": "c", "text": "Change data capture", "explanation": "CDC captura alterações de um banco de origem."},
+        {"id": "d", "text": "Replicação síncrona", "explanation": "Não é um padrão de ingestão de arquivos."}
+      ],
+      "correct": ["b"]
+    }
+  ]
+}

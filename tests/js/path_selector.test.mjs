@@ -36,7 +36,6 @@ function makeLab({ paths = ["console", "cli"], unavailable = {}, attempts = 0, h
     description: "Descrição",
     difficulty: "iniciante",
     estimated_duration_minutes: 10,
-    estimated_cost_usd: 0,
     dea_domains: ["D1"],
     dea_tasks: ["1.1"],
     prerequisites: [],

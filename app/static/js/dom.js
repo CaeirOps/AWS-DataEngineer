@@ -50,12 +50,6 @@ export function errorBanner(err, title) {
   );
 }
 
-export function formatCost(usd) {
-  const value = Number(usd);
-  if (!Number.isFinite(value)) return "n/d";
-  return `US$ ${value.toFixed(2)}`;
-}
-
 export function domainBadge(domain) {
   const key = String(domain).toLowerCase();
   const cls = /^d[1-4]$/.test(key) ? ` badge--${key}` : "";

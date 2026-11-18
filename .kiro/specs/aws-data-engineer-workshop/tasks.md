@@ -618,19 +618,19 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Gerar um relatório de skills por módulo e por domínio (por exemplo `python scripts/coverage_report.py`)
     - **Validates: Requirements 10.2, 10.3, 10.4, 20.2**
 
-- [ ] 15L. Metadata e catálogo de módulos
-  - [ ] 15L.1 Escrever primeiro os testes das novas regras do catálogo
+- [x] 15L. Metadata e catálogo de módulos
+  - [x] 15L.1 Escrever primeiro os testes das novas regras do catálogo
     - `skills` válidos e existentes na Matriz, `has_infrastructure` coerente com `stack.yaml` e com steps `deploy`/`teardown`, `cost_notice` obrigatório com infraestrutura e `pricing_url` `https://aws.amazon.com/`, `optional` só em `task` e com `cost_note`, `quiz` com `quiz.json` e `pass_score` válidos
     - _Requirements: 6.8, 19.3, 20.3_
-  - [ ] 15L.2 Implementar as regras no `LabCatalog`, no modelo de dados e na API
+  - [x] 15L.2 Implementar as regras no `LabCatalog`, no modelo de dados e na API
     - Expor `skills`, `cost_notice`, `has_infrastructure`, `optional` e `cost_note` em `GET /api/labs` e `GET /api/labs/<lab_id>`, mantendo os nomes `lab_id` e `/api/labs`
     - `CloudFormationService` e rotas de deploy, teardown e stack-status respondem `NO_INFRASTRUCTURE` (409) sem cliente boto3 em módulo sem infraestrutura
     - `_compute_lab_status` passa a considerar obrigatórios só os steps `task` não opcionais e os steps `quiz`
     - _Requirements: 4.4, 5.8, 6.8, 19.2_
-  - [ ] 15L.3 Atualizar o fixture `lab-example` e criar o fixture `lab-theory`
+  - [x] 15L.3 Atualizar o fixture `lab-example` e criar o fixture `lab-theory`
     - `lab-example` ganha `skills`, `cost_notice`, um step opcional e um step `quiz`; `lab-theory` só tem steps `info`, `quiz` e `completion`, sem infraestrutura
     - _Requirements: 4.6, 6.8_
-  - [ ]* 15L.4 Escrever teste de propriedade da conclusão com prática opcional
+  - [x]* 15L.4 Escrever teste de propriedade da conclusão com prática opcional
     - **Property 28: Prática opcional não bloqueia a conclusão**
     - **Validates: Requirements 5.8, 19.2**
 

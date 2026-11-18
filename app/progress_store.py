@@ -252,9 +252,10 @@ class ProgressStore:
             raise StepNotFoundError(
                 f"Step '{step_id}' não encontrado no lab '{lab_id}'."
             )
-        if meta.type == "task":
+        if meta.type in ("task", "quiz"):
             raise StepRequiresValidationError(
-                f"Step '{step_id}' é do tipo task e só é concluído por validação."
+                f"Step '{step_id}' é do tipo {meta.type} e só é concluído por "
+                "validação ou correção."
             )
         now = _now()
         with self._locked():
@@ -301,8 +302,10 @@ class ProgressStore:
     def _compute_lab_status(self, lab_id: str, lab_metadata: LabMetadata) -> str:
         """Calcula o status do lab: `not_started`, `in_progress` ou `completed`.
 
-        `completed` somente se todos os steps do tipo `task` estão `passed`
-        (se o lab não tem steps `task`, consideram-se todos os steps).
+        `completed` somente se todos os steps obrigatórios (`task` não
+        opcional e `quiz`) estão `passed`. Prática opcional não bloqueia a
+        conclusão (5.8, 19.2). Se o lab não tem step obrigatório,
+        consideram-se todos os steps.
         """
         lab = self.get_lab_progress(lab_id)
         return self._status_from(lab, lab_metadata)
@@ -325,9 +328,7 @@ class ProgressStore:
         steps = lab.get("steps", {})
         if lab.get("status") == "completed":
             return "completed"  # estado final, sem regressão
-        required = [s for s in lab_metadata.steps if s.type == "task"] or list(
-            lab_metadata.steps
-        )
+        required = [s for s in lab_metadata.steps if s.required] or list(lab_metadata.steps)
         if required and all(
             steps.get(s.step_id, {}).get("status") == "passed" for s in required
         ):

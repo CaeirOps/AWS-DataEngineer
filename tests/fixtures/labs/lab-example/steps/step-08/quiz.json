@@ -1,0 +1,18 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "domain": "D2",
+      "skills": ["2.3.2"],
+      "prompt": "A AnyCompany guarda notas fiscais fictícias no Amazon S3 e quase não as consulta depois de 90 dias. Qual recurso move esses objetos para uma classe mais barata sem código?",
+      "options": [
+        {"id": "a", "text": "S3 Lifecycle", "explanation": "Correta. Regras de ciclo de vida mudam a classe de armazenamento por idade do objeto."},
+        {"id": "b", "text": "S3 Versioning", "explanation": "Versionamento guarda versões antigas, mas não muda a classe de armazenamento."},
+        {"id": "c", "text": "S3 Transfer Acceleration", "explanation": "Acelera transferências pela rede de borda e não altera a classe."},
+        {"id": "d", "text": "S3 Event Notifications", "explanation": "Envia eventos, mas sozinho não move objetos."}
+      ],
+      "correct": ["a"]
+    }
+  ]
+}

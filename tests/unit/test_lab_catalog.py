@@ -12,6 +12,7 @@ from app.errors import (
     StepNotFoundError,
 )
 from app.lab_catalog import CONTENT_SEPARATOR, InvalidLabMetadataError, LabCatalog
+from tests.fixtures import NO_INFRA_FIELDS
 
 
 # ----------------------------------------------------------------------
@@ -48,6 +49,7 @@ def make_metadata(lab_id="lab-a", steps=None, **extra):
         "dea_domains": ["1"],
         "dea_tasks": ["1.1"],
         "services": ["Amazon S3"],
+        **NO_INFRA_FIELDS,
         "prerequisites": {},
         "steps": steps if steps is not None else [task_step(), info_step()],
     }

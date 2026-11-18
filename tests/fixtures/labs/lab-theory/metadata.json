@@ -1,0 +1,18 @@
+{
+  "lab_id": "lab-theory",
+  "title": "Módulo teórico de exemplo (somente testes)",
+  "description": "Módulo fictício sem infraestrutura, usado pelos testes da plataforma.",
+  "difficulty": "iniciante",
+  "estimated_duration_minutes": 15,
+  "dea_domains": ["D1"],
+  "dea_tasks": ["1.1"],
+  "services": ["Amazon S3"],
+  "skills": ["1.1.1", "1.1.2"],
+  "has_infrastructure": false,
+  "prerequisites": {"hard": [], "recommended": []},
+  "steps": [
+    {"step_id": "step-01", "title": "Batch e streaming", "type": "info", "skills": ["1.1.1", "1.1.2"]},
+    {"step_id": "step-02", "title": "Verificação de conhecimento", "type": "quiz", "skills": ["1.1.1", "1.1.2"]},
+    {"step_id": "step-03", "title": "Conclusão", "type": "completion"}
+  ]
+}

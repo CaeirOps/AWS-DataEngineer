@@ -15,6 +15,7 @@ from app.lab_catalog import LabCatalog
 from app.models import ValidationResult
 from app.progress_store import ProgressStore
 from app.validation_service import ValidationService
+from tests.fixtures import NO_INFRA_FIELDS
 
 LAB_ID = "lab-01"
 STEP_ID = "step-task"
@@ -35,6 +36,7 @@ def _write_catalog(labs_dir: str, hint_threshold: int) -> None:
         "dea_domains": [],
         "dea_tasks": [],
         "services": ["Amazon S3"],
+        **NO_INFRA_FIELDS,
         "steps": [
             {
                 "step_id": STEP_ID,
