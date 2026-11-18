@@ -597,7 +597,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
 
 ## Parte 1B: Plataforma para módulos com teoria e prática (release v0.2.0)
 
-- [ ] 15J. Abrir a release v0.2.0 e atualizar o spec
+- [x] 15J. Abrir a release v0.2.0 e atualizar o spec
   - [x] 15J.1 Criar a branch `release/v0.2.0`
     - Criar a branch no GitHub apontando para o commit atual de `origin/main`, que já tem os 8 checks aprovados, porque o ruleset de `release/**` recusa push de commits sem checks
     - Levar o `tasks.md` com o status pós `v0.1.0` por PR de uma branch de trabalho (`chore/...`) para `release/v0.2.0`
@@ -607,12 +607,12 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Apresentar o resumo ao mantenedor e abrir o PR `docs/spec-modulos` para `release/v0.2.0` só depois da aprovação
     - _Requirements: 4.6, 7.1, 10.2, 17.1, 18.1, 19.1, 20.1_
 
-- [ ] 15K. Matriz de cobertura do exame
-  - [ ] 15K.1 Criar `docs/exam-coverage.json`
+- [x] 15K. Matriz de cobertura do exame
+  - [x] 15K.1 Criar `docs/exam-coverage.json`
     - Listar todas as skills do guia oficial (1.1.1 a 4.5.7) com domínio, task e texto conferido nas páginas oficiais de cada domínio, e ligar cada skill aos módulos planejados (`lab-00` a `lab-18`)
     - Registrar `source` e `retrieved_at`
     - _Requirements: 10.2, 10.3, 20.1_
-  - [ ] 15K.2 Escrever os testes da Matriz de cobertura
+  - [x] 15K.2 Escrever os testes da Matriz de cobertura
     - **Property 26: Toda skill do guia oficial está coberta**
     - Falhar se alguma skill ficar sem módulo, se um módulo citado não existir em `modules`, se houver id duplicado ou fora do formato `N.N.N`, ou se o `skills` de um metadata existente divergir da Matriz
     - Gerar um relatório de skills por módulo e por domínio (por exemplo `python scripts/coverage_report.py`)
