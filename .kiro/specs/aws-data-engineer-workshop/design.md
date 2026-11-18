@@ -6,6 +6,8 @@ A Plataforma de Workshop AWS Data Engineer é uma aplicação web local, distrib
 
 A stack é composta por dois containers: `workshop` (Flask + gunicorn, em rede Docker `internal`, sem acesso direto à internet) e `gateway` (Squid, único com porta publicada em `127.0.0.1` e único com saída para a internet, filtrada por Allowlist). Dois scripts no host, `check_requirements.py` e `start.py`, usam somente a biblioteca padrão do Python.
 
+O conteúdo é organizado em 19 módulos (Módulo 00 a 18) e um Simulado. Cada módulo é um treinamento hands-on que intercala steps de teoria (`info`) e de prática validada (`task`), termina com uma Verificação de conhecimento (`quiz`) corrigida no servidor e usa o cenário contínuo da varejista fictícia AnyCompany. Os identificadores técnicos herdados (`lab_id`, `labs/`, `/api/labs`) são mantidos por compatibilidade e designam módulos.
+
 O princípio de segurança adotado é "security first", seguindo as recomendações de segurança do GitHub e da AWS. Na prática: o container `workshop` recebe somente credenciais temporárias por variáveis de ambiente e nunca monta `~/.aws`; a API local valida `Host`, `Origin` e um cabeçalho próprio; os containers rodam sem privilégios; as imagens e dependências são fixadas por digest e por hash; e o repositório tem CI, CodeQL, Dependabot e CODEOWNERS.
 
 ## Architecture
@@ -510,7 +512,142 @@ Quando uma Trilha não está em `paths` de um step `task` (11.6), os arquivos de
 | `deploy` | Instrução de deploy CloudFormation com botão de status |
 | `task` | Tarefa com botão "Validar" que chama a API e seletor de Trilha (Console \| CLI). Conteúdo em `scenario.md` + arquivos por Trilha |
 | `teardown` | Instrução de teardown CloudFormation com confirmação |
-| `completion` | Tela de conclusão do lab |
+| `quiz` | Verificação de conhecimento: questões no estilo do exame em `quiz.json`, corrigidas no servidor (seção 5a) |
+| `completion` | Tela de conclusão do módulo |
+
+### 5a. Módulos: teoria, prática opcional, custo, quiz, simulado e cobertura
+
+**Compatibilidade de nomes.** O conceito passa a ser Módulo, mas `lab_id`, o diretório `labs/`, as rotas `/api/labs`, `/lab/<lab_id>` e os módulos `app/validators/labNN.py` mantêm os nomes atuais. Renomear quebraria a API, os testes e o progresso salvo dos usuários sem ganho funcional. A interface mostra "Módulo" nos textos. Os ids seguem `lab-00` a `lab-18` e o Simulado usa `mock-exam`.
+
+**Estrutura de um módulo:**
+
+```
+labs/lab-03/
+├── metadata.json
+├── steps/
+│   ├── step-01/content.md      # info: objetivos e skills
+│   ├── step-02/content.md      # info: conceito
+│   ├── step-03/...             # task: prática (scenario, console, cli, hints)
+│   ├── step-04/content.md      # info: conceito seguinte
+│   ├── step-05/...             # task: prática opcional
+│   ├── step-06/quiz.json       # quiz: verificação de conhecimento
+│   └── step-07/content.md      # completion: resumo e links oficiais
+├── cloudformation/stack.yaml   # ausente em módulos sem infraestrutura
+└── assets/
+    └── *.svg | *.png           # diagramas exibidos no conteúdo
+```
+
+**Campos novos do `metadata.json`:**
+
+```json
+{
+  "lab_id": "lab-03",
+  "title": "Athena e SQL analítico",
+  "skills": ["2.2.4", "3.1.7", "3.2.3", "3.2.6"],
+  "has_infrastructure": true,
+  "cost_notice": {
+    "services": [
+      { "name": "Amazon Athena", "pricing_url": "https://aws.amazon.com/athena/pricing/" },
+      { "name": "Amazon S3", "pricing_url": "https://aws.amazon.com/s3/pricing/" }
+    ]
+  },
+  "steps": [
+    { "step_id": "step-02", "title": "Partition pruning", "type": "info", "skills": ["3.1.7"] },
+    { "step_id": "step-05", "title": "Notebook Spark no Athena", "type": "task",
+      "hint_threshold": 3, "paths": ["console"], "unavailable_paths": {"cli": "..."},
+      "optional": true, "skills": ["3.2.4"],
+      "cost_note": "Notebooks Spark cobram por DPU-hora; a prática padrão não usa notebook." },
+    { "step_id": "step-06", "title": "Verificação de conhecimento", "type": "quiz",
+      "pass_score": 0.7, "skills": ["3.1.7", "3.2.3", "3.2.6"] }
+  ]
+}
+```
+
+**Regras de validação na carga (`LabCatalog`):**
+- `skills` do módulo: lista não vazia de ids no formato `N.N.N` existentes na Matriz de cobertura. A união dos `skills` dos steps está contida no `skills` do módulo.
+- `has_infrastructure`: booleano, padrão `true`. Quando `false`, não existe `cloudformation/stack.yaml` e não há steps `deploy` nem `teardown`. Quando `true`, os dois existem.
+- `cost_notice`: obrigatório quando `has_infrastructure` é `true`. `services` é uma lista não vazia com `name` não vazio e `pricing_url` começando com `https://aws.amazon.com/`. Não há valor em USD: a AWS Pricing Calculator pública não tem API para gerar estimativas nem links, e calcular a partir do AWS Price List API dependeria de premissas de uso definidas por nós. A estimativa em USD está no roadmap (ver "Melhorias futuras").
+- `optional`: permitido só em steps `task`, padrão `false`. Step opcional exige `cost_note` não vazio.
+- `quiz`: exige `steps/<id>/quiz.json` válido e `pass_score` entre 0 e 1 (padrão 0.7).
+- O campo `cost_disclaimer` continua aceito como texto livre do aviso. O campo antigo `estimated_cost_usd` deixa de ser exibido.
+
+**Melhorias futuras (roadmap).** Estimativa de custo em USD por módulo, gerada por script a partir do AWS Price List API (`pricing:GetProducts`, somente leitura), com premissas de uso versionadas e revisadas, cálculo determinístico e data da consulta. Só entra quando o método for reprodutível e revisado pelo mantenedor.
+
+**Conclusão do módulo.** São obrigatórios os steps `task` sem `optional` e os steps `quiz`. `_compute_lab_status` retorna `completed` quando todos os obrigatórios estão `passed`. Steps `info`, `deploy`, `teardown` e `completion` seguem a regra de visita (2.6) e não bloqueiam a conclusão. Prática opcional registra progresso normalmente.
+
+**Módulo sem infraestrutura.** `POST /api/deploy`, `POST /api/teardown` e `GET /api/stack-status` respondem `NO_INFRASTRUCTURE` (HTTP 409) sem criar cliente boto3. O frontend não mostra o disclaimer de custo nem os controles de stack.
+
+**Formato do `quiz.json`:**
+
+```json
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "domain": "D3",
+      "skills": ["3.1.7"],
+      "prompt": "A AnyCompany consulta pedidos de um único dia ...",
+      "options": [
+        { "id": "a", "text": "...", "explanation": "..." },
+        { "id": "b", "text": "...", "explanation": "..." },
+        { "id": "c", "text": "...", "explanation": "..." },
+        { "id": "d", "text": "...", "explanation": "..." }
+      ],
+      "correct": ["b"]
+    }
+  ]
+}
+```
+
+- `type: single` tem exatamente 4 alternativas e 1 correta. `type: multiple` tem 5 ou mais alternativas e 2 ou mais corretas, e o enunciado informa quantas marcar, como no exame.
+- `domain` e `skills` de cada questão alimentam o Simulado e a Matriz de cobertura.
+- Ids de questão são únicos no catálogo inteiro, no formato `<lab_id>/<qid>`, para o Simulado não repetir questões.
+
+**Rotas de quiz:**
+- `GET /api/labs/<lab_id>/steps/<step_id>/quiz` retorna `{questions: [{id, type, prompt, options: [{id, text}], select}]}`, sem `correct` e sem `explanation`. `select` é o número de alternativas a marcar.
+- `POST /api/labs/<lab_id>/steps/<step_id>/quiz` recebe `{answers: {"q1": ["b"], ...}}`, corrige no servidor e retorna `{score, passed, results: [{id, correct, selected, right: bool, options: [{id, text, explanation}]}], attempts}`. Questão sem resposta conta como errada. Resposta com id de alternativa inexistente é recusada com `INVALID_ANSWER` (400).
+- As duas rotas não chamam a AWS e não dependem da sessão. O `POST` segue as proteções do Requirement 13.
+
+**Progress Store.** Steps `quiz` guardam `status`, `attempts`, `best_score`, `last_score` e `passed_at`. O step passa a `passed` na primeira tentativa com `score >= pass_score`, e `passed` não regride. O Simulado guarda `mock_exam.attempts` com `started_at`, `finished_at`, `score` e `by_domain`, limitado às 20 tentativas mais recentes.
+
+**Simulado (`mock-exam`).** Módulo especial sem infraestrutura, sem steps `task` e sem `quiz.json` próprio.
+- `POST /api/mock-exam` cria uma tentativa. O servidor sorteia questões de todos os `quiz.json` do catálogo, sem repetição, com `N` padrão 65 (limitado ao total disponível). A cota de cada domínio é `round(N * peso)` com os pesos D1 0,34, D2 0,26, D3 0,22 e D4 0,18. A diferença de arredondamento vai para o domínio de maior peso. Se um domínio não tiver questões suficientes, o restante é completado pelos outros domínios na ordem dos pesos, e a resposta informa o ajuste.
+- A tentativa fica no Progress Store com os ids sorteados (sem gabarito no browser). `POST /api/mock-exam/<attempt_id>/submit` corrige e retorna a nota geral, a nota por domínio e as explicações.
+- O cronômetro é opcional e roda no frontend, com duração padrão de 130 minutos. O servidor registra `started_at` e `finished_at`, mas não recusa o envio por tempo.
+
+**Destaques no Markdown.** Sintaxe de citação com marcador na primeira linha:
+
+```
+> [!EXAM] Na prova, partition pruning aparece como forma de reduzir custo no Athena.
+> [!COST] O Athena cobra por TB escaneado.
+> [!TIP] Prefira Parquet com compressão Snappy.
+> [!WARNING] Este recurso continua cobrando até ser removido.
+```
+
+O renderizador gera um `aside` com classe `callout callout--exam|cost|tip|warning` e o título "Na prova", "Custo", "Boas práticas" ou "Atenção". O texto continua escapado. Marcador desconhecido vira citação comum.
+
+**Imagens locais.** `![texto alternativo](assets/diagrama.svg)` vira `<img>` somente se o caminho for relativo, começar com `assets/`, não contiver `..`, `//`, `\`, `:` nem query, tiver extensão `.svg` ou `.png` e o texto alternativo não for vazio. Em qualquer outro caso o renderizador mostra só o texto alternativo. O `src` gerado é `/api/labs/<lab_id>/assets/<arquivo>`.
+- A rota `GET /api/labs/<lab_id>/assets/<nome>` aceita só nomes no formato `[A-Za-z0-9_-]+\.(svg|png)`, resolve o caminho dentro de `labs/<lab_id>/assets/` e recusa qualquer caminho fora dele.
+- SVG é servido com `Content-Type: image/svg+xml` e `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`, o que impede scripts embutidos. PNG é servido como `image/png`. As duas respostas levam `X-Content-Type-Options: nosniff`.
+- A CSP da página (`default-src 'self'`) já permite essas imagens, porque são da mesma origem.
+
+**Matriz de cobertura (`docs/exam-coverage.json`).**
+
+```json
+{
+  "source": "https://docs.aws.amazon.com/aws-certification/latest/data-engineer-associate-01/data-engineer-associate-01.html",
+  "retrieved_at": "2026-11-20",
+  "modules": { "lab-00": "Fundamentos de engenharia de dados", "...": "..." },
+  "skills": [
+    { "id": "1.1.1", "domain": "D1", "task": "1.1", "text": "Read data from streaming sources ...", "modules": ["lab-07", "lab-09"] }
+  ]
+}
+```
+
+- O texto das skills fica em inglês, igual ao guia oficial, para facilitar a conferência quando a AWS revisar o guia.
+- Os testes verificam três coisas. Toda skill tem ao menos um módulo. Todo módulo citado está em `modules`. Para cada módulo já existente em `labs/`, o `skills` do metadata é igual ao conjunto de skills que a Matriz atribui a ele.
+- O `LabCatalog` carrega a Matriz na inicialização para validar o campo `skills`. Na ausência do arquivo, a carga falha com erro claro.
 
 ### 6. Frontend SPA (app/static/)
 
@@ -538,7 +675,8 @@ app/static/
 **Roteamento client-side:**
 
 ```
-/                    → Dashboard (todos os labs)
+/                    → Dashboard (todos os módulos e o Simulado)
+/mock-exam           → Simulado
 /lab/{lab_id}        → Lab (abre no step de retomada)
 /lab/{lab_id}/{step} → Step específico (somente se visitado)
 ```
@@ -1637,3 +1775,28 @@ def test_validate_step_handles_any_bucket_name(bucket_name):
 *Para qualquer* combinação de `Host`, `Origin`, `Content-Type` e `X-Workshop-Request` em uma requisição `POST`, `PUT` ou `DELETE` à API, a requisição só é aceita se `Host` for `127.0.0.1:<porta>` ou `localhost:<porta>`, `Origin` estiver presente e for `http://127.0.0.1:<porta>` ou `http://localhost:<porta>`, `Content-Type` for `application/json` e `X-Workshop-Request` for `1`. Qualquer outra combinação é recusada com o código de erro correspondente e não altera o estado (`progress.json` idêntico antes e depois). *Para qualquer* requisição `GET` com `Host` fora da allowlist, exceto `/health`, a resposta é 421. Todas as respostas incluem os cinco cabeçalhos de segurança.
 
 **Validates: Requirements 13.1, 13.2, 13.4**
+
+---
+### Property 23: O gabarito nunca chega ao browser antes da resposta
+*Para qualquer* `quiz.json` válido e *para qualquer* tentativa do Simulado, a resposta de `GET /api/labs/<lab_id>/steps/<step_id>/quiz` e de `POST /api/mock-exam` não contém os campos `correct` nem `explanation`, nem os valores das alternativas corretas em outro campo. Explicações e gabarito só aparecem na resposta do envio das respostas.
+**Validates: Requirements 17.2, 18.2**
+---
+### Property 24: A nota é calculada corretamente para escolha única e múltipla
+*Para qualquer* conjunto de questões e *para qualquer* conjunto de respostas, uma questão é correta se e somente se o conjunto marcado é igual ao conjunto correto. `score` é o número de questões corretas dividido pelo total. O step `quiz` fica `passed` se e somente se alguma tentativa teve `score >= pass_score`, e `passed` nunca regride.
+**Validates: Requirements 17.3, 17.4, 17.5**
+---
+### Property 25: O Simulado respeita os pesos dos domínios e não repete questões
+*Para qualquer* banco de questões e *para qualquer* `N`, a tentativa não contém ids repetidos e tem `min(N, total)` questões. Quando todos os domínios têm questões suficientes, a quantidade por domínio é a cota calculada pela regra de arredondamento documentada, e a soma das cotas é `N`.
+**Validates: Requirements 7.4, 18.2**
+---
+### Property 26: Toda skill do guia oficial está coberta
+Na Matriz de cobertura, todas as skills de 1.1.1 a 4.5.7 do guia oficial têm ao menos um módulo, todo módulo citado está no catálogo planejado e, para cada módulo existente em `labs/`, o `skills` do metadata é igual ao conjunto que a Matriz atribui a ele.
+**Validates: Requirements 10.2, 10.3, 10.4, 20.2**
+---
+### Property 27: Imagens do conteúdo são sempre locais
+*Para qualquer* Markdown, o renderizador só gera `<img>` para caminhos que passam na regra de imagens locais, e o `src` gerado sempre aponta para `/api/labs/<lab_id>/assets/`. *Para qualquer* nome pedido à rota de assets, a rota só serve arquivos `.svg` ou `.png` dentro de `labs/<lab_id>/assets/`.
+**Validates: Requirements 4.8, 8.2**
+---
+### Property 28: Prática opcional não bloqueia a conclusão
+*Para qualquer* módulo com steps de tipos mistos e *para qualquer* progresso, o módulo fica `completed` se e somente se todos os steps `task` não opcionais e todos os steps `quiz` estão `passed`, independentemente do status das práticas opcionais.
+**Validates: Requirements 5.8, 19.2**
