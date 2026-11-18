@@ -46,7 +46,7 @@ services:
       - HTTP_PROXY=http://gateway:3128
       - NO_PROXY=localhost,127.0.0.1,gateway
     healthcheck:
-      # python:3.11-slim nao inclui curl; usa a stdlib
+      # python:3.15-slim nao inclui curl; usa a stdlib
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)"]
       interval: 10s
       timeout: 5s

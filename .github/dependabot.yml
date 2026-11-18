@@ -21,6 +21,14 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # Trocar a versao do Python (major/minor) e uma decisao deliberada: exige
+    # atualizar juntos o Dockerfile, o ci.yml, scripts/compile-requirements.sh
+    # e requirements.txt. O Dependabot segue propondo patch e digest.
+    ignore:
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
     groups:
       docker:
         patterns: ["*"]
