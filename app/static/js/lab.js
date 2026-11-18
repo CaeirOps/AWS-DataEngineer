@@ -1,7 +1,7 @@
 // Tela de lab: wizard de steps, abas Console | CLI, validação e deploy/teardown.
 
 import { api } from "./api.js";
-import { el, errorBanner, errorMessage, replaceContent, formatCost, domainBadge, difficultyBadge } from "./dom.js";
+import { el, errorBanner, errorMessage, replaceContent, domainBadge, difficultyBadge } from "./dom.js";
 import { renderMarkdown } from "./markdown.js";
 import { PATHS, getProgress, preferredPathOf, setPreferredPath, visitStep } from "./progress.js";
 import { createValidatorPanel } from "./validator.js";
@@ -51,7 +51,7 @@ function overviewView(lab) {
     el(
       "p",
       null,
-      `Duração estimada: ${lab.estimated_duration_minutes} min. Custo estimado: ${formatCost(lab.estimated_cost_usd)}.`
+      `Duração estimada: ${lab.estimated_duration_minutes} min.`
     ),
     el(
       "p",
@@ -68,7 +68,6 @@ function costBanner(lab) {
     "div",
     { class: "banner banner--cost", role: "note" },
     el("div", { class: "banner__title" }, "Aviso de custos"),
-    el("p", null, `Custo estimado deste lab: ${formatCost(lab.estimated_cost_usd)}.`),
     el("p", null, lab.cost_disclaimer || "Os recursos provisionados neste lab podem gerar custos na sua conta AWS.")
   );
 }
@@ -285,7 +284,8 @@ export async function renderLab({ labId, stepId, navigate }) {
 
   const hasDeploy = steps.some((s) => s.type === "deploy");
   const firstTask = steps.findIndex((s) => s.type === "task");
-  if (step.type === "deploy" || (!hasDeploy && index === firstTask)) panel.append(costBanner(lab));
+  const showCost = lab.has_infrastructure !== false;
+  if (showCost && (step.type === "deploy" || (!hasDeploy && index === firstTask))) panel.append(costBanner(lab));
 
   if (step.type === "task") {
     panel.append(
@@ -295,6 +295,9 @@ export async function renderLab({ labId, stepId, navigate }) {
         buildWizard();
       })
     );
+  } else if (step.type === "quiz") {
+    // A tela do quiz chega com a correção no servidor (task 15N).
+    panel.append(el("p", { class: "card__meta" }, "A verificação de conhecimento deste step ainda não está disponível."));
   } else {
     panel.append(renderMarkdown(step.content));
     if (step.type === "deploy") panel.append(createDeployPanel(labId).node);
@@ -314,21 +317,24 @@ export async function renderLab({ labId, stepId, navigate }) {
   next.addEventListener("click", async () => {
     if (busy) return;
     if (isLast) {
-      const pending = steps.filter((s) => s.type === "task" && s.status !== "passed");
+      // Obrigatórios: task não opcional e quiz (Prática opcional não bloqueia).
+      const pending = steps.filter(
+        (s) => ((s.type === "task" && !s.optional) || s.type === "quiz") && s.status !== "passed"
+      );
       if (pending.length > 0) {
         replaceContent(
           warning,
           el(
             "div",
             { class: "banner banner--warning", role: "alert" },
-            el("div", { class: "banner__title" }, "Ainda há tarefas sem validação"),
+            el("div", { class: "banner__title" }, "Ainda há steps obrigatórios pendentes"),
             el("ul", null, pending.map((s) => el("li", null, s.title)))
           )
         );
         return;
       }
     }
-    if (step.type !== "task") {
+    if (step.type !== "task" && step.type !== "quiz") {
       busy = true;
       next.disabled = true;
       try {

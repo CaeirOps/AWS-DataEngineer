@@ -19,6 +19,8 @@ RUN groupadd --gid 10001 workshop \
 
 COPY app/ ./app/
 COPY labs/ ./labs/
+# Matriz de cobertura: o catalogo recusa skills fora dela (20.3)
+COPY docs/exam-coverage.json ./docs/exam-coverage.json
 
 USER 10001:10001
 

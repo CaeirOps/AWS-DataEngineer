@@ -4,24 +4,31 @@
   "description": "Lab fictício usado pelos testes da plataforma. Não faz parte do catálogo real.",
   "difficulty": "iniciante",
   "estimated_duration_minutes": 10,
-  "estimated_cost_usd": 0.0,
   "cost_disclaimer": "Lab fictício de teste. A stack usa somente um WaitConditionHandle, sem custo.",
   "dea_domains": ["D2"],
-  "dea_tasks": ["2.1"],
+  "dea_tasks": ["2.1", "2.3"],
   "services": ["Amazon S3", "AWS CloudFormation"],
+  "skills": ["2.1.1", "2.1.2", "2.3.2"],
+  "has_infrastructure": true,
+  "cost_notice": {
+    "services": [
+      {"name": "Amazon S3", "pricing_url": "https://aws.amazon.com/s3/pricing/"}
+    ]
+  },
   "prerequisites": {
     "hard": [],
     "recommended": []
   },
   "steps": [
-    {"step_id": "step-01", "title": "Introdução", "type": "info"},
+    {"step_id": "step-01", "title": "Introdução", "type": "info", "skills": ["2.1.1"]},
     {"step_id": "step-02", "title": "Deploy da stack de exemplo", "type": "deploy"},
     {
       "step_id": "step-03",
       "title": "Criar bucket S3 de exemplo",
       "type": "task",
       "hint_threshold": 3,
-      "paths": ["console", "cli"]
+      "paths": ["console", "cli"],
+      "skills": ["2.1.1"]
     },
     {
       "step_id": "step-04",
@@ -31,7 +38,25 @@
       "paths": ["console"],
       "unavailable_paths": {
         "cli": "Esta tarefa de exemplo depende de uma visualização interativa que não existe na API."
-      }
+      },
+      "skills": ["2.1.2"]
+    },
+    {
+      "step_id": "step-07",
+      "title": "Prática opcional: regra de ciclo de vida",
+      "type": "task",
+      "hint_threshold": 3,
+      "paths": ["console", "cli"],
+      "optional": true,
+      "cost_note": "Prática fictícia de teste. Em um módulo real, aqui fica o serviço cobrado e o motivo.",
+      "skills": ["2.3.2"]
+    },
+    {
+      "step_id": "step-08",
+      "title": "Verificação de conhecimento",
+      "type": "quiz",
+      "pass_score": 0.7,
+      "skills": ["2.1.1", "2.3.2"]
     },
     {"step_id": "step-05", "title": "Teardown da stack de exemplo", "type": "teardown"},
     {"step_id": "step-06", "title": "Conclusão", "type": "completion"}

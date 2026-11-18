@@ -17,7 +17,7 @@ from app.progress_store import ProgressStore
 from app.server import create_app
 from tests.fixtures.http_client import workshop_client
 from app.validation_service import ValidationService
-from tests.fixtures import EXAMPLE_LAB_ID, LABS_FIXTURE_DIR, example_validator_loader
+from tests.fixtures import EXAMPLE_LAB_ID, LABS_FIXTURE_DIR, THEORY_LAB_ID, example_validator_loader
 
 LAB = EXAMPLE_LAB_ID
 STACK = f"workshop-{LAB}"
@@ -134,9 +134,9 @@ def _validate(client, step_id, **body):
 def test_listagem_mostra_lab_de_exemplo_com_retomada_no_primeiro_step(env):
     data = env["client"].get("/api/labs").get_json()
     labs = {lab["lab_id"]: lab for lab in data["labs"]}
-    assert set(labs) == {LAB}
+    assert set(labs) == {LAB, THEORY_LAB_ID}
     lab = labs[LAB]
-    assert lab["total_steps"] == 6
+    assert lab["total_steps"] == 8
     assert lab["completed_steps"] == 0
     assert lab["status"] == "not_started"
     assert lab["resume_step"] == "step-01"
@@ -152,7 +152,7 @@ def test_detalhes_do_lab_trazem_trilhas_e_content_dos_steps_nao_task(env):
     assert steps["step-04"]["unavailable_paths"]["cli"]
     for sid in ("step-01", "step-02", "step-05", "step-06"):
         assert steps[sid]["content"].strip()
-    for sid in ("step-03", "step-04"):
+    for sid in ("step-03", "step-04", "step-07", "step-08"):
         assert "content" not in steps[sid]
     assert data["residual_resources"]
 
@@ -217,12 +217,17 @@ def test_validacao_ate_o_limiar_da_dica_e_depois_conclui_o_lab(env):
 
     body = _validate(client, "step-04").get_json()
     assert body["passed"] is True
+    # Falta o quiz (step-08); a Prática opcional (step-07) não conta.
+    assert client.get(f"/api/labs/{LAB}").get_json()["status"] == "in_progress"
 
+    # A correção do quiz chega na task 15N; aqui o resultado vai direto ao store.
+    lab_meta = env["catalog"].get_lab(LAB)
+    env["store"].update_step(LAB, "step-08", "passed", lab_metadata=lab_meta)
     detail = client.get(f"/api/labs/{LAB}").get_json()
     assert detail["status"] == "completed"
     summary = {l["lab_id"]: l for l in client.get("/api/labs").get_json()["labs"]}[LAB]
     assert summary["status"] == "completed"
-    assert summary["completed_steps"] == 2
+    assert summary["completed_steps"] == 3
     # step-01 e step-02 (não task) não passaram: a retomada ainda aponta para eles.
     assert detail["resume_step"] == "step-01"
 

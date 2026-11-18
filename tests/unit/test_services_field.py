@@ -7,6 +7,7 @@ import pytest
 from app.lab_catalog import InvalidLabMetadataError, LabCatalog
 from app.server import create_app
 from tests.fixtures.http_client import workshop_client
+from tests.fixtures import NO_INFRA_FIELDS
 
 FIXTURE_LABS = Path(__file__).resolve().parent.parent / "fixtures" / "labs"
 
@@ -23,6 +24,7 @@ def _metadata(**overrides):
         "dea_domains": ["Domain 1"],
         "dea_tasks": ["1.1"],
         "services": ["Amazon S3"],
+        **NO_INFRA_FIELDS,
         "steps": [{"step_id": "i1", "title": "Info", "type": "info"}],
     }
     meta.update(overrides)

@@ -23,6 +23,7 @@ def _validate_bucket_created(session, ctx: dict) -> ValidationResult:
 STEP_VALIDATORS = {
     "step-03": _validate_bucket_created,
     "step-04": _validate_bucket_created,
+    "step-07": _validate_bucket_created,  # Prática opcional
 }
 
 
