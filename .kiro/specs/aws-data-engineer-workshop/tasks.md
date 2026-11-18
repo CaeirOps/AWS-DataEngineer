@@ -528,7 +528,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Repositório git temporário: commits assinados passam; commit sem `Signed-off-by` falha e é listado
     - _Requirements: 1.13, 15.3_
 
-- [ ] 15H. Validação final com Docker e configuração do GitHub
+- [x] 15H. Validação final com Docker e configuração do GitHub
   - [x] 15H.1 Executar a suíte completa e validar compose, build e Squid
     - Executar `pytest` (incluindo `tests/security/`) e a suíte JS; executar `docker compose config`, `docker compose build`, `squid -k parse` na imagem fixada e `hadolint` no `Dockerfile` quando disponível
     - Corrigir qualquer falha antes de seguir
@@ -548,7 +548,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Se algum job falhar, corrigir e repetir a partir da 15H.3
     - _Requirements: 15.3, 15.9_
 
-  - [~] 15H.5 Configurar o repositório no GitHub com o `gh` CLI (autenticado como administrador)
+  - [x] 15H.5 Configurar o repositório no GitHub com o `gh` CLI (autenticado como administrador)
     - Depende da 15I.7 (branch `release/v0.1.0` já enviada) e roda antes do PR da release, para que o próprio PR seja validado pelos rulesets
     - Ruleset em `main`: pull request obrigatório (aprovação 0 e revisão de code owners obrigatória), resolução de conversas, os 8 status checks `tests`, `dco`, `secrets`, `dependencies`, `dockerfile`, `cloudformation`, `analyze (python)` e `analyze (javascript)` com política estrita, bloqueio de exclusão e de force push, histórico linear; bypass somente do papel admin e somente no modo `pull_request`
     - Segundo ruleset para `release/**` e `hotfix/**`: pull request obrigatório e os mesmos 8 status checks, sem regra de non-fast-forward (para permitir atualizar por rebase) e sem regra de exclusão (para apagar a branch após o merge)
@@ -558,7 +558,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Conferir cada configuração relendo-a pela API; registrar o resultado somente no relatório da execução, sem criar arquivo no repositório
     - _Requirements: 15.9, 15.17, 15.18_
 
-- [ ] 15I. Correção do DCO com Dependabot, alinhamento ao Python 3.15 e gitflow (release v0.1.0)
+- [x] 15I. Correção do DCO com Dependabot, alinhamento ao Python 3.15 e gitflow (release v0.1.0)
   - [x] 15I.1 Criar a branch `release/v0.1.0` a partir de `origin/main`
     - `git fetch origin` e `git switch -c release/v0.1.0 origin/main`; todos os commits desta task usam `git commit -s` e Conventional Commits
     - _Requirements: 15.15, 15.19_
@@ -586,11 +586,11 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - `pytest` (incluindo `tests/security/`), suíte JS, `docker compose config` e `docker compose build`; repetir a suíte Python dentro da imagem 3.15
     - _Requirements: 14.4, 14.5, 15.3, 15.10_
 
-  - [-] 15I.7 Fazer push da branch `release/v0.1.0`
+  - [x] 15I.7 Fazer push da branch `release/v0.1.0`
     - Adicionar os arquivos por nome, conferir `git status` e `git diff --cached` sem credenciais, `progress/*` nem `.env`, e `git push -u origin release/v0.1.0`
     - _Requirements: 15.15_
 
-  - [~] 15I.8 Abrir o PR da release, integrar, criar a tag e o GitHub Release
+  - [x] 15I.8 Abrir o PR da release, integrar, criar a tag e o GitHub Release
     - Depende da 15H.5 concluída. Abrir o PR de `release/v0.1.0` para `main`, aguardar os 8 checks, e fazer o merge por rebase and merge somente com autorização do mantenedor (o mantenedor aprova)
     - Criar a tag anotada `v0.1.0` em `main`, publicar o GitHub Release com notas e confirmar que a branch da release foi apagada
     - _Requirements: 15.16, 15.17_
@@ -598,26 +598,26 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
 ## Parte 2: Labs (um por task, com revisão do usuário entre eles)
 
 - [ ] 16. Lab 01 - Fundamentos de S3 e Data Lake (D2, iniciante)
-  - [~] 16.1 Checkpoint de proposta do Lab 01
+  - [ ] 16.1 Checkpoint de proposta do Lab 01
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (S3) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - Depende das tarefas 15A, 15B e 15C (retomada, campo `services` e verificação de ambiente) e das tarefas 15D a 15I (credenciais, sessão, proteção da API, endurecimento, CI, GitHub e release v0.1.0) concluídas
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 16.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 16.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - Listar em `prerequisites` os cinco pré-requisitos do requisito 7.5 (conta AWS ativa com acesso administrativo, conhecimento básico de SQL, familiaridade com linha de comando, Docker instalado e Git básico)
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 7.5, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 16.3 Criar o conteúdo dos steps em `labs/lab-01/steps/<step_id>/`
+  - [ ] 16.3 Criar o conteúdo dos steps em `labs/lab-01/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 16.4 Criar `app/validators/lab01.py`
+  - [ ] 16.4 Criar `app/validators/lab01.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 01 (S3), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
 
@@ -625,29 +625,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 16.6 Checkpoint de revisão do Lab 01
+  - [ ] 16.6 Checkpoint de revisão do Lab 01
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 02
     - _Requirements: 7.1_
 
 - [ ] 17. Lab 02 - Catalogação e descoberta de dados (D2)
-  - [~] 17.1 Checkpoint de proposta do Lab 02
+  - [ ] 17.1 Checkpoint de proposta do Lab 02
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Glue Data Catalog e crawlers) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 17.2 Criar `labs/lab-02/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 17.2 Criar `labs/lab-02/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 17.3 Criar o conteúdo dos steps em `labs/lab-02/steps/<step_id>/`
+  - [ ] 17.3 Criar o conteúdo dos steps em `labs/lab-02/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 17.4 Criar `app/validators/lab02.py`
+  - [ ] 17.4 Criar `app/validators/lab02.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 02 (Glue Data Catalog e crawlers), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
 
@@ -655,29 +655,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 17.6 Checkpoint de revisão do Lab 02
+  - [ ] 17.6 Checkpoint de revisão do Lab 02
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 03
     - _Requirements: 7.1_
 
 - [ ] 18. Lab 03 - Transformação ETL com AWS Glue (D1)
-  - [~] 18.1 Checkpoint de proposta do Lab 03
+  - [ ] 18.1 Checkpoint de proposta do Lab 03
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Glue ETL jobs) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 18.2 Criar `labs/lab-03/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 18.2 Criar `labs/lab-03/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 18.3 Criar o conteúdo dos steps em `labs/lab-03/steps/<step_id>/`
+  - [ ] 18.3 Criar o conteúdo dos steps em `labs/lab-03/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 18.4 Criar `app/validators/lab03.py`
+  - [ ] 18.4 Criar `app/validators/lab03.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 03 (Glue ETL jobs), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
 
@@ -685,29 +685,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 18.6 Checkpoint de revisão do Lab 03
+  - [ ] 18.6 Checkpoint de revisão do Lab 03
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 04
     - _Requirements: 7.1_
 
 - [ ] 19. Lab 04 - Consultas analíticas com Athena (D3)
-  - [~] 19.1 Checkpoint de proposta do Lab 04
+  - [ ] 19.1 Checkpoint de proposta do Lab 04
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Athena) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 19.2 Criar `labs/lab-04/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 19.2 Criar `labs/lab-04/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 19.3 Criar o conteúdo dos steps em `labs/lab-04/steps/<step_id>/`
+  - [ ] 19.3 Criar o conteúdo dos steps em `labs/lab-04/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 19.4 Criar `app/validators/lab04.py`
+  - [ ] 19.4 Criar `app/validators/lab04.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 04 (Athena), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
 
@@ -715,29 +715,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 19.6 Checkpoint de revisão do Lab 04
+  - [ ] 19.6 Checkpoint de revisão do Lab 04
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 05
     - _Requirements: 7.1_
 
 - [ ] 20. Lab 05 - Qualidade de dados com DataBrew (D3)
-  - [~] 20.1 Checkpoint de proposta do Lab 05
+  - [ ] 20.1 Checkpoint de proposta do Lab 05
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Glue DataBrew) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 20.2 Criar `labs/lab-05/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 20.2 Criar `labs/lab-05/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 20.3 Criar o conteúdo dos steps em `labs/lab-05/steps/<step_id>/`
+  - [ ] 20.3 Criar o conteúdo dos steps em `labs/lab-05/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 20.4 Criar `app/validators/lab05.py`
+  - [ ] 20.4 Criar `app/validators/lab05.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 05 (Glue DataBrew), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
 
@@ -745,29 +745,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 20.6 Checkpoint de revisão do Lab 05
+  - [ ] 20.6 Checkpoint de revisão do Lab 05
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 06
     - _Requirements: 7.1_
 
 - [ ] 21. Lab 06 - Ingestão de streaming com Kinesis (D1)
-  - [~] 21.1 Checkpoint de proposta do Lab 06
+  - [ ] 21.1 Checkpoint de proposta do Lab 06
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Kinesis Data Streams) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 21.2 Criar `labs/lab-06/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 21.2 Criar `labs/lab-06/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 21.3 Criar o conteúdo dos steps em `labs/lab-06/steps/<step_id>/`
+  - [ ] 21.3 Criar o conteúdo dos steps em `labs/lab-06/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 21.4 Criar `app/validators/lab06.py`
+  - [ ] 21.4 Criar `app/validators/lab06.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 06 (Kinesis Data Streams), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
 
@@ -775,29 +775,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 21.6 Checkpoint de revisão do Lab 06
+  - [ ] 21.6 Checkpoint de revisão do Lab 06
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 07
     - _Requirements: 7.1_
 
 - [ ] 22. Lab 07 - Data Warehouse com Redshift (D2)
-  - [~] 22.1 Checkpoint de proposta do Lab 07
+  - [ ] 22.1 Checkpoint de proposta do Lab 07
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Redshift) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 22.2 Criar `labs/lab-07/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 22.2 Criar `labs/lab-07/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 22.3 Criar o conteúdo dos steps em `labs/lab-07/steps/<step_id>/`
+  - [ ] 22.3 Criar o conteúdo dos steps em `labs/lab-07/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 22.4 Criar `app/validators/lab07.py`
+  - [ ] 22.4 Criar `app/validators/lab07.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 07 (Redshift), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
 
@@ -805,29 +805,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 22.6 Checkpoint de revisão do Lab 07
+  - [ ] 22.6 Checkpoint de revisão do Lab 07
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 08
     - _Requirements: 7.1_
 
 - [ ] 23. Lab 08 - Orquestração de pipelines (D3)
-  - [~] 23.1 Checkpoint de proposta do Lab 08
+  - [ ] 23.1 Checkpoint de proposta do Lab 08
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (Step Functions e EventBridge) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 23.2 Criar `labs/lab-08/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 23.2 Criar `labs/lab-08/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 23.3 Criar o conteúdo dos steps em `labs/lab-08/steps/<step_id>/`
+  - [ ] 23.3 Criar o conteúdo dos steps em `labs/lab-08/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 23.4 Criar `app/validators/lab08.py`
+  - [ ] 23.4 Criar `app/validators/lab08.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 08 (Step Functions e EventBridge), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
 
@@ -835,29 +835,29 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 23.6 Checkpoint de revisão do Lab 08
+  - [ ] 23.6 Checkpoint de revisão do Lab 08
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 09
     - _Requirements: 7.1_
 
 - [ ] 24. Lab 09 - Segurança e Governança (D4)
-  - [~] 24.1 Checkpoint de proposta do Lab 09
+  - [ ] 24.1 Checkpoint de proposta do Lab 09
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (IAM, Lake Formation e KMS) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 24.2 Criar `labs/lab-09/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 24.2 Criar `labs/lab-09/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 24.3 Criar o conteúdo dos steps em `labs/lab-09/steps/<step_id>/`
+  - [ ] 24.3 Criar o conteúdo dos steps em `labs/lab-09/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 24.4 Criar `app/validators/lab09.py`
+  - [ ] 24.4 Criar `app/validators/lab09.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 09 (IAM, Lake Formation e KMS), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
 
@@ -865,30 +865,30 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 24.6 Checkpoint de revisão do Lab 09
+  - [ ] 24.6 Checkpoint de revisão do Lab 09
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para o Lab 10
     - _Requirements: 7.1_
 
 - [ ] 25. Lab 10 - Pipeline end-to-end (D1)
-  - [~] 25.1 Checkpoint de proposta do Lab 10
+  - [ ] 25.1 Checkpoint de proposta do Lab 10
     - Apresentar ao usuário: cenário, lista de steps, tasks DEA-C01 cobertas, serviços AWS (pipeline integrando os Labs 01 a 09) e estimativa de custo
     - Aguardar a aprovação do usuário antes de escrever qualquer conteúdo
     - _Requirements: 7.1, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 25.2 Criar `labs/lab-10/metadata.json` e `cloudformation/stack.yaml`
+  - [ ] 25.2 Criar `labs/lab-10/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `lab_id`, `title`, `description`, `difficulty`, `estimated_duration_minutes`, `estimated_cost_usd`, `cost_disclaimer`, `dea_domains`, `dea_tasks`, `prerequisites`, `services` (lista não vazia de nomes de serviços AWS usados no lab, por exemplo "Amazon S3"), `steps`, `residual_resources`
     - Em cada step `task`, declarar `paths` e, para toda Trilha ausente, `unavailable_paths` com motivo não vazio
     - Documentar em `metadata.json` (`prerequisites`) a dependência explícita dos Labs 01 a 09 como pré-requisito recomendado (7.3)
     - _Requirements: 4.1, 6.1, 7.1, 5.7, 7.3, 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [~] 25.3 Criar o conteúdo dos steps em `labs/lab-10/steps/<step_id>/`
+  - [ ] 25.3 Criar o conteúdo dos steps em `labs/lab-10/steps/<step_id>/`
     - Nos steps `task`, criar `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` (omitindo os arquivos de Trilhas declaradas em `unavailable_paths`); nos demais tipos, criar somente `content.md`
     - Seguir 11.7 em `cli.md` e `hint-cli.md`: comandos AWS CLI v2 com `--profile "$AWS_PROFILE"` e `--region "$AWS_REGION"` ou placeholders `<...>`, sem credenciais, cada comando precedido por uma linha explicando o que faz
     - Seguir 11.8 em `console.md` e `hint-console.md`: caminho `Serviço > Menu > Botão`, configurações relevantes da tela e por que importam para o DEA-C01, com o mínimo para concluir a tarefa primeiro e as explorações em seção separada
     - Manter termos técnicos em inglês no conteúdo em português
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 10.1, 11.1, 11.5, 11.6, 11.7, 11.8_
 
-  - [~] 25.4 Criar `app/validators/lab10.py`
+  - [ ] 25.4 Criar `app/validators/lab10.py`
     - Implementar `STEP_VALIDATORS` e `validate_step` para os steps do Lab 10 (pipeline integrando os Labs 01 a 09), usando `@_safe_validate` em todas as funções internas
     - _Requirements: 5.1, 5.2, 5.3, 5.6, 7.1_
 
@@ -896,7 +896,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [~] 25.6 Checkpoint de revisão do Lab 10
+  - [ ] 25.6 Checkpoint de revisão do Lab 10
     - Apresentar o lab pronto ao usuário e aguardar a revisão e a aprovação antes de seguir para a Parte 3
     - _Requirements: 7.1_
 
@@ -929,7 +929,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Testar o detector com textos gerados que contêm ou não os padrões
     - **Validates: Requirements 11.7, 9.3**
 
-- [~] 27. Checkpoint final — Garantir que todos os testes passam
+- [ ] 27. Checkpoint final — Garantir que todos os testes passam
   - Garantir que todos os testes passam, perguntar ao usuário se houver dúvidas.
 
 ## Notes
