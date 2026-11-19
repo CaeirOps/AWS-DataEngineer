@@ -100,9 +100,10 @@ class CloudFormationService:
             StackDeployError: template ausente, grande demais ou erro da AWS.
             CredentialsError, CredentialsMissingError, PermissionsError: ver `_translate`.
         """
-        self._require_lab(lab_id, lab_metadata)
-        stack_name = self._get_stack_name(lab_id)
-        template = self._read_template(lab_id)
+        lab = self._require_lab(lab_id, lab_metadata)
+        stack_name = self._get_stack_name(lab.lab_id)
+        # Caminho do template montado com o id do catálogo, não com o da URL.
+        template = self._read_template(lab.lab_id)
 
         def run() -> dict:
             cfn = self._client()
