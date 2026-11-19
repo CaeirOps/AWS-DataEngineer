@@ -30,6 +30,7 @@ from app.errors import (
     WorkshopError,
 )
 from app.models import LabMetadata, StepMetadata
+from app.quiz import Quiz, QuizFormatError, parse_quiz
 
 VALID_PATHS = ("console", "cli")
 STEP_TYPES = ("info", "deploy", "task", "quiz", "teardown", "completion")
@@ -96,6 +97,7 @@ class LabCatalog:
         )
         self._matrix_skills: Optional[frozenset[str]] = None
         self._labs: dict[str, LabMetadata] = {}
+        self._quizzes: dict[tuple[str, str], Quiz] = {}
         self._load_all()
 
     @property
@@ -182,6 +184,8 @@ class LabCatalog:
             raise InvalidLabMetadataError(lab_id, "campo 'steps' ausente ou não é lista")
         steps: list[StepMetadata] = []
         seen: set[str] = set()
+        question_ids: set[str] = set()
+        quizzes: list[Quiz] = []
         for raw_step in raw_steps:
             step = self._parse_step(lab_id, raw_step)
             if step.step_id in seen:
@@ -193,10 +197,13 @@ class LabCatalog:
                     lab_id, f"skills do step fora dos skills do módulo: {outside}", step.step_id
                 )
             if step.type == "quiz":
-                self._check_quiz_file(lab_id, step.step_id)
+                quizzes.append(self._load_quiz(lab_id, step, skills, question_ids))
             steps.append(step)
 
         self._check_infrastructure(lab_id, has_infra, steps)
+        # Só registra os quizzes depois que o módulo inteiro passou na validação.
+        for quiz in quizzes:
+            self._quizzes[(lab_id, quiz.step_id)] = quiz
 
         return LabMetadata(
             lab_id=lab_id,
@@ -302,19 +309,22 @@ class LabCatalog:
             result.append({"name": name, "pricing_url": item["pricing_url"]})
         return {"services": result}
 
-    def _check_quiz_file(self, lab_id: str, step_id: str) -> None:
-        """`quiz.json` existe e tem `questions` não vazio (formato completo na 15N)."""
-        file = self._labs_dir / lab_id / "steps" / step_id / "quiz.json"
+    def _load_quiz(
+        self, lab_id: str, step: StepMetadata, skills: list[str], taken: set[str]
+    ) -> Quiz:
+        """Lê e valida `steps/<step_id>/quiz.json` no formato completo (17.1)."""
+        file = self._labs_dir / lab_id / "steps" / step.step_id / "quiz.json"
         try:
             with open(file, encoding="utf-8") as fh:
                 data = json.load(fh)
         except (OSError, ValueError) as exc:
-            raise InvalidLabMetadataError(lab_id, f"quiz.json ausente ou inválido: {exc}", step_id)
-        questions = data.get("questions") if isinstance(data, dict) else None
-        if not isinstance(questions, list) or not questions:
             raise InvalidLabMetadataError(
-                lab_id, "quiz.json deve ter 'questions' como lista não vazia", step_id
+                lab_id, f"quiz.json ausente ou inválido: {exc}", step.step_id
             )
+        try:
+            return parse_quiz(data, lab_id, step.step_id, step.pass_score, skills, taken)
+        except QuizFormatError as exc:
+            raise InvalidLabMetadataError(lab_id, f"quiz.json: {exc}", step.step_id)
 
     def _check_infrastructure(
         self, lab_id: str, has_infra: bool, steps: list[StepMetadata]
@@ -537,6 +547,28 @@ class LabCatalog:
         """Retorna a Dica Detalhada da Trilha (`hint-console.md` ou `hint-cli.md`)."""
         lab, step, trail = self._task_step_and_path(lab_id, step_id, path)
         return self._read(lab, step, f"hint-{trail}.md")
+
+    def get_quiz(self, lab_id: str, step_id: str) -> Quiz:
+        """Quiz carregado de um step `quiz`.
+
+        Raises:
+            LabNotFoundError, StepNotFoundError (inclui step que não é quiz).
+        """
+        lab, step = self._lab_and_step(lab_id, step_id)
+        if step.type != "quiz":
+            raise StepNotFoundError(
+                f"Step '{step_id}' do lab '{lab_id}' não é do tipo quiz."
+            )
+        return self._quizzes[(lab.lab_id, step.step_id)]
+
+    def get_all_quizzes(self) -> list[Quiz]:
+        """Todos os quizzes do catálogo, na ordem dos labs e dos steps (Simulado)."""
+        result = []
+        for lab in self.get_all_labs():
+            for step in lab.steps:
+                if step.type == "quiz":
+                    result.append(self._quizzes[(lab.lab_id, step.step_id)])
+        return result
 
     def get_asset(self, lab_id: str, name: str) -> tuple[Path, str]:
         """Retorna `(caminho, mimetype)` de `labs/<lab_id>/assets/<name>`.

@@ -20,7 +20,22 @@ from tests.fixtures import LABS_FIXTURE_DIR, THEORY_LAB_ID
 from tests.fixtures.http_client import workshop_client
 
 PRICING_S3 = {"name": "Amazon S3", "pricing_url": "https://aws.amazon.com/s3/pricing/"}
-QUIZ = {"questions": [{"id": "q1"}]}
+QUIZ = {
+    "questions": [
+        {
+            "id": "q1",
+            "type": "single",
+            "domain": "D1",
+            "skills": ["1.1.1"],
+            "prompt": "Pergunta fictícia?",
+            "options": [
+                {"id": k, "text": f"Alternativa {k}", "explanation": f"Explicação {k}"}
+                for k in "abcd"
+            ],
+            "correct": ["a"],
+        }
+    ]
+}
 
 
 # ----------------------------------------------------------------------

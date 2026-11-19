@@ -276,6 +276,58 @@ class ProgressStore:
         result["resume_step"] = self.get_resume_step(lab_id, lab_metadata)
         return result
 
+    def record_quiz_attempt(
+        self,
+        lab_id: str,
+        step_id: str,
+        score: float,
+        passed: bool,
+        lab_metadata: LabMetadata,
+    ) -> dict:
+        """Registra uma tentativa de step `quiz` (17.3, 17.5, 17.6).
+
+        Incrementa `attempts` e grava `last_score` e `best_score`. O step vira
+        `passed` na primeira tentativa aprovada e `passed` nunca regride.
+
+        Returns:
+            `step_status`, `attempt_count`, `last_score`, `best_score`,
+            `lab_status` e `resume_step`.
+
+        Raises:
+            StepNotFoundError: step inexistente ou que não é `quiz`.
+        """
+        meta = next((s for s in lab_metadata.steps if s.step_id == step_id), None)
+        if meta is None or meta.type != "quiz":
+            raise StepNotFoundError(
+                f"Step quiz '{step_id}' não encontrado no lab '{lab_id}'."
+            )
+        now = _now()
+        with self._locked():
+            data = self._read()
+            lab = data["labs"].setdefault(lab_id, self._new_lab(now))
+            step = lab["steps"].setdefault(step_id, _new_step())
+            step["attempts"] += 1
+            step["last_attempt_at"] = now
+            step["last_score"] = score
+            best = step.get("best_score")
+            step["best_score"] = score if best is None else max(best, score)
+            if step["status"] != "passed":
+                step["status"] = "passed" if passed else "failed"
+                if passed:
+                    step["passed_at"] = now
+            self._refresh_lab_status(lab, lab_metadata, now)
+            data["last_updated"] = now
+            self._write(data)
+            result = {
+                "step_status": step["status"],
+                "attempt_count": step["attempts"],
+                "last_score": step["last_score"],
+                "best_score": step["best_score"],
+                "lab_status": lab["status"],
+            }
+        result["resume_step"] = self.get_resume_step(lab_id, lab_metadata)
+        return result
+
     def get_resume_step(self, lab_id: str, lab_metadata: LabMetadata) -> Optional[str]:
         """Retorna o `step_id` do primeiro step (ordem do metadata) não `passed`.
 
