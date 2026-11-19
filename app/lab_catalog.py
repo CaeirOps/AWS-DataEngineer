@@ -528,8 +528,8 @@ class LabCatalog:
     def get_asset(self, lab_id: str, name: str) -> tuple[Path, str]:
         """Retorna `(caminho, mimetype)` de `labs/<lab_id>/assets/<name>`.
 
-        Aceita só um nome simples com extensão `.svg` ou `.png`. O caminho
-        resolvido (com links simbólicos) precisa ficar dentro de `assets/`.
+        Aceita só um nome simples com extensão `.svg` ou `.png`, de um arquivo
+        regular em `assets/`. Links simbólicos são recusados.
 
         Raises:
             LabNotFoundError: lab inexistente.
@@ -540,12 +540,22 @@ class LabCatalog:
         match = _ASSET_RE.match(name) if isinstance(name, str) else None
         if match is None:
             raise AssetNotFoundError("Imagem não encontrada.")
+        # O caminho vem da listagem do diretório, nunca do texto recebido: o
+        # nome pedido só escolhe uma entrada que já existe em `assets/`.
         assets_dir = (self._labs_dir / lab_id / "assets").resolve()
         try:
-            file = (assets_dir / name).resolve(strict=True)
+            entries = {entry.name: entry for entry in assets_dir.iterdir()}
+        except OSError:
+            raise AssetNotFoundError("Imagem não encontrada.")
+        entry = entries.get(match.group(0))
+        if entry is None:
+            raise AssetNotFoundError("Imagem não encontrada.")
+        try:
+            file = entry.resolve(strict=True)
         except (OSError, RuntimeError):
             raise AssetNotFoundError("Imagem não encontrada.")
-        if file.parent != assets_dir or not file.is_file():
+        # `file != entry` significa link simbólico: recusado, mesmo dentro de `assets/`.
+        if file != entry or not file.is_file():
             raise AssetNotFoundError("Imagem não encontrada.")
         return file, ASSET_MIMETYPES[match.group(1)]
 
