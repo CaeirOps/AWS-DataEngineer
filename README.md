@@ -13,39 +13,67 @@ Workshop interativo, open source e *self-paced* para quem está se preparando pa
 
 ## Status
 
-**Em desenvolvimento.** A plataforma ainda não está pronta para uso. Os requisitos, o design técnico e o plano de implementação estão versionados em `.kiro/specs/aws-data-engineer-workshop/`.
+**Plataforma pronta (v0.2.0), módulos em produção.** A plataforma já tem catálogo de módulos, trilhas Console e CLI, validação automática, Verificação de conhecimento, Simulado, prática opcional e Aviso de custo. Os 19 módulos estão sendo escritos um por vez, cada um revisado pelo mantenedor antes de entrar. Os requisitos, o design técnico e o plano de implementação estão em `.kiro/specs/aws-data-engineer-workshop/`.
 
 ---
 
-## Como vai funcionar
+## Como funciona
 
 1. Você clona o repositório.
 2. Roda `python check_requirements.py` para validar o ambiente local.
-3. Roda `python start.py`, que exporta as credenciais temporárias do seu profile, sobe os containers e abre o workshop em `http://localhost:5000`.
-4. Em cada lab, faz o deploy do cenário (CloudFormation), executa as tarefas na sua conta AWS e clica em **Validar**.
+3. Roda `python start.py`, que exporta as credenciais temporárias do seu profile, sobe os containers e abre o workshop em `http://localhost:5000` (ou na porta definida em `WORKSHOP_PORT`).
+4. Cada módulo segue a mesma sequência: objetivos com as skills do exame, conceitos intercalados com práticas, Verificação de conhecimento e resumo com links para a documentação oficial. Você lê a teoria e executa a prática ao mesmo tempo.
+5. Nas práticas, faz o deploy do cenário (CloudFormation), executa a tarefa na sua conta AWS e clica em **Validar**.
    Cada tarefa tem duas trilhas: **Console**, com o passo a passo pelas telas do serviço, e **CLI**, com os comandos do AWS CLI. Você escolhe a que preferir e pode alternar a qualquer momento.
-5. Ao terminar, clica em **Finalizar Lab** para remover a infraestrutura e evitar custos.
+6. Ao terminar, clica em **Finalizar Lab** para remover a infraestrutura e evitar custos.
 
-Tudo roda localmente. Não há servidor externo, login ou coleta de dados.
+Tudo roda localmente. Não há servidor externo, login ou coleta de dados. O cenário de todos os módulos é a **AnyCompany**, uma empresa fictícia de varejo, com dados fictícios.
 
 ---
 
-## Laboratórios planejados
+## Módulos
 
-A progressão vai do iniciante absoluto ao pipeline completo, cobrindo os quatro domínios do [guia oficial do exame](https://docs.aws.amazon.com/aws-certification/latest/data-engineer-associate-01/data-engineer-associate-01.html).
+A progressão vai dos fundamentos ao projeto final e cobre as 120 skills dos quatro domínios do [guia oficial do exame](https://docs.aws.amazon.com/aws-certification/latest/data-engineer-associate-01/data-engineer-associate-01.html). A relação entre skills e módulos está na Matriz de cobertura, em `docs/exam-coverage.json`. Para ver o resumo, rode `python scripts/coverage_report.py`.
 
-| Lab | Tema | Domínio | Nível |
-|---|---|---|---|
-| 01 | Fundamentos de S3 e Data Lake | D2 | ⭐ |
-| 02 | Catalogação e descoberta de dados (Glue Crawler, Data Catalog) | D2 | ⭐⭐ |
-| 03 | Transformação ETL com AWS Glue e PySpark | D1 | ⭐⭐ |
-| 04 | Consultas analíticas com Athena | D3 | ⭐⭐ |
-| 05 | Qualidade de dados com Glue DataBrew | D3 | ⭐⭐⭐ |
-| 06 | Ingestão de streaming com Kinesis | D1 | ⭐⭐⭐ |
-| 07 | Data Warehouse com Redshift | D2 | ⭐⭐⭐ |
-| 08 | Orquestração com Step Functions e EventBridge | D3 | ⭐⭐⭐⭐ |
-| 09 | Segurança e governança (Lake Formation, KMS, Macie, CloudTrail) | D4 | ⭐⭐⭐⭐ |
-| 10 | Pipeline end-to-end | D1-D4 | ⭐⭐⭐⭐⭐ |
+| Módulo | Tema | Domínios |
+|---|---|---|
+| 00 | Fundamentos de engenharia de dados (só teoria, sem custo) | D1, D2 |
+| 01 | S3 e data lake | D2, D1 |
+| 02 | Catálogo de dados | D2 |
+| 03 | Athena e SQL analítico | D3 |
+| 04 | ETL com Glue e PySpark | D1, D3 |
+| 05 | EMR Serverless e escolha do motor de processamento | D1, D3 |
+| 06 | Qualidade de dados | D3 |
+| 07 | Streaming | D1 |
+| 08 | DynamoDB e bancos operacionais | D2, D1 |
+| 09 | Migração e CDC | D1, D2, D4 |
+| 10 | Redshift | D2, D3, D4 |
+| 11 | Open table formats | D2 |
+| 12 | Orquestração | D1, D3 |
+| 13 | Observabilidade e operação | D3, D4 |
+| 14 | Segurança | D4 |
+| 15 | Governança | D4 |
+| 16 | Dados para IA | D1, D2 |
+| 17 | Data APIs, IaC e CI/CD | D1, D3 |
+| 18 | Projeto final | D1, D2, D3, D4 |
+
+Na interface e na API, cada módulo usa o identificador `lab-NN` (por exemplo `lab-03`).
+
+### Verificação de conhecimento
+
+Cada módulo termina com questões no formato do exame:
+- **Escolha única:** uma alternativa correta entre quatro.
+- **Múltipla escolha:** duas ou mais alternativas corretas entre cinco ou mais. A questão só conta como certa se você marcar exatamente as corretas, como na prova.
+
+O gabarito fica no servidor e só aparece depois do envio, com a explicação de cada alternativa. A nota mínima padrão é 70%, as tentativas são ilimitadas e o quiz não usa a AWS.
+
+### Simulado final
+
+O Simulado sorteia questões das Verificações de conhecimento de todos os módulos, sem repetição. Por padrão são 65 questões, com a distribuição de domínios do exame: D1 34%, D2 26%, D3 22% e D4 18%.
+- O cronômetro de 130 minutos é opcional.
+- O resultado mostra a nota geral, a nota por domínio e as explicações.
+- As 20 tentativas mais recentes ficam no histórico.
+- Se faltarem questões em algum domínio, o sorteio completa com os outros domínios e avisa na tela.
 
 ---
 
@@ -69,7 +97,12 @@ O `python start.py` lê o profile escolhido (`AWS_PROFILE`, padrão `default`), 
 
 ## Custos
 
-**Os labs criam recursos reais na sua conta AWS e podem gerar cobrança.** Cada lab mostra uma estimativa de custo antes do deploy. Faça um lab por vez e sempre use **Finalizar Lab** ao terminar. A responsabilidade pelos custos da conta é sua.
+**As práticas criam recursos reais na sua conta AWS e podem gerar cobrança.** A responsabilidade pelos custos da conta é sua.
+
+- **Aviso de custo:** antes do deploy, o módulo lista os serviços cobrados, cada um com o link da página oficial de preços em `aws.amazon.com`. O workshop não mostra valores em USD. Uma estimativa só seria confiável com premissas de uso revisadas, e a AWS Pricing Calculator pública não tem API para gerar estimativas (veja [Melhorias futuras](#melhorias-futuras)).
+- **Prática opcional:** serviços de custo mais alto (por exemplo Amazon MWAA, Amazon MSK, Amazon OpenSearch Service e Amazon QuickSight) ficam em práticas marcadas como **Opcional**, com um aviso de custo reforçado. Você pode pulá-las e concluir o módulo mesmo assim.
+- **Sem custo:** o Módulo 00, as Verificações de conhecimento e o Simulado não usam a AWS.
+- Faça um módulo por vez e sempre use **Finalizar Lab** ao terminar.
 
 ---
 
@@ -165,12 +198,25 @@ Se não houver release aberta, abra uma issue antes. O mantenedor cria a release
 
 **Método de merge:** o único método usado é *rebase and merge*. Ele preserva cada commit com o próprio `Signed-off-by` e mantém o histórico linear. O *squash* cria um commit novo com o e-mail padrão do GitHub do autor, que pode divergir do sign-off e quebrar o DCO. O *merge commit* quebra o histórico linear.
 
+**Como nasce uma release:** a branch `release/vX.Y.Z` é criada no mesmo commit da `main`, sem commits próprios. As regras da branch exigem os checks do CI, e um push que já traz commits novos é recusado (`GH013`, *required status checks are expected*). Por isso, o mantenedor cria a branch apontando para a `main` e leva as mudanças por Pull Request:
+
+```
+git fetch origin
+git push origin origin/main:refs/heads/release/vX.Y.Z
+```
+
 **Como sai uma versão:**
 
 1. O mantenedor abre o PR de `release/vX.Y.Z` para a `main`.
 2. Com o CI verde, o PR é integrado por *rebase and merge*.
 3. O mantenedor cria a tag anotada `vX.Y.Z` (SemVer) na `main` e publica o GitHub Release com as notas.
 4. A branch da release é apagada.
+
+---
+
+## Melhorias futuras
+
+- **Estimativa de custo em USD por módulo.** A ideia é gerá-la por script a partir do AWS Price List API (`pricing:GetProducts`, somente leitura), com premissas de uso versionadas e revisadas, cálculo determinístico e data da consulta. Ela só entra quando o método for reprodutível e revisado pelo mantenedor. Até lá, o Aviso de custo mostra os serviços cobrados e as páginas oficiais de preços.
 
 ---
 

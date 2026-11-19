@@ -683,10 +683,10 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - **Validates: Requirements 7.4, 18.2**
 
 - [ ] 15Q. Integração, documentação e release v0.2.0
-  - [ ] 15Q.1 Executar a suíte completa, os testes com Docker e o `start.py` real
+  - [x] 15Q.1 Executar a suíte completa, os testes com Docker e o `start.py` real
     - `env -u WORKSHOP_PORT .venv/bin/python -m pytest tests -q -rs`, `node --test "tests/js/*.test.mjs"`, testes com Docker separados por arquivo e `start.py` com `AWS_PROFILE=Caeiro-Admin WORKSHOP_PORT=5050`; conferir no browser os fixtures de ponta a ponta
     - _Requirements: 1.4, 17.1, 18.1_
-  - [ ] 15Q.2 Atualizar README e `CONTRIBUTING.md`
+  - [x] 15Q.2 Atualizar README e `CONTRIBUTING.md`
     - README: lista dos 19 módulos, Verificação de conhecimento, Simulado, prática opcional, Aviso de custo, criação de release a partir do commit da `main` no gitflow e seção "Melhorias futuras" com a estimativa de custo em USD. `CONTRIBUTING.md`: como escrever um módulo (estrutura, Destaques, imagens, quiz, Aviso de custo, cenário AnyCompany, Matriz de cobertura)
     - _Requirements: 16.2, 19.4_
   - [ ] 15Q.3 Publicar a release v0.2.0
