@@ -1,0 +1,62 @@
+{
+  "lab_id": "lab-02",
+  "title": "Módulo 02 - Catálogo de dados",
+  "description": "Construa o catálogo técnico da AnyCompany com o AWS Glue Data Catalog: descubra esquemas com crawlers, sincronize partições, agende a atualização, trate a mudança de esquema e conheça as conexões JDBC.",
+  "difficulty": "intermediario",
+  "estimated_duration_minutes": 120,
+  "dea_domains": ["D2", "D1"],
+  "dea_tasks": ["1.1", "1.2", "2.2", "2.4"],
+  "services": ["AWS Glue", "Amazon S3", "Amazon CloudWatch Logs", "AWS IAM", "AWS CloudFormation"],
+  "skills": ["1.1.5", "1.2.2", "2.2.1", "2.2.2", "2.2.3", "2.2.4", "2.2.5", "2.4.2"],
+  "has_infrastructure": true,
+  "cost_notice": {
+    "services": [
+      {"name": "AWS Glue (Data Catalog e crawlers)", "pricing_url": "https://aws.amazon.com/glue/pricing/"},
+      {"name": "Amazon S3", "pricing_url": "https://aws.amazon.com/s3/pricing/"},
+      {"name": "Amazon CloudWatch Logs", "pricing_url": "https://aws.amazon.com/cloudwatch/pricing/"}
+    ]
+  },
+  "prerequisites": {
+    "hard": [
+      "Ambiente do workshop no ar (python start.py) com uma sessão AWS válida",
+      "Permissão na conta para criar buckets S3, AWS Glue, funções Lambda, roles do IAM e stacks CloudFormation"
+    ],
+    "recommended": [
+      "Módulo 00 - Fundamentos de engenharia de dados",
+      "Módulo 01 - S3 e data lake",
+      "AWS CLI v2 configurada no seu computador, para a trilha CLI"
+    ]
+  },
+  "steps": [
+    {"step_id": "step-01", "title": "Objetivos e cenário", "type": "info",
+     "skills": ["1.1.5", "1.2.2", "2.2.1", "2.2.2", "2.2.3", "2.2.4", "2.2.5", "2.4.2"]},
+    {"step_id": "step-02", "title": "Deploy do ambiente", "type": "deploy"},
+    {"step_id": "step-03", "title": "O catálogo de dados", "type": "info", "skills": ["2.2.1", "2.2.2"]},
+    {"step_id": "step-04", "title": "Descobrir o esquema dos pedidos", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.2.2", "2.2.3"]},
+    {"step_id": "step-05", "title": "Como o crawler funciona", "type": "info", "skills": ["2.2.3", "2.4.2"]},
+    {"step_id": "step-06", "title": "Catalogar todas as fontes com agenda", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.2.3", "1.1.5"]},
+    {"step_id": "step-07", "title": "Partições no catálogo", "type": "info", "skills": ["2.2.4"]},
+    {"step_id": "step-08", "title": "Sincronizar uma partição nova", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.2.4"]},
+    {"step_id": "step-09", "title": "Agendar jobs e crawlers", "type": "info", "skills": ["1.1.5"]},
+    {"step_id": "step-10", "title": "Evolução de esquema", "type": "info", "skills": ["2.4.2", "2.2.3"]},
+    {"step_id": "step-11", "title": "Tratar uma coluna nova", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.4.2", "2.2.3"]},
+    {"step_id": "step-12", "title": "Conexões e fontes JDBC", "type": "info", "skills": ["2.2.5", "1.2.2"]},
+    {"step_id": "step-13", "title": "Catalogar um banco relacional", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.2.5", "1.2.2"], "optional": true,
+     "cost_note": "Esta prática cria um banco Amazon RDS, que cobra por hora de instância e por armazenamento, e um secret no AWS Secrets Manager, cobrado por secret e por mês. O banco, o secret e o security group ficam fora da stack: remova todos eles no step 15 assim que terminar."},
+    {"step_id": "step-14", "title": "Verificação de conhecimento", "type": "quiz", "pass_score": 0.7,
+     "skills": ["1.1.5", "1.2.2", "2.2.1", "2.2.2", "2.2.3", "2.2.4", "2.2.5", "2.4.2"]},
+    {"step_id": "step-15", "title": "Finalizar o módulo", "type": "teardown"},
+    {"step_id": "step-16", "title": "Resumo e próximos passos", "type": "completion"}
+  ],
+  "residual_resources": [
+    "Prática opcional: o banco Amazon RDS criado por você, com os snapshots automáticos e os backups, se existirem",
+    "Prática opcional: o secret do AWS Secrets Manager com a senha do banco (a exclusão agendada ainda cobra até o fim do prazo)",
+    "Prática opcional: o security group e o subnet group criados por você para o banco",
+    "Arquivos locais criados na trilha CLI (por exemplo crawler-pedidos.json)"
+  ]
+}

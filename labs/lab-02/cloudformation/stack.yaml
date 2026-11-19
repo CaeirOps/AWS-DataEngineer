@@ -1,0 +1,387 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Workshop AWS Data Engineer, Modulo 02 (Catalogo de dados). Cria o bucket com os
+  dados ficticios da AnyCompany ja particionados, o database vazio do Glue Data
+  Catalog e a role que o aluno usa nos crawlers. O aluno cria os crawlers e as
+  tabelas; a funcao de preparacao os remove no teardown, junto com o conteudo do
+  bucket.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    why: >-
+      Ambiente efemero de aprendizado. O aluno descobre esquemas com crawlers,
+      sincroniza particoes, trata uma mudanca de esquema e, opcionalmente,
+      cria uma conexao JDBC. A stack entrega so o ponto de partida seguro.
+    must:
+      - Os nomes seguem workshop-lab-02-* porque os validadores e as instrucoes de CLI os calculam a partir da conta e da Region.
+      - Crawlers, tabelas, particoes e conexoes criados pelo aluno nao pertencem a stack; a funcao de preparacao os apaga no delete.
+
+Resources:
+  # ------------------------------------------------------------------ Bucket
+  CatalogoBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Dados ficticios da AnyCompany que os crawlers descobrem.
+        must:
+          - DeletionPolicy Delete, porque o teardown do workshop precisa remover o bucket.
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-dados-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  CatalogoBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CatalogoBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: NegarSemTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt CatalogoBucket.Arn
+              - !Sub "${CatalogoBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  # ---------------------------------------------------------------- Database
+  Database:
+    Type: AWS::Glue::Database
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Database vazio onde os crawlers do aluno criam as tabelas.
+        must:
+          - O teardown apaga as tabelas do database antes da stack remove-lo.
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub "${AWS::StackName}-anycompany"
+        Description: Catalogo tecnico da AnyCompany (workshop, dados ficticios)
+
+  # ------------------------------------------------------------ Role crawler
+  CrawlerRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Role que o aluno informa nos crawlers, com privilegio minimo.
+        must:
+          - Le so o bucket de dados e grava so no database do modulo.
+          - Sem a politica gerenciada AWSGlueServiceRole, que e ampla demais para este cenario.
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-crawler-${AWS::Region}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: crawler
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: LerDados
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt CatalogoBucket.Arn
+                  - !Sub "${CatalogoBucket.Arn}/*"
+              - Sid: CatalogoDoModulo
+                Effect: Allow
+                Action:
+                  - glue:GetDatabase
+                  - glue:GetTable
+                  - glue:GetTables
+                  - glue:CreateTable
+                  - glue:UpdateTable
+                  - glue:GetPartition
+                  - glue:GetPartitions
+                  - glue:BatchGetPartition
+                  - glue:CreatePartition
+                  - glue:BatchCreatePartition
+                  - glue:UpdatePartition
+                  - glue:BatchUpdatePartition
+                  - glue:DeletePartition
+                  - glue:BatchDeletePartition
+                  - glue:GetConnection
+                  - glue:GetConnections
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${Database}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${Database}/*"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:connection/*"
+              - Sid: LogsDoCrawler
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/crawlers*"
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  # ------------------------------------------- Funcao de preparacao e limpeza
+  PreparacaoLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-preparacao"
+      RetentionInDays: 7
+
+  PreparacaoRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Grava os dados ficticios na criacao e limpa bucket, crawlers, tabelas e conexoes no delete.
+        must:
+          - Politicas inline, para continuarem existindo enquanto o custom resource e excluido.
+          - So mexe em recursos com o prefixo workshop-lab-02 e no database do modulo.
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: preparacao
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: GravarDados
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "${CatalogoBucket.Arn}/*"
+              - Sid: ListarParaEsvaziar
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                Resource: !GetAtt CatalogoBucket.Arn
+              - Sid: ApagarObjetos
+                Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                Resource: !Sub "${CatalogoBucket.Arn}/*"
+              - Sid: LimparCrawlers
+                Effect: Allow
+                Action:
+                  - glue:GetCrawlers
+                  - glue:GetCrawler
+                  - glue:StopCrawler
+                  - glue:DeleteCrawler
+                Resource: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:crawler/${AWS::StackName}-*"
+              - Sid: LimparCatalogo
+                Effect: Allow
+                Action:
+                  - glue:GetTables
+                  - glue:DeleteTable
+                  - glue:BatchDeleteTable
+                  - glue:GetPartitions
+                  - glue:BatchDeletePartition
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${Database}"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${Database}/*"
+              - Sid: LimparConexoes
+                Effect: Allow
+                Action:
+                  - glue:GetConnections
+                  - glue:DeleteConnection
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+                  - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:connection/${AWS::StackName}-*"
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "${PreparacaoLogGroup.Arn}"
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  PreparacaoFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-preparacao"
+      Description: Dados ficticios na criacao; limpa bucket, crawlers, tabelas e conexoes no delete
+      Runtime: python3.13
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 128
+      Timeout: 300
+      Role: !GetAtt PreparacaoRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref PreparacaoLogGroup
+      Code:
+        ZipFile: |
+          import json, time, urllib.request
+          import boto3
+
+          s3 = boto3.client("s3")
+          glue = boto3.client("glue")
+          DATAS = ["2026-03-08", "2026-03-09", "2026-03-10"]
+          LOJAS = ["04", "09", "17", "23"]
+
+          def pedidos_csv(dia, n):
+              linhas = ["id_pedido,id_loja,id_cliente,valor,status,dt"]
+              for i in range(1, 13):
+                  valor = round(19.9 + (i * 7.35 + n * 3.1) % 180, 2)
+                  status = "cancelado" if i % 5 == 0 else "pago"
+                  linhas.append(f"{n}{i:03d},{LOJAS[i % 4]},cliente-00{41 + i % 3},{valor:.2f},{status},{dia}")
+              return "\n".join(linhas) + "\n"
+
+          def clientes_json():
+              regs = [{"id_cliente": f"cliente-00{n}", "nome": f"Cliente Ficticio {n}", "cidade": "Cidade Exemplo",
+                       "aceita_marketing": n % 2 == 1} for n in (41, 42, 43)]
+              return "\n".join(json.dumps(r, ensure_ascii=False) for r in regs) + "\n"
+
+          def fornecedores_v1():
+              return ("sku,descricao,quantidade,preco\n"
+                      "CAM-042,Camiseta azul,120,39.90\nCAM-043,Camiseta branca,80,39.90\n"
+                      "CAL-007,Calca jeans,45,119.90\nTEN-011,Tenis casual,30,199.90\n")
+
+          def put(bucket, key, body, tipo):
+              s3.put_object(Bucket=bucket, Key=key, Body=body.encode("utf-8"), ContentType=tipo)
+
+          def preparar(bucket):
+              for n, dia in enumerate(DATAS, start=1):
+                  put(bucket, f"pedidos/dt={dia}/pedidos-{dia}.csv", pedidos_csv(dia, n), "text/csv")
+              put(bucket, "clientes/clientes.json", clientes_json(), "application/json")
+              put(bucket, "fornecedores/estoque-2026-03-09.csv", fornecedores_v1(), "text/csv")
+
+          def esvaziar(bucket):
+              while True:
+                  try:
+                      page = s3.list_object_versions(Bucket=bucket, MaxKeys=1000)
+                  except s3.exceptions.NoSuchBucket:
+                      return
+                  itens = [{"Key": v["Key"], "VersionId": v["VersionId"]}
+                           for v in page.get("Versions", []) + page.get("DeleteMarkers", [])]
+                  if not itens:
+                      return
+                  s3.delete_objects(Bucket=bucket, Delete={"Objects": itens, "Quiet": True})
+
+          def paginar(chamada, chave, **args):
+              token = None
+              while True:
+                  resp = chamada(**({**args, "NextToken": token} if token else args))
+                  yield from resp.get(chave, [])
+                  token = resp.get("NextToken")
+                  if not token:
+                      return
+
+          def limpar_glue(prefixo, database):
+              for crawler in list(paginar(glue.get_crawlers, "Crawlers")):
+                  if not crawler["Name"].startswith(prefixo):
+                      continue
+                  if crawler.get("State") == "RUNNING":
+                      try:
+                          glue.stop_crawler(Name=crawler["Name"])
+                      except glue.exceptions.CrawlerStoppingException:
+                          pass
+                      for _ in range(30):
+                          if glue.get_crawler(Name=crawler["Name"])["Crawler"]["State"] == "READY":
+                              break
+                          time.sleep(5)
+                  glue.delete_crawler(Name=crawler["Name"])
+              try:
+                  tabelas = [t["Name"] for t in paginar(glue.get_tables, "TableList", DatabaseName=database)]
+              except glue.exceptions.EntityNotFoundException:
+                  tabelas = []
+              for i in range(0, len(tabelas), 25):
+                  glue.batch_delete_table(DatabaseName=database, TablesToDelete=tabelas[i:i + 25])
+              for conexao in list(paginar(glue.get_connections, "ConnectionList")):
+                  if conexao["Name"].startswith(prefixo):
+                      glue.delete_connection(ConnectionName=conexao["Name"])
+
+          def responder(event, context, status, motivo):
+              corpo = json.dumps({
+                  "Status": status, "Reason": f"{motivo} (log: {context.log_stream_name})"[:1000],
+                  "PhysicalResourceId": event.get("PhysicalResourceId") or "workshop-lab-02-dados",
+                  "StackId": event["StackId"], "RequestId": event["RequestId"],
+                  "LogicalResourceId": event["LogicalResourceId"]}).encode()
+              req = urllib.request.Request(event["ResponseURL"], data=corpo, method="PUT",
+                                           headers={"Content-Type": "", "Content-Length": str(len(corpo))})
+              urllib.request.urlopen(req, timeout=30)
+
+          def handler(event, context):
+              props = event["ResourceProperties"]
+              try:
+                  if event["RequestType"] == "Create":
+                      preparar(props["Bucket"])
+                  elif event["RequestType"] == "Delete":
+                      limpar_glue(props["Prefixo"], props["Database"])
+                      esvaziar(props["Bucket"])
+                  responder(event, context, "SUCCESS", "ok")
+              except Exception as exc:
+                  print(f"erro: {type(exc).__name__}: {exc}")
+                  responder(event, context, "FAILED", f"{type(exc).__name__}: {exc}")
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  DadosFicticios:
+    Type: Custom::DadosFicticios
+    DependsOn:
+      - PreparacaoLogGroup
+      - CatalogoBucketPolicy
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: >-
+          Na criacao grava os dados ficticios. No delete roda antes do bucket e
+          do database (depende deles): apaga crawlers, tabelas, conexoes e o
+          conteudo do bucket.
+    Properties:
+      ServiceToken: !GetAtt PreparacaoFunction.Arn
+      ServiceTimeout: 300
+      Bucket: !Ref CatalogoBucket
+      Database: !Ref Database
+      Prefixo: !Ref AWS::StackName
+
+Outputs:
+  Bucket:
+    Description: Bucket com os dados da AnyCompany
+    Value: !Ref CatalogoBucket
+  Database:
+    Description: Database do Glue Data Catalog
+    Value: !Ref Database
+  CrawlerRoleArn:
+    Description: ARN da role que os crawlers usam
+    Value: !GetAtt CrawlerRole.Arn

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" width="720" height="220" role="img" aria-labelledby="t d">
+  <title id="t">Do S3 ao catálogo, passando pelo crawler</title>
+  <desc id="d">O crawler lê os arquivos do S3, passa pelos classificadores, agrupa em tabelas e partições e grava no Data Catalog, usando uma role do IAM.</desc>
+  <style>
+    .h{font:bold 14px sans-serif;fill:#16191F}
+    .t{font:13px sans-serif;fill:#16191F}
+    .n{font:12px sans-serif;fill:#5F6B7A}
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5F6B7A"/>
+    </marker>
+  </defs>
+  <rect x="10" y="50" width="130" height="80" rx="8" fill="#FFFFFF" stroke="#232F3E" stroke-width="2"/>
+  <text x="75" y="82" text-anchor="middle" class="h">Amazon S3</text>
+  <text x="75" y="102" text-anchor="middle" class="n">pedidos/dt=.../</text>
+  <text x="75" y="118" text-anchor="middle" class="n">clientes/ ...</text>
+  <line x1="140" y1="90" x2="188" y2="90" stroke="#5F6B7A" stroke-width="2" marker-end="url(#a)"/>
+
+  <rect x="190" y="30" width="340" height="120" rx="10" fill="#FFF8EC" stroke="#F39C12" stroke-width="2"/>
+  <text x="360" y="54" text-anchor="middle" class="h">Crawler</text>
+  <rect x="205" y="68" width="95" height="66" rx="6" fill="#FFFFFF" stroke="#F39C12"/>
+  <text x="252" y="92" text-anchor="middle" class="t">1. Amostra</text>
+  <text x="252" y="110" text-anchor="middle" class="n">os arquivos</text>
+  <rect x="312" y="68" width="95" height="66" rx="6" fill="#FFFFFF" stroke="#F39C12"/>
+  <text x="360" y="92" text-anchor="middle" class="t">2. Classifica</text>
+  <text x="360" y="110" text-anchor="middle" class="n">CSV, JSON...</text>
+  <rect x="419" y="68" width="100" height="66" rx="6" fill="#FFFFFF" stroke="#F39C12"/>
+  <text x="469" y="92" text-anchor="middle" class="t">3. Agrupa</text>
+  <text x="469" y="110" text-anchor="middle" class="n">tabelas e partições</text>
+  <line x1="530" y1="90" x2="578" y2="90" stroke="#5F6B7A" stroke-width="2" marker-end="url(#a)"/>
+
+  <rect x="580" y="50" width="130" height="80" rx="8" fill="#EAF2FE" stroke="#1A73E8" stroke-width="2"/>
+  <text x="645" y="82" text-anchor="middle" class="h">Data Catalog</text>
+  <text x="645" y="102" text-anchor="middle" class="n">tabelas e</text>
+  <text x="645" y="118" text-anchor="middle" class="n">partições</text>
+
+  <rect x="190" y="170" width="340" height="40" rx="8" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <text x="360" y="195" text-anchor="middle" class="t">Role do IAM: lê o S3 e grava no catálogo</text>
+  <line x1="360" y1="170" x2="360" y2="152" stroke="#5F6B7A" stroke-width="2" marker-end="url(#a)"/>
+</svg>

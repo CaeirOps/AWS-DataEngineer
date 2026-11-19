@@ -1,0 +1,433 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.2.1",
+        "2.2.2"
+      ],
+      "prompt": "A AnyCompany guarda os pedidos em arquivos CSV no Amazon S3 e quer que o Amazon Athena, o AWS Glue e o Amazon EMR consultem os mesmos dados com o mesmo esquema, com o menor esforço operacional. O que o time deve fazer?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Registrar as tabelas no AWS Glue Data Catalog e fazer os três serviços usarem esse catálogo",
+          "explanation": "Correta. O Glue Data Catalog é um catálogo técnico gerenciado, usado pelo Athena e pelo Glue por padrão e pelo EMR como metastore do Hive e do Spark. O esquema é definido uma vez."
+        },
+        {
+          "id": "b",
+          "text": "Criar um metastore Apache Hive em instâncias Amazon EC2 e apontar os serviços para ele",
+          "explanation": "Incorreta. Funciona, mas o time passaria a administrar as instâncias, o banco do metastore, os backups e a disponibilidade."
+        },
+        {
+          "id": "c",
+          "text": "Copiar os arquivos para um bucket diferente para cada serviço e definir o esquema em cada um",
+          "explanation": "Incorreta. Duplica os dados e deixa três definições de esquema que podem divergir."
+        },
+        {
+          "id": "d",
+          "text": "Guardar o esquema em uma planilha compartilhada entre os times",
+          "explanation": "Incorreta. Uma planilha não é lida pelos motores, e cada um teria de reproduzir o esquema à mão."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.2.3"
+      ],
+      "prompt": "Um fornecedor da AnyCompany envia arquivos novos ao Amazon S3 todo dia, e o time precisa que o AWS Glue Data Catalog descubra o esquema e se mantenha atualizado, sem escrever código. Qual solução atende com o menor esforço?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Um crawler do AWS Glue com uma agenda diária apontando para o prefixo do fornecedor",
+          "explanation": "Correta. O crawler infere o esquema e as partições, cria ou atualiza as tabelas e roda na agenda definida, sem código."
+        },
+        {
+          "id": "b",
+          "text": "Uma função AWS Lambda que lê o arquivo e chama CreateTable manualmente a cada execução",
+          "explanation": "Incorreta. Exige escrever, testar e manter o código de inferência de tipos e de atualização do catálogo."
+        },
+        {
+          "id": "c",
+          "text": "Uma consulta CREATE TABLE escrita à mão pelo analista toda semana",
+          "explanation": "Incorreta. É manual e deixa o catálogo desatualizado entre as execuções."
+        },
+        {
+          "id": "d",
+          "text": "Um cluster Amazon EMR com um job que roda todos os dias para inferir o esquema",
+          "explanation": "Incorreta. Cria e mantém um cluster para uma tarefa que o crawler faz de forma gerenciada."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "multiple",
+      "domain": "D2",
+      "skills": [
+        "2.2.3"
+      ],
+      "prompt": "Um crawler do AWS Glue vai catalogar a pasta de pedidos da AnyCompany no Amazon S3. Quais itens ele precisa para funcionar? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Uma role do IAM com leitura nos arquivos do S3",
+          "explanation": "Correta. O crawler assume uma role e precisa de s3:GetObject e s3:ListBucket nos prefixos que varre."
+        },
+        {
+          "id": "b",
+          "text": "Permissões do Glue para criar e atualizar tabelas e partições no database de destino",
+          "explanation": "Correta. É o crawler que grava no Data Catalog, e a role precisa de permissão para isso."
+        },
+        {
+          "id": "c",
+          "text": "Um cluster Amazon EMR ativo para processar a varredura",
+          "explanation": "Incorreta. O crawler é gerenciado pelo Glue e não usa cluster do cliente."
+        },
+        {
+          "id": "d",
+          "text": "Que os arquivos estejam em formato Parquet",
+          "explanation": "Incorreta. O crawler reconhece CSV, JSON, Parquet, ORC, Avro e outros formatos."
+        },
+        {
+          "id": "e",
+          "text": "Uma conexão do Glue com uma VPC",
+          "explanation": "Incorreta. A conexão é necessária para fontes que exigem rede privada, como um banco JDBC, e não para um bucket do S3."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.2.4"
+      ],
+      "prompt": "A AnyCompany grava novos dados todo dia em pastas como dt=2026-03-11/. A tabela está catalogada, mas o Amazon Athena não retorna os dados da pasta nova. Qual é a causa mais provável e uma correção rápida?",
+      "options": [
+        {
+          "id": "a",
+          "text": "A partição nova não foi registrada no catálogo; execute MSCK REPAIR TABLE ou ALTER TABLE ADD PARTITION",
+          "explanation": "Correta. Para o Athena, uma pasta que não é uma partição do catálogo é invisível. Esses comandos registram as partições que faltam."
+        },
+        {
+          "id": "b",
+          "text": "O Athena não lê pastas criadas depois da tabela; é preciso recriar a tabela",
+          "explanation": "Incorreta. Basta registrar a partição, e recriar a tabela não é necessário."
+        },
+        {
+          "id": "c",
+          "text": "O bucket precisa ter o versionamento ativado para o Athena ler dados novos",
+          "explanation": "Incorreta. O versionamento não afeta a descoberta de partições."
+        },
+        {
+          "id": "d",
+          "text": "O crawler apagou os dados antigos e o Athena aguarda a reposição",
+          "explanation": "Incorreta. Um crawler não apaga dados do S3."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q5",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.2.4"
+      ],
+      "prompt": "Uma tabela do Amazon Athena tem milhares de partições por data, e as consultas ficaram lentas por causa do tempo de leitura dos metadados no catálogo. As partições seguem sempre o mesmo padrão de data. Qual é a melhor solução?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Habilitar partition projection na tabela, descrevendo o intervalo de datas",
+          "explanation": "Correta. Com a partition projection, o Athena calcula as partições em memória a partir das propriedades da tabela, sem consultar o catálogo, e não exige registrar novas partições."
+        },
+        {
+          "id": "b",
+          "text": "Executar o crawler a cada 5 minutos",
+          "explanation": "Incorreta. Não acelera a leitura de metadados das consultas e aumenta o custo, já que cada execução cobra no mínimo 10 minutos de DPU."
+        },
+        {
+          "id": "c",
+          "text": "Converter a tabela para CSV",
+          "explanation": "Incorreta. O formato do arquivo não afeta o tempo de leitura dos metadados das partições."
+        },
+        {
+          "id": "d",
+          "text": "Reduzir a memória do workgroup do Athena",
+          "explanation": "Incorreta. Isso não resolve o gargalo, que está na consulta ao catálogo."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q6",
+      "type": "multiple",
+      "domain": "D1",
+      "skills": [
+        "1.1.5"
+      ],
+      "prompt": "A AnyCompany quer executar um crawler do AWS Glue todos os dias às 03:00 no horário de São Paulo (UTC-3) e iniciar o mesmo crawler também quando um arquivo urgente chegar ao Amazon S3. Quais configurações atendem? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Uma agenda no crawler com a expressão cron(0 6 * * ? *)",
+          "explanation": "Correta. As agendas do Glue usam UTC, e 06:00 UTC equivale a 03:00 em São Paulo."
+        },
+        {
+          "id": "b",
+          "text": "Um evento do S3 que aciona uma função Lambda ou o EventBridge, e esse destino inicia o crawler",
+          "explanation": "Correta. O evento do S3 não inicia o crawler sozinho, mas pode acionar um destino que chame a API para iniciá-lo."
+        },
+        {
+          "id": "c",
+          "text": "Uma agenda no crawler com a expressão cron(0 3 * * ? *)",
+          "explanation": "Incorreta. As agendas do Glue estão em UTC, então isso rodaria às 00:00 em São Paulo."
+        },
+        {
+          "id": "d",
+          "text": "Marcar o crawler como incremental para que ele inicie quando houver arquivos novos",
+          "explanation": "Incorreta. O modo incremental só reduz o que o crawler varre. Ele não faz o crawler iniciar."
+        },
+        {
+          "id": "e",
+          "text": "Agendar o crawler de minuto em minuto",
+          "explanation": "Incorreta. A precisão mínima de uma agenda é de 5 minutos, e cada execução cobra no mínimo 10 minutos de DPU."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q7",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.4.2"
+      ],
+      "prompt": "Um fornecedor da AnyCompany passou a enviar mais uma coluna no fim do seu arquivo CSV. O crawler já cataloga a pasta com o UpdateBehavior em LOG, e o time quer que a tabela do catálogo passe a ter a nova coluna sem apagar nada. O que deve ser feito?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Mudar o UpdateBehavior para UPDATE_IN_DATABASE e executar o crawler de novo",
+          "explanation": "Correta. Com UPDATE_IN_DATABASE, o crawler atualiza a definição da tabela com o esquema novo. O DeleteBehavior continua sem apagar nada."
+        },
+        {
+          "id": "b",
+          "text": "Mudar o DeleteBehavior para DELETE_FROM_DATABASE",
+          "explanation": "Incorreta. Essa opção apaga tabelas do catálogo quando os objetos somem e não atualiza o esquema."
+        },
+        {
+          "id": "c",
+          "text": "Manter LOG, porque o crawler já atualiza o esquema em segundo plano",
+          "explanation": "Incorreta. Com LOG, o crawler só registra a mudança e a tabela continua com o esquema antigo."
+        },
+        {
+          "id": "d",
+          "text": "Reescrever todos os arquivos antigos com a coluna nova",
+          "explanation": "Incorreta. Não é necessário: os arquivos antigos passam a devolver nulo para a coluna nova."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q8",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.4.2"
+      ],
+      "prompt": "A AnyCompany cataloga arquivos CSV, e um sistema passou a enviar uma coluna nova no MEIO do arquivo, entre duas colunas existentes. Depois de o crawler atualizar a tabela, as consultas retornam valores trocados em algumas colunas, sem nenhum erro. Qual é a explicação?",
+      "options": [
+        {
+          "id": "a",
+          "text": "O CSV é lido por posição, e a coluna no meio deslocou as colunas seguintes",
+          "explanation": "Correta. Em CSV, as colunas são associadas pela posição. Uma coluna no meio desloca todas as seguintes, e os dados ficam em colunas erradas, sem erro. O mais seguro é acrescentar colunas no fim."
+        },
+        {
+          "id": "b",
+          "text": "O crawler corrompeu o arquivo ao atualizar a tabela",
+          "explanation": "Incorreta. O crawler não altera os arquivos do S3."
+        },
+        {
+          "id": "c",
+          "text": "O Athena não suporta tabelas com mais de 4 colunas",
+          "explanation": "Incorreta. Não existe esse limite."
+        },
+        {
+          "id": "d",
+          "text": "As partições antigas foram apagadas pelo DeleteBehavior",
+          "explanation": "Incorreta. O sintoma é de valores trocados, não de partições ausentes."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q9",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.2.5",
+        "1.2.2"
+      ],
+      "prompt": "A AnyCompany tem um banco PostgreSQL no Amazon RDS, em uma subnet privada, e quer catalogar as tabelas dele com um crawler do AWS Glue, sem colocar a senha em texto na configuração. Qual solução atende?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Criar uma conexão JDBC do Glue com a VPC, a subnet e o security group, e a senha em um secret do AWS Secrets Manager",
+          "explanation": "Correta. A conexão guarda a URL JDBC e a rede, e o secret guarda as credenciais. O crawler JDBC usa a conexão para chegar ao banco."
+        },
+        {
+          "id": "b",
+          "text": "Expor o banco com um endereço IP público e gravar a senha na descrição do crawler",
+          "explanation": "Incorreta. Expõe o banco à internet e grava a credencial em texto."
+        },
+        {
+          "id": "c",
+          "text": "Copiar o banco inteiro para o Amazon S3 todo dia e catalogar a cópia",
+          "explanation": "Incorreta. É uma solução de replicação, e não de catalogação. Também não resolve como o crawler chegaria ao banco."
+        },
+        {
+          "id": "d",
+          "text": "Instalar o driver JDBC em um cluster Amazon EMR e rodar o crawler nele",
+          "explanation": "Incorreta. O crawler é gerenciado pelo Glue e não roda em um cluster do cliente."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q10",
+      "type": "multiple",
+      "domain": "D2",
+      "skills": [
+        "2.2.5"
+      ],
+      "prompt": "Um crawler JDBC do AWS Glue falha ao tentar se conectar a um banco do Amazon RDS em uma subnet privada. Quais verificações ajudam a encontrar a causa? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "O security group do banco permite a porta do banco a partir do security group da conexão do Glue",
+          "explanation": "Correta. Sem essa regra de entrada, o tráfego do Glue é bloqueado no banco."
+        },
+        {
+          "id": "b",
+          "text": "O security group da conexão permite tráfego de entrada dele mesmo, e a subnet tem rota para o S3 e para o Secrets Manager",
+          "explanation": "Correta. O Glue precisa dessa regra de auto referência, e a subnet precisa alcançar os serviços que o job usa, por endpoints ou por NAT."
+        },
+        {
+          "id": "c",
+          "text": "O banco precisa ter o versionamento ativado",
+          "explanation": "Incorreta. Versionamento é um recurso de buckets do S3, não de bancos relacionais."
+        },
+        {
+          "id": "d",
+          "text": "O banco precisa estar em uma subnet pública com IP público",
+          "explanation": "Incorreta. O Glue alcança bancos privados por meio da conexão na VPC, e um IP público não é necessário."
+        },
+        {
+          "id": "e",
+          "text": "O crawler precisa ser executado com a política AdministratorAccess",
+          "explanation": "Incorreta. O problema é de rede e não de privilégio, e privilégio de administrador viola o princípio do menor privilégio."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q11",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.1.5"
+      ],
+      "prompt": "A AnyCompany tem um fluxo em que um job de ingestão precisa terminar antes de o crawler rodar, e o crawler precisa terminar antes de um job de transformação. As etapas dependem umas das outras e precisam ser monitoradas em um só lugar. Qual serviço é o mais adequado para coordenar o fluxo?",
+      "options": [
+        {
+          "id": "a",
+          "text": "AWS Step Functions ou Amazon MWAA (Apache Airflow), que chamam cada etapa e controlam as dependências",
+          "explanation": "Correta. Esses serviços orquestram etapas com dependência entre elas, tentativas e monitoramento em um só lugar."
+        },
+        {
+          "id": "b",
+          "text": "Três agendas independentes, uma para cada etapa, com horários espaçados",
+          "explanation": "Incorreta. Não garante a ordem se uma etapa demorar mais que o esperado."
+        },
+        {
+          "id": "c",
+          "text": "Uma regra de Lifecycle do S3",
+          "explanation": "Incorreta. O Lifecycle muda a classe ou expira objetos e não orquestra jobs."
+        },
+        {
+          "id": "d",
+          "text": "Uma partition projection",
+          "explanation": "Incorreta. É um recurso do Athena para partições e não coordena etapas."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q12",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.2.3",
+        "1.1.5"
+      ],
+      "prompt": "O time da AnyCompany agendou um crawler do AWS Glue para rodar de hora em hora, mas os dados novos só chegam uma vez por dia. A fatura do Glue ficou maior do que o esperado. Qual é a causa e a melhor correção?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Cada execução cobra no mínimo 10 minutos de DPU; reduza a frequência para uma vez por dia, depois da chegada dos dados",
+          "explanation": "Correta. O crawler cobra por DPU-hora com mínimo de 10 minutos por execução, então 23 execuções diárias sem dados novos desperdiçam custo."
+        },
+        {
+          "id": "b",
+          "text": "O Data Catalog cobra por consulta feita pelo Athena; é preciso desligar o Athena",
+          "explanation": "Incorreta. A cobrança do crawler é separada, e desligar o Athena não resolve o custo das execuções do crawler."
+        },
+        {
+          "id": "c",
+          "text": "As execuções do crawler são gratuitas, e o custo vem do S3 Standard",
+          "explanation": "Incorreta. O crawler cobra por DPU-hora."
+        },
+        {
+          "id": "d",
+          "text": "Trocar o formato dos arquivos para JSON reduz o custo do crawler",
+          "explanation": "Incorreta. O formato não elimina o mínimo cobrado por execução."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    }
+  ]
+}
