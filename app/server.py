@@ -16,14 +16,20 @@ cada lab é um módulo. `estimated_cost_usd` não é exposto (19.4).
 import json
 import logging
 import os
+import re
+import uuid
 from pathlib import Path
 from typing import Optional
 
 from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from app.cloudformation_service import CloudFormationService
+from app import mock_exam
 from app.errors import (
     InvalidPayloadError,
+    MockExamAlreadySubmittedError,
+    MockExamNotFoundError,
+    MockExamUnavailableError,
     LabNotFoundError,
     NoInfrastructureError,
     WorkshopError,
@@ -168,6 +174,10 @@ def create_app(config: Optional[dict] = None) -> Flask:
     def index():
         return serve_index()
 
+    @app.get("/mock-exam")
+    def mock_exam_page():
+        return serve_index()
+
     @app.get("/lab/<lab_id>")
     @app.get("/lab/<lab_id>/<step_id>")
     def lab_page(lab_id, step_id=None):
@@ -292,6 +302,88 @@ def create_app(config: Optional[dict] = None) -> Flask:
                 **saved,
             }
         )
+
+    # ------------------------------------------------------------------
+    # Simulado (Requirement 18): sem AWS e sem sessão
+    # ------------------------------------------------------------------
+
+    attempt_id_re = re.compile(r"^[0-9a-f]{32}$")
+
+    def mock_summary(attempt: dict) -> dict:
+        return {k: attempt.get(k) for k in
+                ("attempt_id", "started_at", "finished_at", "score", "right", "total", "by_domain")}
+
+    @app.get("/api/mock-exam")
+    def mock_exam_info():
+        pool = mock_exam.build_pool(catalog.get_all_quizzes())
+        available = {d: 0 for d in mock_exam.DOMAIN_ORDER}
+        for item in pool.values():
+            available[item.domain] += 1
+        return jsonify(
+            {
+                "available": len(pool),
+                "available_by_domain": available,
+                "default_count": mock_exam.DEFAULT_QUESTIONS,
+                "max_count": mock_exam.MAX_QUESTIONS,
+                "duration_minutes": mock_exam.DEFAULT_DURATION_MINUTES,
+                "weights": dict(mock_exam.DOMAIN_WEIGHTS),
+                "attempts": [mock_summary(a) for a in reversed(store.get_mock_attempts())],
+            }
+        )
+
+    @app.post("/api/mock-exam")
+    def start_mock_exam():
+        """Sorteia uma tentativa sem gabarito (18.2, Property 23 e 25)."""
+        count = _json_body().get("count", mock_exam.DEFAULT_QUESTIONS)
+        if (
+            isinstance(count, bool)
+            or not isinstance(count, int)
+            or not 1 <= count <= mock_exam.MAX_QUESTIONS
+        ):
+            raise InvalidPayloadError(
+                f"count deve ser inteiro entre 1 e {mock_exam.MAX_QUESTIONS}."
+            )
+        pool = mock_exam.build_pool(catalog.get_all_quizzes())
+        if not pool:
+            raise MockExamUnavailableError("Nenhuma questão disponível para o Simulado.")
+        selection = mock_exam.select_questions(pool, count)
+        attempt = store.create_mock_attempt(uuid.uuid4().hex, selection["question_ids"])
+        message = None
+        if selection["adjusted"]:
+            message = (
+                f"O catálogo não tem questões suficientes para a distribuição padrão de "
+                f"{count} questões. A tentativa tem {len(selection['question_ids'])} "
+                "questões, completadas pelos outros domínios na ordem dos pesos."
+            )
+        return jsonify(
+            {
+                "attempt_id": attempt["attempt_id"],
+                "started_at": attempt["started_at"],
+                "duration_minutes": mock_exam.DEFAULT_DURATION_MINUTES,
+                "requested": count,
+                "by_domain": selection["by_domain"],
+                "adjusted": selection["adjusted"],
+                "message": message,
+                "questions": mock_exam.public_attempt_questions(
+                    pool, selection["question_ids"]
+                ),
+            }
+        )
+
+    @app.post("/api/mock-exam/<attempt_id>/submit")
+    def submit_mock_exam(attempt_id):
+        """Corrige no servidor e devolve a nota geral e por domínio (18.3, 18.5)."""
+        if not attempt_id_re.match(attempt_id):
+            raise MockExamNotFoundError("Tentativa do Simulado não encontrada.")
+        attempt = store.get_mock_attempt(attempt_id)
+        if attempt.get("finished_at"):
+            raise MockExamAlreadySubmittedError(
+                "Esta tentativa do Simulado já foi corrigida. Inicie uma nova tentativa."
+            )
+        pool = mock_exam.build_pool(catalog.get_all_quizzes())
+        result = mock_exam.grade_attempt(pool, attempt["question_ids"], _json_body().get("answers"))
+        saved = store.finish_mock_attempt(attempt_id, result)
+        return jsonify({**mock_summary(saved), "results": result["results"]})
 
     @app.get("/api/labs/<lab_id>/assets/<name>")
     def lab_asset(lab_id, name):
