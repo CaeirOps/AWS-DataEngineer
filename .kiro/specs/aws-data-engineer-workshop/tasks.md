@@ -695,7 +695,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
 
 ## Parte 2: Módulos (um por task, com proposta e revisão do mantenedor)
 
-- [-] 16. Módulo 00 - Fundamentos de engenharia de dados (D1, D2)
+- [x] 16. Módulo 00 - Fundamentos de engenharia de dados (D1, D2)
   - [x] 16.1 Checkpoint de proposta do Módulo 00
     - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
     - Aguardar a aprovação antes de escrever qualquer conteúdo
@@ -710,7 +710,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
   - [x] 16.5 Escrever a Verificação de conhecimento do Módulo 00
     - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
     - _Requirements: 17.1, 18.2_
-  - [ ] 16.8 Checkpoint de revisão do Módulo 00
+  - [x] 16.8 Checkpoint de revisão do Módulo 00
     - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
     - _Requirements: 7.1, 7.3, 19.4_
 
