@@ -480,33 +480,46 @@ class LabCatalog:
     # Conteúdo
     # ------------------------------------------------------------------
 
-    def _step_dir(self, lab_id: str, step_id: str) -> Path:
-        # lab_id e step_id já foram confirmados no catálogo (formato validado na carga).
-        return self._labs_dir / lab_id / "steps" / step_id
+    # Os caminhos em disco são montados só com valores do catálogo (ids
+    # carregados e validados na carga) e com nomes de arquivo constantes,
+    # nunca com o texto recebido na requisição.
 
-    def _read(self, lab_id: str, step_id: str, filename: str) -> str:
-        file = self._step_dir(lab_id, step_id) / filename
+    def _lab_and_step(self, lab_id: str, step_id: str) -> tuple[LabMetadata, StepMetadata]:
+        lab = self.get_lab(lab_id)
+        if lab is None:
+            raise LabNotFoundError(f"Lab '{lab_id}' não encontrado.")
+        for step in lab.steps:
+            if step.step_id == step_id:
+                return lab, step
+        raise StepNotFoundError(f"Step '{step_id}' não encontrado no lab '{lab_id}'.")
+
+    def _read(self, lab: LabMetadata, step: StepMetadata, filename: str) -> str:
+        file = self._labs_dir / lab.lab_id / "steps" / step.step_id / filename
         try:
             return file.read_text(encoding="utf-8")
         except OSError:
             raise StepNotFoundError(
-                f"Arquivo de conteúdo '{filename}' não encontrado no step '{step_id}' "
-                f"do lab '{lab_id}'."
+                f"Arquivo de conteúdo '{filename}' não encontrado no step "
+                f"'{step.step_id}' do lab '{lab.lab_id}'."
             )
 
-    def _task_step_and_path(self, lab_id: str, step_id: str, path: object) -> StepMetadata:
-        step = self.get_step(lab_id, step_id)
+    def _task_step_and_path(
+        self, lab_id: str, step_id: str, path: object
+    ) -> tuple[LabMetadata, StepMetadata, str]:
+        """Lab, step `task` e a Trilha como constante de `VALID_PATHS`."""
+        lab, step = self._lab_and_step(lab_id, step_id)
         if step.type != "task":
             raise StepNotFoundError(
                 f"Step '{step_id}' do lab '{lab_id}' não é do tipo task."
             )
-        if path not in VALID_PATHS:
+        trail = next((p for p in VALID_PATHS if p == path), None)
+        if trail is None:
             raise InvalidPathError(
                 f"Trilha inválida: {path!r}. Use 'console' ou 'cli'."
             )
-        if path not in (step.paths or []):
-            raise PathUnavailableError(path, (step.unavailable_paths or {}).get(path, ""))
-        return step
+        if trail not in (step.paths or []):
+            raise PathUnavailableError(trail, (step.unavailable_paths or {}).get(trail, ""))
+        return lab, step, trail
 
     def get_step_content(self, lab_id: str, step_id: str, path: str) -> str:
         """Retorna `scenario.md`, o separador e o arquivo da Trilha escolhida.
@@ -515,15 +528,15 @@ class LabCatalog:
             LabNotFoundError, StepNotFoundError (inclui step que não é task),
             InvalidPathError, PathUnavailableError.
         """
-        self._task_step_and_path(lab_id, step_id, path)
-        scenario = self._read(lab_id, step_id, "scenario.md")
-        trail = self._read(lab_id, step_id, f"{path}.md")
-        return scenario + CONTENT_SEPARATOR + trail
+        lab, step, trail = self._task_step_and_path(lab_id, step_id, path)
+        scenario = self._read(lab, step, "scenario.md")
+        instructions = self._read(lab, step, f"{trail}.md")
+        return scenario + CONTENT_SEPARATOR + instructions
 
     def get_step_hint(self, lab_id: str, step_id: str, path: str) -> str:
         """Retorna a Dica Detalhada da Trilha (`hint-console.md` ou `hint-cli.md`)."""
-        self._task_step_and_path(lab_id, step_id, path)
-        return self._read(lab_id, step_id, f"hint-{path}.md")
+        lab, step, trail = self._task_step_and_path(lab_id, step_id, path)
+        return self._read(lab, step, f"hint-{trail}.md")
 
     def get_asset(self, lab_id: str, name: str) -> tuple[Path, str]:
         """Retorna `(caminho, mimetype)` de `labs/<lab_id>/assets/<name>`.
@@ -535,14 +548,15 @@ class LabCatalog:
             LabNotFoundError: lab inexistente.
             AssetNotFoundError: nome fora da regra, fora de `assets/` ou ausente.
         """
-        if self.get_lab(lab_id) is None:
+        lab = self.get_lab(lab_id)
+        if lab is None:
             raise LabNotFoundError(f"Lab '{lab_id}' não encontrado.")
         match = _ASSET_RE.match(name) if isinstance(name, str) else None
         if match is None:
             raise AssetNotFoundError("Imagem não encontrada.")
         # O caminho vem da listagem do diretório, nunca do texto recebido: o
         # nome pedido só escolhe uma entrada que já existe em `assets/`.
-        assets_dir = (self._labs_dir / lab_id / "assets").resolve()
+        assets_dir = (self._labs_dir / lab.lab_id / "assets").resolve()
         try:
             entries = {entry.name: entry for entry in assets_dir.iterdir()}
         except OSError:
@@ -561,10 +575,10 @@ class LabCatalog:
 
     def get_step_single_content(self, lab_id: str, step_id: str) -> str:
         """Retorna `content.md` de steps info, deploy, teardown e completion."""
-        step = self.get_step(lab_id, step_id)
+        lab, step = self._lab_and_step(lab_id, step_id)
         if step.type in ("task", "quiz"):
             raise StepNotFoundError(
                 f"Step '{step_id}' do lab '{lab_id}' é do tipo {step.type} e não tem "
                 "content.md único."
             )
-        return self._read(lab_id, step_id, "content.md")
+        return self._read(lab, step, "content.md")
