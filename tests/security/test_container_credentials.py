@@ -130,3 +130,15 @@ def test_cap_drop_all_e_no_new_privileges(container):
     assert host["CapDrop"] == ["ALL"]
     assert "no-new-privileges:true" in host["SecurityOpt"] or \
         "no-new-privileges" in host["SecurityOpt"]
+
+
+def test_sessao_da_plataforma_usa_as_credenciais_do_ambiente(container):
+    """A fábrica de sessão da plataforma funciona sem profile (regressão do v0.2.1)."""
+    script = (
+        "from app.validation_service import default_session_factory as f;"
+        "c=f().get_credentials();"
+        "print(c.method, c.access_key)"
+    )
+    r = _exec(container, "python", "-c", script)
+    assert r.returncode == 0, r.stderr[-800:]
+    assert r.stdout.split() == ["env", _FICTICIAS["AWS_ACCESS_KEY_ID"]]

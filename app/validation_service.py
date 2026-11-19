@@ -27,8 +27,16 @@ _LAB_NUMBER_RE = re.compile(r"^lab-(\d+)$")
 
 
 def default_session_factory() -> boto3.Session:
-    """Cria a sessão boto3 com o profile de `AWS_PROFILE` (padrão `default`)."""
-    return boto3.Session(profile_name=os.environ.get("AWS_PROFILE", "default"))
+    """Cria a sessão boto3 da plataforma.
+
+    No container não há `AWS_PROFILE` e os arquivos de configuração apontam
+    para `/dev/null`: as credenciais temporárias chegam por variável de
+    ambiente (15D). Por isso a sessão só usa um profile nomeado quando
+    `AWS_PROFILE` está definida; sem ela, segue a cadeia padrão do SDK, que
+    lê `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_SESSION_TOKEN`.
+    """
+    profile = os.environ.get("AWS_PROFILE")
+    return boto3.Session(profile_name=profile) if profile else boto3.Session()
 
 
 def default_validator_loader(lab_id: str):
