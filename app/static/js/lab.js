@@ -110,7 +110,7 @@ function taskView(lab, step, preferred, onValidated) {
         `/api/labs/${enc(lab.lab_id)}/steps/${enc(step.step_id)}/content?path=${enc(active)}`
       );
       if (ticket !== contentTicket) return;
-      replaceContent(content, renderMarkdown(data.markdown));
+      replaceContent(content, renderMarkdown(data.markdown, { labId: lab.lab_id }));
     } catch (err) {
       if (ticket !== contentTicket) return;
       replaceContent(content, errorBanner(err, "Não foi possível carregar as instruções"));
@@ -299,7 +299,7 @@ export async function renderLab({ labId, stepId, navigate }) {
     // A tela do quiz chega com a correção no servidor (task 15N).
     panel.append(el("p", { class: "card__meta" }, "A verificação de conhecimento deste step ainda não está disponível."));
   } else {
-    panel.append(renderMarkdown(step.content));
+    panel.append(renderMarkdown(step.content, { labId }));
     if (step.type === "deploy") panel.append(createDeployPanel(labId).node);
     if (step.type === "teardown") panel.append(createTeardownPanel(labId).node);
     if (step.type === "completion") panel.append(completionView(lab));
