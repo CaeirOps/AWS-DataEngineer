@@ -126,6 +126,18 @@ def test_symlink_escaping_assets_dir_is_refused(copied_labs, tmp_path):
             catalog.get_asset(LAB, name)
 
 
+def test_symlink_inside_assets_dir_is_refused(copied_labs):
+    """Mesmo apontando para outro arquivo de `assets/`, link simbólico não é servido."""
+    assets = copied_labs / LAB / "assets"
+    (assets / "pagina.html").write_text("<script>alert(1)</script>", encoding="utf-8")
+    os.symlink(assets / "pagina.html", assets / "atalho.svg")
+    os.symlink(assets / "fluxo.svg", assets / "copia.svg")
+    catalog = LabCatalog(str(copied_labs))
+    for name in ("atalho.svg", "copia.svg"):
+        with pytest.raises(AssetNotFoundError):
+            catalog.get_asset(LAB, name)
+
+
 def test_directory_with_asset_name_is_refused(copied_labs):
     (copied_labs / LAB / "assets" / "pasta.svg").mkdir()
     with pytest.raises(AssetNotFoundError):
