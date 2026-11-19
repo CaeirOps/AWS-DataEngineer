@@ -1,0 +1,3 @@
+- O parâmetro é `--versioning-configuration Status=Enabled`, com E maiúsculo.
+- `get-bucket-versioning` sem saída significa que o versionamento nunca foi ativado.
+- Erro `AccessDenied`: confira se o `AWS_PROFILE` é o mesmo que você usou no `start.py`.

@@ -1,0 +1,4 @@
+- O nome da pasta da partição é exatamente `dt=2026-03-08`, com o sinal de igual e sem espaços.
+- Use **Move**, não **Copy**: com Copy, os originais continuam em `entrada/`.
+- Se uma pasta foi criada com o nome errado, você pode apagá-la e criar de novo.
+- Se não encontra o bucket, troque a Region no canto superior direito para a Region do workshop.

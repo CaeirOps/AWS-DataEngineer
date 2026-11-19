@@ -714,28 +714,28 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
     - _Requirements: 7.1, 7.3, 19.4_
 
-- [ ] 17. Módulo 01 - S3 e data lake (D2, D1)
-  - [ ] 17.1 Checkpoint de proposta do Módulo 01
+- [-] 17. Módulo 01 - S3 e data lake (D2, D1)
+  - [x] 17.1 Checkpoint de proposta do Módulo 01
     - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
     - Aguardar a aprovação antes de escrever qualquer conteúdo
     - Depende do checkpoint de revisão do Módulo 00
     - _Requirements: 7.1, 7.6, 10.1, 10.3_
-  - [ ] 17.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
+  - [x] 17.2 Criar `labs/lab-01/metadata.json` e `cloudformation/stack.yaml`
     - Preencher `skills`, `services`, `dea_domains`, `dea_tasks`, `steps` (com `skills` por step e `optional`/`cost_note` nas práticas opcionais), `residual_resources` e `cost_notice` com os serviços cobrados e as páginas oficiais de preços
     - _Requirements: 4.3, 4.4, 6.1, 19.3, 20.2_
-  - [ ] 17.3 Escrever o conteúdo teórico em `labs/lab-01/steps/`
+  - [x] 17.3 Escrever o conteúdo teórico em `labs/lab-01/steps/`
     - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
     - _Requirements: 4.5, 4.6, 4.7, 4.8_
-  - [ ] 17.4 Escrever as práticas (steps `task`) do Módulo 01
+  - [x] 17.4 Escrever as práticas (steps `task`) do Módulo 01
     - `scenario.md`, `console.md`, `cli.md`, `hint-console.md` e `hint-cli.md` seguindo 11.7 e 11.8; práticas de serviço caro como `optional: true` com aviso de custo reforçado
     - _Requirements: 4.1, 11.1, 11.7, 11.8, 19.1, 19.5_
-  - [ ] 17.5 Escrever a Verificação de conhecimento do Módulo 01
+  - [x] 17.5 Escrever a Verificação de conhecimento do Módulo 01
     - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
     - _Requirements: 17.1, 18.2_
-  - [ ] 17.6 Criar `app/validators/lab01.py`
+  - [x] 17.6 Criar `app/validators/lab01.py`
     - `STEP_VALIDATORS` e `validate_step` para os steps `task`, com `@_safe_validate`
     - _Requirements: 5.1, 5.2, 5.3, 5.6_
-  - [ ]* 17.7 Escrever testes de unidade do validador do Módulo 01
+  - [x]* 17.7 Escrever testes de unidade do validador do Módulo 01
     - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
   - [ ] 17.8 Checkpoint de revisão do Módulo 01

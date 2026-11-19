@@ -1,0 +1,4 @@
+- Erro `AccessPointAlreadyOwnedByYou`: o Access Point já existe. Siga para o passo 2.
+- Confira as variáveis com `echo "$ANALISTA" "$AP_ARN"` antes de criar o arquivo.
+- O `put-access-point-policy` substitui a política inteira. Rode de novo com o arquivo corrigido.
+- Erro `MalformedPolicy`: valide o arquivo com `python3 -m json.tool politica-analytics.json`.

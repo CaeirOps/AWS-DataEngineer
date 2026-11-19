@@ -1,0 +1,3 @@
+- Sem **Show versions**, o console só cria delete markers. Ligue a chave para ver e apagar as versões.
+- Apague as duas linhas de `cliente-0042.json`: a do delete marker e a da versão com os dados.
+- Se apagou outro cliente por engano, ligue **Show versions** e apague o delete marker dele: a versão anterior volta.

@@ -1,0 +1,4 @@
+- Erro `Unable to validate the following destination configurations`: falta a permissão do passo 1, ou ela foi criada com outro bucket no `--source-arn`.
+- Erro `ResourceConflictException` no `add-permission`: a permissão já existe. Siga para o passo 2.
+- Confira a notificação com `aws s3api get-bucket-notification-configuration --bucket "$RAW"`.
+- Sem resumo: rode `aws logs tail /aws/lambda/workshop-lab-01-indexador --since 15m` e procure erros.

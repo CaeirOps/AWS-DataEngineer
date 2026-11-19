@@ -1,0 +1,464 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Workshop AWS Data Engineer, Modulo 01 (S3 e data lake). Cria os buckets raw e
+  curated da AnyCompany com dados ficticios, a Lambda indexador que o aluno liga
+  a um evento do S3 e a role analista usada no Access Point. Tudo e removido no
+  teardown: a funcao de preparacao esvazia os buckets e apaga os Access Points.
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    why: >-
+      Ambiente efemero de aprendizado. O aluno configura versionamento,
+      Lifecycle, notificacoes, exclusao de dados e Access Point; a stack entrega
+      so o ponto de partida seguro.
+    must:
+      - Os nomes dos recursos seguem workshop-lab-01-* porque os validadores e as instrucoes de CLI os calculam a partir da conta e da Region.
+      - Nenhum recurso pode sobrar depois do delete da stack, exceto os criados pelo aluno fora dela (listados em residual_resources).
+
+Resources:
+  # ------------------------------------------------------------------ Buckets
+  RawBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Camada raw do data lake, recebe os arquivos originais.
+        must:
+          - Versionamento desligado na criacao, porque ativar e a tarefa do step 06.
+          - DeletionPolicy Delete, porque o teardown do workshop precisa remover o bucket.
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-raw-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  RawBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref RawBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: NegarSemTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt RawBucket.Arn
+              - !Sub "${RawBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  CuratedBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Camada curated, recebe os resumos gravados pela Lambda indexador.
+        must:
+          - DeletionPolicy Delete, porque o teardown do workshop precisa remover o bucket.
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-curated-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  CuratedBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: >-
+          Delega o controle de leitura aos Access Points da propria conta, como
+          na documentacao do S3, para a politica do Access Point analytics
+          (step 14) ser a que decide o acesso.
+        must:
+          - A delegacao fica limitada a leitura (GetObject e ListBucket) e a conta dona do bucket.
+    Properties:
+      Bucket: !Ref CuratedBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: NegarSemTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt CuratedBucket.Arn
+              - !Sub "${CuratedBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+          - Sid: DelegarLeituraAosAccessPointsDaConta
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !GetAtt CuratedBucket.Arn
+              - !Sub "${CuratedBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                s3:DataAccessPointAccount: !Ref AWS::AccountId
+
+  # ------------------------------------------------------- Lambda indexador
+  IndexadorLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-indexador"
+      RetentionInDays: 7
+
+  IndexadorRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Privilegio minimo da Lambda indexador.
+        must:
+          - Le so raw/pedidos/ e grava so curated/resumos/.
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: indexador
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: LerPedidos
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${RawBucket.Arn}/pedidos/*"
+              - Sid: GravarResumos
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "${CuratedBucket.Arn}/resumos/*"
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "${IndexadorLogGroup.Arn}"
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  IndexadorFunction:
+    Type: AWS::Lambda::Function
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: >-
+          Funcao pronta que o aluno liga a S3 Event Notifications no step 10.
+          Para cada CSV novo em pedidos/, grava um resumo idempotente em
+          curated/resumos/ (mesma chave, sobrescrita).
+        must:
+          - Sem permissao de invocacao pelo S3 na stack; a trilha CLI do step 10 ensina lambda add-permission com SourceArn e SourceAccount.
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-indexador"
+      Description: Resume cada CSV de pedidos e grava o resultado na camada curated
+      Runtime: python3.13
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 128
+      Timeout: 30
+      Role: !GetAtt IndexadorRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref IndexadorLogGroup
+      Environment:
+        Variables:
+          CURATED_BUCKET: !Ref CuratedBucket
+      Code:
+        ZipFile: |
+          import csv, datetime, io, json, os, urllib.parse
+          import boto3
+
+          s3 = boto3.client("s3")
+          DESTINO = os.environ["CURATED_BUCKET"]
+
+          def handler(event, context):
+              gravados = []
+              for registro in event.get("Records", []):
+                  bucket = registro["s3"]["bucket"]["name"]
+                  chave = urllib.parse.unquote_plus(registro["s3"]["object"]["key"])
+                  if not (chave.startswith("pedidos/") and chave.endswith(".csv")):
+                      continue
+                  corpo = s3.get_object(Bucket=bucket, Key=chave)["Body"].read().decode("utf-8")
+                  linhas = list(csv.DictReader(io.StringIO(corpo)))
+                  total = sum(float(l["valor"]) for l in linhas if l.get("status") == "pago")
+                  resumo = {
+                      "origem": f"s3://{bucket}/{chave}",
+                      "linhas": len(linhas),
+                      "total_pago": round(total, 2),
+                      "processado_em": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+                  }
+                  destino = "resumos/" + chave[: -len(".csv")] + ".json"
+                  s3.put_object(Bucket=DESTINO, Key=destino, Body=json.dumps(resumo, ensure_ascii=False).encode("utf-8"),
+                                ContentType="application/json")
+                  print(json.dumps({"resumo_gravado": destino, "linhas": resumo["linhas"]}))
+                  gravados.append(destino)
+              return {"gravados": gravados}
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  # ------------------------------------------------------------ Role analista
+  AnalistaRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: >-
+          Principal autorizado pelo aluno na politica do Access Point analytics
+          (step 14). Nao tem permissoes proprias de proposito: o acesso vem do
+          Access Point.
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-analista-${AWS::Region}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+            Action: sts:AssumeRole
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  # ------------------------------------------- Funcao de preparacao e limpeza
+  PreparacaoLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-preparacao"
+      RetentionInDays: 7
+
+  PreparacaoRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Grava os dados ficticios na criacao e esvazia os buckets e os Access Points no delete.
+        must:
+          - Politicas inline, para continuarem existindo enquanto o custom resource e excluido.
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: preparacao
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: GravarDadosFicticios
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "${RawBucket.Arn}/entrada/*"
+              - Sid: ListarParaEsvaziar
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                Resource:
+                  - !GetAtt RawBucket.Arn
+                  - !GetAtt CuratedBucket.Arn
+              - Sid: ApagarVersoes
+                Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                Resource:
+                  - !Sub "${RawBucket.Arn}/*"
+                  - !Sub "${CuratedBucket.Arn}/*"
+              - Sid: ListarAccessPoints
+                Effect: Allow
+                Action: s3:ListAccessPoints
+                Resource: "*"
+              - Sid: ApagarAccessPointsDaRegion
+                Effect: Allow
+                Action: s3:DeleteAccessPoint
+                Resource: !Sub "arn:${AWS::Partition}:s3:${AWS::Region}:${AWS::AccountId}:accesspoint/*"
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "${PreparacaoLogGroup.Arn}"
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  PreparacaoFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-preparacao"
+      Description: Dados ficticios na criacao; esvazia buckets e Access Points no delete
+      Runtime: python3.13
+      Architectures:
+        - arm64
+      Handler: index.handler
+      MemorySize: 128
+      Timeout: 300
+      Role: !GetAtt PreparacaoRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref PreparacaoLogGroup
+      Code:
+        ZipFile: |
+          import json, urllib.request
+          import boto3
+
+          s3 = boto3.client("s3")
+          DATAS = ["2026-03-08", "2026-03-09", "2026-03-10"]
+          LOJAS = ["04", "09", "17", "23"]
+
+          def pedidos_csv(dia, n):
+              linhas = ["id_pedido,id_loja,id_cliente,valor,status,dt"]
+              for i in range(1, 13):
+                  valor = round(19.9 + (i * 7.35 + n * 3.1) % 180, 2)
+                  status = "cancelado" if i % 5 == 0 else "pago"
+                  linhas.append(f"{n}{i:03d},{LOJAS[i % 4]},cliente-00{41 + i % 3},{valor:.2f},{status},{dia}")
+              return "\n".join(linhas) + "\n"
+
+          def cliente_json(num):
+              return json.dumps({"id_cliente": f"cliente-00{num}", "nome": f"Cliente Ficticio {num}",
+                                 "email": f"cliente00{num}@example.com", "cidade": "Cidade Exemplo",
+                                 "aceita_marketing": num % 2 == 1}, ensure_ascii=False)
+
+          def preparar(raw):
+              for n, dia in enumerate(DATAS, start=1):
+                  s3.put_object(Bucket=raw, Key=f"entrada/pedidos-{dia}.csv", Body=pedidos_csv(dia, n).encode(),
+                                ContentType="text/csv")
+              for num in (41, 42, 43):
+                  s3.put_object(Bucket=raw, Key=f"entrada/cliente-00{num}.json", Body=cliente_json(num).encode(),
+                                ContentType="application/json")
+
+          def esvaziar(bucket):
+              while True:
+                  try:
+                      page = s3.list_object_versions(Bucket=bucket, MaxKeys=1000)
+                  except s3.exceptions.NoSuchBucket:
+                      return
+                  itens = [{"Key": v["Key"], "VersionId": v["VersionId"]}
+                           for v in page.get("Versions", []) + page.get("DeleteMarkers", [])]
+                  if not itens:
+                      return
+                  s3.delete_objects(Bucket=bucket, Delete={"Objects": itens, "Quiet": True})
+
+          def apagar_access_points(conta, buckets):
+              s3c = boto3.client("s3control")
+              for bucket in buckets:
+                  token = None
+                  while True:
+                      args = {"AccountId": conta, "Bucket": bucket}
+                      if token:
+                          args["NextToken"] = token
+                      resp = s3c.list_access_points(**args)
+                      for ap in resp.get("AccessPointList", []):
+                          s3c.delete_access_point(AccountId=conta, Name=ap["Name"])
+                      token = resp.get("NextToken")
+                      if not token:
+                          break
+
+          def responder(event, context, status, motivo):
+              corpo = json.dumps({
+                  "Status": status, "Reason": f"{motivo} (log: {context.log_stream_name})"[:1000],
+                  "PhysicalResourceId": event.get("PhysicalResourceId") or "workshop-lab-01-dados",
+                  "StackId": event["StackId"], "RequestId": event["RequestId"],
+                  "LogicalResourceId": event["LogicalResourceId"]}).encode()
+              req = urllib.request.Request(event["ResponseURL"], data=corpo, method="PUT",
+                                           headers={"Content-Type": "", "Content-Length": str(len(corpo))})
+              urllib.request.urlopen(req, timeout=30)
+
+          def handler(event, context):
+              props = event["ResourceProperties"]
+              try:
+                  if event["RequestType"] == "Create":
+                      preparar(props["RawBucket"])
+                  elif event["RequestType"] == "Delete":
+                      apagar_access_points(props["AccountId"], [props["RawBucket"], props["CuratedBucket"]])
+                      for bucket in (props["RawBucket"], props["CuratedBucket"]):
+                          esvaziar(bucket)
+                  responder(event, context, "SUCCESS", "ok")
+              except Exception as exc:
+                  print(f"erro: {type(exc).__name__}: {exc}")
+                  responder(event, context, "FAILED", f"{type(exc).__name__}: {exc}")
+      Tags:
+        - Key: Project
+          Value: aws-data-engineer-workshop
+
+  DadosFicticios:
+    Type: Custom::DadosFicticios
+    DependsOn:
+      - PreparacaoLogGroup
+      - RawBucketPolicy
+      - CuratedBucketPolicy
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: >-
+          Na criacao grava pedidos e clientes ficticios em raw/entrada/. No
+          delete roda antes dos buckets (depende deles) e os esvazia, inclusive
+          versoes e delete markers, e apaga os Access Points.
+    Properties:
+      ServiceToken: !GetAtt PreparacaoFunction.Arn
+      ServiceTimeout: 300
+      RawBucket: !Ref RawBucket
+      CuratedBucket: !Ref CuratedBucket
+      AccountId: !Ref AWS::AccountId
+
+Outputs:
+  RawBucket:
+    Description: Bucket da camada raw
+    Value: !Ref RawBucket
+  CuratedBucket:
+    Description: Bucket da camada curated
+    Value: !Ref CuratedBucket
+  IndexadorFunctionArn:
+    Description: ARN da Lambda indexador
+    Value: !GetAtt IndexadorFunction.Arn
+  AnalistaRoleArn:
+    Description: ARN da role analista, usada no Access Point
+    Value: !GetAtt AnalistaRole.Arn

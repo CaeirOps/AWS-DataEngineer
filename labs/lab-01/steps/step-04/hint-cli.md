@@ -1,0 +1,4 @@
+- Confira as variáveis com `echo "$RAW"`. Se estiver vazio, rode de novo o bloco de variáveis.
+- Erro `NoSuchBucket`: o `AWS_REGION` é diferente da Region do workshop.
+- Para ver o que sobrou em `entrada/`: `aws s3 ls "s3://${RAW}/entrada/"`.
+- Para corrigir um arquivo no lugar errado, mova de novo com `aws s3 mv <origem> <destino>`.

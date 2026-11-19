@@ -1,0 +1,4 @@
+- As classes são escritas como `STANDARD_IA` e `GLACIER_IR`.
+- O campo das versões antigas é `NoncurrentVersionExpiration` com `NoncurrentDays`, não `Days`.
+- Erro `MalformedXML`: confira o JSON com `python3 -m json.tool lifecycle-pedidos.json`.
+- Rode o `get-bucket-lifecycle-configuration` para ver o que ficou gravado.

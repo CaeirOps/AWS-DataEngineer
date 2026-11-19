@@ -1,0 +1,4 @@
+- O prefixo é `pedidos/`, com a barra no fim. Sem a barra, a regra também valeria para chaves como `pedidos-antigos.csv`.
+- A ação de versões antigas é **Permanently delete noncurrent versions of objects**, e o número vai em **Days after objects become noncurrent**.
+- Confira se a regra ficou com o status **Enabled** na lista de regras.
+- Se errou um valor, edite a regra existente em vez de criar outra.

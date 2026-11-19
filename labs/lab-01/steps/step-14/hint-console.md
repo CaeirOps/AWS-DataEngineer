@@ -1,0 +1,4 @@
+- O `Resource` usa o ARN do Access Point com `/object/resumos/*`, e não o ARN do bucket.
+- O ARN da role tem a Region no fim do nome: `workshop-lab-01-analista-<region>`.
+- Erro de política inválida: confira se trocou todos os `<conta>` e `<region>` e se as aspas são retas.
+- Para corrigir a política, abra o Access Point, aba **Permissions**, e edite a **Access point policy**.
