@@ -1,0 +1,64 @@
+{
+  "lab_id": "lab-01",
+  "title": "Módulo 01 - S3 e data lake",
+  "description": "Monte o data lake da AnyCompany no Amazon S3: camadas e partições, versionamento, Lifecycle, eventos com AWS Lambda, exclusão de dados por solicitação e acesso com S3 Access Points.",
+  "difficulty": "iniciante",
+  "estimated_duration_minutes": 120,
+  "dea_domains": ["D2", "D1", "D3", "D4"],
+  "dea_tasks": ["1.1", "2.1", "2.3", "3.1", "4.1"],
+  "services": ["Amazon S3", "AWS Lambda", "Amazon CloudWatch Logs", "AWS IAM", "AWS CloudFormation"],
+  "skills": ["1.1.2", "1.1.6", "2.1.1", "2.3.2", "2.3.3", "2.3.4", "2.3.5", "2.3.6", "3.1.8", "4.1.5"],
+  "has_infrastructure": true,
+  "cost_notice": {
+    "services": [
+      {"name": "Amazon S3", "pricing_url": "https://aws.amazon.com/s3/pricing/"},
+      {"name": "AWS Lambda", "pricing_url": "https://aws.amazon.com/lambda/pricing/"},
+      {"name": "Amazon CloudWatch Logs", "pricing_url": "https://aws.amazon.com/cloudwatch/pricing/"}
+    ]
+  },
+  "prerequisites": {
+    "hard": [
+      "Ambiente do workshop no ar (python start.py) com uma sessão AWS válida",
+      "Permissão na conta para criar buckets S3, funções Lambda, roles do IAM e stacks CloudFormation"
+    ],
+    "recommended": [
+      "Módulo 00 - Fundamentos de engenharia de dados",
+      "AWS CLI v2 configurada no seu computador, para a trilha CLI"
+    ]
+  },
+  "steps": [
+    {"step_id": "step-01", "title": "Objetivos e cenário", "type": "info",
+     "skills": ["1.1.2", "1.1.6", "2.1.1", "2.3.2", "2.3.3", "2.3.4", "2.3.5", "2.3.6", "3.1.8", "4.1.5"]},
+    {"step_id": "step-02", "title": "Deploy do ambiente", "type": "deploy"},
+    {"step_id": "step-03", "title": "O S3 como base do data lake", "type": "info", "skills": ["2.1.1", "1.1.2"]},
+    {"step_id": "step-04", "title": "Organizar as camadas e as partições", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.1.1", "1.1.2"]},
+    {"step_id": "step-05", "title": "Versionamento, proteção e resiliência", "type": "info", "skills": ["2.3.4", "2.3.6"]},
+    {"step_id": "step-06", "title": "Ativar o versionamento", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.3.4"]},
+    {"step_id": "step-07", "title": "S3 Lifecycle", "type": "info", "skills": ["2.3.2", "2.3.3"]},
+    {"step_id": "step-08", "title": "Criar a regra de Lifecycle", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.3.2", "2.3.3"]},
+    {"step_id": "step-09", "title": "Eventos do S3 e AWS Lambda", "type": "info", "skills": ["1.1.6", "3.1.8", "1.1.2"]},
+    {"step_id": "step-10", "title": "Processar cada arquivo novo", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["1.1.6", "3.1.8"]},
+    {"step_id": "step-11", "title": "Exclusão de dados", "type": "info", "skills": ["2.3.5", "2.3.4"]},
+    {"step_id": "step-12", "title": "Atender um pedido de exclusão", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.3.5"]},
+    {"step_id": "step-13", "title": "Controle de acesso e S3 Access Points", "type": "info", "skills": ["4.1.5"]},
+    {"step_id": "step-14", "title": "Criar o Access Point do time de análise", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["4.1.5"]},
+    {"step_id": "step-15", "title": "Replicação entre Regions", "type": "task",
+     "hint_threshold": 2, "paths": ["console", "cli"], "skills": ["2.3.6"], "optional": true,
+     "cost_note": "A replicação entre Regions cobra o armazenamento das cópias na outra Region, a transferência de dados entre Regions e as requisições de replicação. O bucket de destino e a role de replicação ficam fora da stack: remova-os manualmente ao terminar."},
+    {"step_id": "step-16", "title": "Verificação de conhecimento", "type": "quiz", "pass_score": 0.7,
+     "skills": ["1.1.2", "1.1.6", "2.1.1", "2.3.2", "2.3.3", "2.3.4", "2.3.5", "2.3.6", "3.1.8", "4.1.5"]},
+    {"step_id": "step-17", "title": "Finalizar o módulo", "type": "teardown"},
+    {"step_id": "step-18", "title": "Resumo e próximos passos", "type": "completion"}
+  ],
+  "residual_resources": [
+    "Prática opcional: o bucket de destino da replicação, na outra Region, com todas as versões dos objetos",
+    "Prática opcional: a role do IAM de replicação criada pelo console (nome começando com s3crr_role_for_) ou por você na CLI",
+    "Arquivos locais criados na trilha CLI (por exemplo politica-analytics.json)"
+  ]
+}

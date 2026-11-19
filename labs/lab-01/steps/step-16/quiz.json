@@ -1,0 +1,440 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.1.1"
+      ],
+      "prompt": "A AnyCompany guarda no Amazon S3 as imagens de campanhas de marketing. Algumas são acessadas todo dia por semanas, outras quase nunca, e não dá para prever qual será o caso. O time quer reduzir o custo sem criar regras nem perder desempenho. Qual classe de armazenamento atende melhor?",
+      "options": [
+        {
+          "id": "a",
+          "text": "S3 Intelligent-Tiering",
+          "explanation": "Correta. Ela move cada objeto entre as camadas de acesso conforme o uso real, sem taxa de leitura, o que serve para padrões de acesso imprevisíveis."
+        },
+        {
+          "id": "b",
+          "text": "S3 Standard-IA",
+          "explanation": "Incorreta. Ela cobra por GB lido e tem duração mínima de 30 dias. As imagens muito acessadas ficariam mais caras."
+        },
+        {
+          "id": "c",
+          "text": "S3 Glacier Flexible Retrieval",
+          "explanation": "Incorreta. Os objetos precisam ser restaurados antes da leitura, o que leva minutos ou horas."
+        },
+        {
+          "id": "d",
+          "text": "S3 One Zone-IA",
+          "explanation": "Incorreta. Guarda em uma única zona e cobra por GB lido. Não resolve o acesso imprevisível."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "multiple",
+      "domain": "D2",
+      "skills": [
+        "2.3.2",
+        "2.3.3"
+      ],
+      "prompt": "Os logs de vendas da AnyCompany são consultados com frequência nos primeiros 30 dias. Depois, raramente, mas quando alguém consulta precisa da resposta em milissegundos. Pela política da empresa, os logs são apagados depois de 1 ano. Qual combinação atende com o menor esforço operacional? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Uma regra de Lifecycle com transição para S3 Glacier Instant Retrieval aos 30 dias",
+          "explanation": "Correta. O Glacier Instant Retrieval é para dados raramente acessados que precisam de leitura em milissegundos, e o Lifecycle faz a transição sem código."
+        },
+        {
+          "id": "b",
+          "text": "Na mesma regra de Lifecycle, a expiração dos objetos aos 365 dias",
+          "explanation": "Correta. A expiração do Lifecycle apaga os logs no fim da retenção, sem nenhum job."
+        },
+        {
+          "id": "c",
+          "text": "Uma função Lambda agendada todo dia que copia os logs para o Glacier Instant Retrieval e apaga os originais",
+          "explanation": "Incorreta. Funciona, mas exige código, agendamento e monitoramento para algo que o Lifecycle faz sozinho."
+        },
+        {
+          "id": "d",
+          "text": "Uma regra de Lifecycle com transição para S3 Glacier Deep Archive aos 30 dias",
+          "explanation": "Incorreta. O Deep Archive exige restaurar os objetos antes de ler, o que leva horas."
+        },
+        {
+          "id": "e",
+          "text": "Ativar o versionamento no bucket",
+          "explanation": "Incorreta. O versionamento protege contra exclusão acidental, mas não muda a classe nem apaga dados antigos."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.3.3",
+        "2.3.4"
+      ],
+      "prompt": "Um bucket versionado da AnyCompany tem uma regra de Lifecycle que expira os objetos de `temp/` depois de 7 dias. Meses depois, o espaço ocupado por `temp/` continua crescendo, embora a listagem normal mostre poucos objetos. Qual é a causa mais provável e a correção?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Em bucket versionado, a expiração cria delete markers e as versões ficam noncurrent; falta uma ação NoncurrentVersionExpiration na regra",
+          "explanation": "Correta. A expiração da versão atual só cria o delete marker. As versões antigas continuam ocupando espaço até uma ação de exclusão de versões antigas."
+        },
+        {
+          "id": "b",
+          "text": "A regra de Lifecycle só roda quando o versionamento está suspenso; é preciso suspender o versionamento",
+          "explanation": "Incorreta. As regras de Lifecycle funcionam em buckets versionados. Suspender o versionamento não apaga as versões que já existem."
+        },
+        {
+          "id": "c",
+          "text": "O Lifecycle não funciona com prefixos; é preciso aplicar a regra ao bucket inteiro",
+          "explanation": "Incorreta. Filtrar por prefixo é o uso mais comum do Lifecycle."
+        },
+        {
+          "id": "d",
+          "text": "Os objetos foram para o Glacier e a listagem não mostra objetos arquivados",
+          "explanation": "Incorreta. A regra só tem expiração, sem transição, e objetos arquivados aparecem na listagem normal."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.3.4"
+      ],
+      "prompt": "Um analista da AnyCompany sobrescreveu por engano um arquivo de preços no Amazon S3. O time quer conseguir recuperar o conteúdo anterior em situações como essa, sem impedir as exclusões legítimas do dia a dia. O que deve ser feito?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ativar o versionamento do bucket",
+          "explanation": "Correta. Com o versionamento, cada sobrescrita guarda a versão anterior, que pode ser restaurada."
+        },
+        {
+          "id": "b",
+          "text": "Ativar o S3 Object Lock em modo compliance",
+          "explanation": "Incorreta. O Object Lock em modo compliance impede qualquer exclusão até o fim da retenção, o que bloquearia as exclusões legítimas."
+        },
+        {
+          "id": "c",
+          "text": "Ativar a criptografia SSE-KMS",
+          "explanation": "Incorreta. A criptografia protege o conteúdo contra acesso indevido, mas não guarda versões anteriores."
+        },
+        {
+          "id": "d",
+          "text": "Ativar o Block Public Access",
+          "explanation": "Incorreta. Ele bloqueia acesso público, mas não protege contra sobrescrita por usuários autorizados."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q5",
+      "type": "multiple",
+      "domain": "D2",
+      "skills": [
+        "2.3.6"
+      ],
+      "prompt": "A AnyCompany precisa de uma cópia automática dos novos objetos de um bucket em outra Region, para recuperação de desastre. Quais itens são necessários para configurar a replicação entre Regions (CRR)? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Versionamento ativado no bucket de origem e no de destino",
+          "explanation": "Correta. A replicação do S3 exige o versionamento nos dois buckets."
+        },
+        {
+          "id": "b",
+          "text": "Uma role do IAM que o S3 assume para ler da origem e gravar no destino",
+          "explanation": "Correta. A regra de replicação informa a role com as permissões de leitura na origem e de replicação no destino."
+        },
+        {
+          "id": "c",
+          "text": "O S3 Object Lock ativado no bucket de destino",
+          "explanation": "Incorreta. O Object Lock é opcional e não é exigido pela replicação."
+        },
+        {
+          "id": "d",
+          "text": "Os dois buckets na mesma Region",
+          "explanation": "Incorreta. Na mesma Region, a replicação é a SRR. A CRR é justamente entre Regions diferentes."
+        },
+        {
+          "id": "e",
+          "text": "Nada mais: a regra replica sozinha todos os objetos que já existiam no bucket",
+          "explanation": "Incorreta. A regra replica só os objetos novos. Os existentes exigem o S3 Batch Replication."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q6",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.3.5"
+      ],
+      "prompt": "Por exigência regulatória, as notas fiscais da AnyCompany precisam ficar guardadas por 7 anos sem que ninguém consiga apagá-las ou alterá-las, nem mesmo o usuário root da conta. Qual recurso atende?",
+      "options": [
+        {
+          "id": "a",
+          "text": "S3 Object Lock em modo compliance, com retenção de 7 anos",
+          "explanation": "Correta. No modo compliance, nenhuma versão pode ser apagada ou alterada até o fim da retenção, por nenhum usuário, inclusive o root."
+        },
+        {
+          "id": "b",
+          "text": "S3 Object Lock em modo governance, com retenção de 7 anos",
+          "explanation": "Incorreta. No modo governance, usuários com a permissão s3:BypassGovernanceRetention podem remover a trava."
+        },
+        {
+          "id": "c",
+          "text": "Versionamento com MFA Delete",
+          "explanation": "Incorreta. O MFA Delete dificulta a exclusão de versões, mas quem tem o MFA do root ainda pode apagar."
+        },
+        {
+          "id": "d",
+          "text": "Uma bucket policy que nega s3:DeleteObject a todos",
+          "explanation": "Incorreta. Um administrador pode alterar ou remover a bucket policy e depois apagar os objetos."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q7",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.3.5",
+        "2.3.4"
+      ],
+      "prompt": "Um cliente da AnyCompany pediu a exclusão dos seus dados. O arquivo dele está em um bucket com versionamento ativado e foi sobrescrito duas vezes. Como garantir a exclusão definitiva?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Apagar cada versão do objeto informando o VersionId, e também o delete marker, se houver",
+          "explanation": "Correta. Em bucket versionado, só a exclusão com VersionId remove os dados de forma definitiva."
+        },
+        {
+          "id": "b",
+          "text": "Executar aws s3 rm no objeto",
+          "explanation": "Incorreta. Sem VersionId, o S3 só cria um delete marker, e as três versões com os dados continuam guardadas."
+        },
+        {
+          "id": "c",
+          "text": "Suspender o versionamento e depois apagar o objeto",
+          "explanation": "Incorreta. Suspender não remove as versões que já existem. A exclusão sem VersionId continua deixando as versões antigas."
+        },
+        {
+          "id": "d",
+          "text": "Criar uma regra de Lifecycle que expira o objeto em 1 dia",
+          "explanation": "Incorreta. A expiração cria um delete marker sem apagar as versões antigas, e a ação é assíncrona. Não atende um pedido de exclusão."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q8",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.1.6",
+        "1.1.2"
+      ],
+      "prompt": "Os fornecedores da AnyCompany enviam arquivos CSV a qualquer hora para o prefixo `estoque/` de um bucket. Cada arquivo precisa ser processado por uma função Lambda logo que chega, com o menor esforço operacional. O que o time deve configurar?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Uma S3 Event Notification para eventos de criação de objetos, com prefixo estoque/ e sufixo .csv, tendo a Lambda como destino",
+          "explanation": "Correta. A notificação chama a Lambda na hora, com filtro por prefixo e sufixo, sem agendamento nem código de listagem."
+        },
+        {
+          "id": "b",
+          "text": "Uma regra do EventBridge Scheduler que chama a Lambda a cada 5 minutos para listar os arquivos novos",
+          "explanation": "Incorreta. Exige controlar o que já foi processado e adiciona até 5 minutos de atraso."
+        },
+        {
+          "id": "c",
+          "text": "Um relatório diário do S3 Inventory com a lista de objetos",
+          "explanation": "Incorreta. O Inventory é gerado uma vez por dia ou por semana, não serve para processar na chegada."
+        },
+        {
+          "id": "d",
+          "text": "Uma trilha do AWS CloudTrail com eventos de dados do bucket, lida pela Lambda a cada hora",
+          "explanation": "Incorreta. O CloudTrail registra as chamadas para auditoria e não é o mecanismo de gatilho mais simples nem o mais rápido."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q9",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.1.6"
+      ],
+      "prompt": "Quando um arquivo de pedidos chega ao S3, a AnyCompany precisa iniciar uma Step Function e, ao mesmo tempo, chamar uma Lambda de auditoria, só para arquivos maiores que 1 MB. Qual solução atende?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ativar o envio de eventos do bucket para o Amazon EventBridge e criar regras com filtro pelo tamanho do objeto, uma para cada destino",
+          "explanation": "Correta. O EventBridge aceita vários destinos para o mesmo evento e filtra por qualquer campo, inclusive o tamanho."
+        },
+        {
+          "id": "b",
+          "text": "Criar duas S3 Event Notifications com o mesmo prefixo e o mesmo tipo de evento, uma para cada destino",
+          "explanation": "Incorreta. O S3 não aceita notificações com filtros sobrepostos para o mesmo tipo de evento, e o filtro só vê prefixo e sufixo."
+        },
+        {
+          "id": "c",
+          "text": "Usar uma S3 Event Notification com filtro de tamanho para a Step Function",
+          "explanation": "Incorreta. As S3 Event Notifications filtram só por prefixo e sufixo, e não têm a Step Function como destino direto."
+        },
+        {
+          "id": "d",
+          "text": "Configurar a replicação do bucket para disparar os dois destinos",
+          "explanation": "Incorreta. A replicação copia objetos entre buckets e não dispara processamento."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q10",
+      "type": "multiple",
+      "domain": "D3",
+      "skills": [
+        "3.1.8"
+      ],
+      "prompt": "Uma Lambda da AnyCompany processa cada arquivo novo do S3. Às vezes o mesmo arquivo é processado duas vezes e gera totais duplicados, e quando a função falha o evento se perde. Quais mudanças resolvem esses problemas? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tornar o processamento idempotente, gravando o resultado em uma chave fixa derivada do arquivo de origem",
+          "explanation": "Correta. O S3 entrega eventos pelo menos uma vez. Com saída idempotente, processar de novo não duplica os totais."
+        },
+        {
+          "id": "b",
+          "text": "Configurar uma on-failure destination ou uma fila de mensagens com falha (DLQ) para as invocações assíncronas",
+          "explanation": "Correta. Depois das novas tentativas automáticas, o evento com falha fica guardado para análise e reprocessamento."
+        },
+        {
+          "id": "c",
+          "text": "Aumentar o tempo limite da função para 30 minutos",
+          "explanation": "Incorreta. O limite máximo da Lambda é de 15 minutos, e tempo maior não resolve duplicidade nem perda de eventos."
+        },
+        {
+          "id": "d",
+          "text": "Gravar o resultado no mesmo prefixo que dispara o evento, para manter tudo junto",
+          "explanation": "Incorreta. A função seria chamada de novo pelo próprio resultado, criando um laço de invocações."
+        },
+        {
+          "id": "e",
+          "text": "Pedir ao S3 que entregue os eventos em ordem e exatamente uma vez",
+          "explanation": "Incorreta. As S3 Event Notifications não oferecem entrega exatamente uma vez nem ordem garantida."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q11",
+      "type": "single",
+      "domain": "D4",
+      "skills": [
+        "4.1.5"
+      ],
+      "prompt": "Cinco times da AnyCompany acessam o mesmo bucket do data lake, cada um com permissões diferentes em prefixos diferentes. A bucket policy ficou grande e difícil de revisar. O que simplifica a gestão de acesso?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Criar um S3 Access Point para cada time, cada um com a sua política",
+          "explanation": "Correta. Cada Access Point tem nome e política próprios, e a bucket policy só delega o acesso a eles."
+        },
+        {
+          "id": "b",
+          "text": "Criar um usuário do IAM por time e distribuir chaves de acesso",
+          "explanation": "Incorreta. Chaves de longa duração aumentam o risco e não simplificam a política do bucket."
+        },
+        {
+          "id": "c",
+          "text": "Reativar as ACLs dos objetos e dar permissão objeto por objeto",
+          "explanation": "Incorreta. A AWS recomenda manter as ACLs desligadas, e gerenciar permissão por objeto é ainda mais difícil."
+        },
+        {
+          "id": "d",
+          "text": "Copiar os dados para cinco buckets, um por time",
+          "explanation": "Incorreta. Duplica dados e custos e cria o problema de manter as cópias sincronizadas."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q12",
+      "type": "multiple",
+      "domain": "D4",
+      "skills": [
+        "4.1.5"
+      ],
+      "prompt": "A AnyCompany quer que os dados do bucket curated só possam ser lidos a partir da VPC onde rodam os jobs de análise, sem passar pela internet. Quais configurações atendem? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Um gateway endpoint do S3 na VPC e uma bucket policy que nega requisições cuja aws:SourceVpce seja diferente do id desse endpoint",
+          "explanation": "Correta. O tráfego sai da VPC pelo endpoint, sem internet, e a bucket policy recusa qualquer outro caminho."
+        },
+        {
+          "id": "b",
+          "text": "Um S3 Access Point com origem de rede VPC, usado pelos jobs para ler os dados",
+          "explanation": "Correta. Um Access Point com origem VPC só aceita requisições daquela VPC."
+        },
+        {
+          "id": "c",
+          "text": "Ativar o Block Public Access no bucket",
+          "explanation": "Incorreta. Ele impede acesso público, mas não limita o acesso de principais autorizados a uma VPC."
+        },
+        {
+          "id": "d",
+          "text": "Associar um security group ao bucket",
+          "explanation": "Incorreta. Buckets do S3 não têm security groups."
+        },
+        {
+          "id": "e",
+          "text": "Criar um NAT gateway na VPC",
+          "explanation": "Incorreta. O NAT gateway leva o tráfego para a internet, que é o que se quer evitar, e cobra por GB."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    }
+  ]
+}

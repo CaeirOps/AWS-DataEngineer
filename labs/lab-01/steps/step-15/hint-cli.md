@@ -1,0 +1,4 @@
+- `InvalidRequest` no `put-bucket-replication`: o versionamento não está ativo em um dos buckets.
+- Erro de role: espere alguns segundos depois do `create-role` e tente de novo.
+- O `--region "$DR_REGION"` é necessário nos comandos do bucket de destino.
+- Para conferir a regra: `aws s3api get-bucket-replication --bucket "$RAW"`.

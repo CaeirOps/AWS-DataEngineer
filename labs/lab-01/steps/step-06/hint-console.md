@@ -1,0 +1,3 @@
+- A opção fica na aba **Properties** do bucket, não na aba **Management**.
+- Confira se editou o bucket `raw`, e não o `curated`.
+- Se o status estiver **Suspended**, edite de novo e escolha **Enable**.

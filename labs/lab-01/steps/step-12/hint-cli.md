@@ -1,0 +1,4 @@
+- `aws s3 rm` em bucket versionado só cria um delete marker. A exclusão definitiva usa `aws s3api delete-object --version-id`.
+- A versão gravada antes do versionamento tem o `VersionId` literal `null`: `--version-id null`.
+- Rode `aws s3api list-object-versions --bucket "$RAW" --prefix clientes/` para ver o que sobrou.
+- Se apagou outro cliente por engano, apague o delete marker dele com `--version-id <id-do-marker>`.

@@ -1,0 +1,3 @@
+- O bucket de destino precisa estar em outra Region e com o versionamento ativado. Sem versionamento, o console não deixa salvar a regra.
+- A replicação vale só para objetos novos. Copie um arquivo depois de criar a regra para ver a cópia.
+- Se o **Replication status** ficar `FAILED`, confira as permissões da role criada pelo console.

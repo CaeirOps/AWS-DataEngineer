@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" width="720" height="260" role="img" aria-labelledby="t d">
+  <title id="t">Versões e delete markers de um objeto</title>
+  <desc id="d">Cada gravação cria uma versão. Excluir sem VersionId cria um delete marker que esconde o objeto, mas as versões continuam. Apagar com VersionId remove cada versão de forma definitiva.</desc>
+  <style>
+    .h{font:bold 14px sans-serif;fill:#16191F}
+    .t{font:13px sans-serif;fill:#16191F}
+    .n{font:12px sans-serif;fill:#5F6B7A}
+    .m{font:12px monospace;fill:#16191F}
+  </style>
+  <text x="120" y="25" text-anchor="middle" class="h">1. Duas gravações</text>
+  <rect x="40" y="45" width="160" height="40" rx="6" fill="#EAF9F0" stroke="#2ECC71"/>
+  <text x="120" y="70" text-anchor="middle" class="m">v2 (atual)</text>
+  <rect x="40" y="95" width="160" height="40" rx="6" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <text x="120" y="120" text-anchor="middle" class="m">v1 (noncurrent)</text>
+  <text x="120" y="160" text-anchor="middle" class="n">o objeto aparece na lista</text>
+
+  <text x="360" y="25" text-anchor="middle" class="h">2. DELETE sem VersionId</text>
+  <rect x="280" y="45" width="160" height="40" rx="6" fill="#FDEDEB" stroke="#E74C3C"/>
+  <text x="360" y="70" text-anchor="middle" class="m">delete marker</text>
+  <rect x="280" y="95" width="160" height="40" rx="6" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <text x="360" y="120" text-anchor="middle" class="m">v2 (noncurrent)</text>
+  <rect x="280" y="145" width="160" height="40" rx="6" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <text x="360" y="170" text-anchor="middle" class="m">v1 (noncurrent)</text>
+  <text x="360" y="210" text-anchor="middle" class="n">some da lista, mas os dados</text>
+  <text x="360" y="226" text-anchor="middle" class="n">continuam no bucket (e cobrados)</text>
+
+  <text x="600" y="25" text-anchor="middle" class="h">3. DELETE de cada VersionId</text>
+  <rect x="520" y="45" width="160" height="90" rx="6" fill="#FFFFFF" stroke="#5F6B7A" stroke-dasharray="6 4"/>
+  <text x="600" y="85" text-anchor="middle" class="t">nenhuma versão</text>
+  <text x="600" y="105" text-anchor="middle" class="t">nenhum marcador</text>
+  <text x="600" y="160" text-anchor="middle" class="n">exclusão definitiva</text>
+  <text x="600" y="176" text-anchor="middle" class="n">(pedido de exclusão atendido)</text>
+</svg>
