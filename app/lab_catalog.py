@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 from typing import Optional
 
 from app.errors import (
+    AssetNotFoundError,
     InvalidPathError,
     LabNotFoundError,
     PathUnavailableError,
@@ -42,6 +43,10 @@ ENV_COVERAGE_FILE = "WORKSHOP_COVERAGE_FILE"
 _SKILL_RE = re.compile(r"^[1-9]\.[1-9]\.[1-9][0-9]?$")
 # Caracteres proibidos em `pricing_url`: espaços, controle e barra invertida.
 _URL_FORBIDDEN_RE = re.compile(r"[\s\x00-\x1f\x7f\\]")
+
+# Imagens do conteúdo: um único nome em `assets/`, só .svg ou .png (4.8, 8.2).
+_ASSET_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}\.(svg|png)$")
+ASSET_MIMETYPES = {"svg": "image/svg+xml", "png": "image/png"}
 
 # Ids viram nomes de diretório: aceitar somente este formato evita path traversal.
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
@@ -519,6 +524,30 @@ class LabCatalog:
         """Retorna a Dica Detalhada da Trilha (`hint-console.md` ou `hint-cli.md`)."""
         self._task_step_and_path(lab_id, step_id, path)
         return self._read(lab_id, step_id, f"hint-{path}.md")
+
+    def get_asset(self, lab_id: str, name: str) -> tuple[Path, str]:
+        """Retorna `(caminho, mimetype)` de `labs/<lab_id>/assets/<name>`.
+
+        Aceita só um nome simples com extensão `.svg` ou `.png`. O caminho
+        resolvido (com links simbólicos) precisa ficar dentro de `assets/`.
+
+        Raises:
+            LabNotFoundError: lab inexistente.
+            AssetNotFoundError: nome fora da regra, fora de `assets/` ou ausente.
+        """
+        if self.get_lab(lab_id) is None:
+            raise LabNotFoundError(f"Lab '{lab_id}' não encontrado.")
+        match = _ASSET_RE.match(name) if isinstance(name, str) else None
+        if match is None:
+            raise AssetNotFoundError("Imagem não encontrada.")
+        assets_dir = (self._labs_dir / lab_id / "assets").resolve()
+        try:
+            file = (assets_dir / name).resolve(strict=True)
+        except (OSError, RuntimeError):
+            raise AssetNotFoundError("Imagem não encontrada.")
+        if file.parent != assets_dir or not file.is_file():
+            raise AssetNotFoundError("Imagem não encontrada.")
+        return file, ASSET_MIMETYPES[match.group(1)]
 
     def get_step_single_content(self, lab_id: str, step_id: str) -> str:
         """Retorna `content.md` de steps info, deploy, teardown e completion."""

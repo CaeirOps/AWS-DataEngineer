@@ -19,7 +19,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from app.cloudformation_service import CloudFormationService
 from app.errors import (
@@ -28,7 +28,7 @@ from app.errors import (
     NoInfrastructureError,
     WorkshopError,
 )
-from app.http_security import register_request_guards
+from app.http_security import ASSET_CSP_FLAG, register_request_guards
 from app.lab_catalog import LabCatalog
 from app.models import LabMetadata, StepMetadata
 from app import session as session_module
@@ -248,6 +248,15 @@ def create_app(config: Optional[dict] = None) -> Flask:
         return jsonify(
             {"lab_id": lab_id, "step_id": step_id, "path": path, "markdown": markdown}
         )
+
+    @app.get("/api/labs/<lab_id>/assets/<name>")
+    def lab_asset(lab_id, name):
+        """Imagem local do módulo (`assets/*.svg|png`), com CSP `sandbox` (4.8, 8.2)."""
+        setattr(request, ASSET_CSP_FLAG, True)
+        path, mimetype = catalog.get_asset(lab_id, name)
+        response = send_file(path, mimetype=mimetype, conditional=False, max_age=0)
+        response.headers["Content-Disposition"] = "inline"
+        return response
 
     @app.get("/api/labs/<lab_id>/steps/<step_id>/hint")
     def step_hint(lab_id, step_id):

@@ -74,7 +74,7 @@ export function createValidatorPanel({ labId, step, getPath, onResult }) {
         `/api/labs/${enc(labId)}/steps/${enc(step.step_id)}/hint?path=${enc(path)}`
       );
       if (ticket !== hintRequest) return;
-      replaceContent(hintBox, el("h4", null, "Dica detalhada"), renderMarkdown(data.hint));
+      replaceContent(hintBox, el("h4", null, "Dica detalhada"), renderMarkdown(data.hint, { labId }));
     } catch (err) {
       if (ticket !== hintRequest) return;
       replaceContent(hintBox, el("p", null, errorMessage(err)));
