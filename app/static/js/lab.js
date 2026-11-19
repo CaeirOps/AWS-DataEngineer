@@ -3,6 +3,7 @@
 import { api } from "./api.js";
 import { el, errorBanner, errorMessage, replaceContent, domainBadge, difficultyBadge } from "./dom.js";
 import { renderMarkdown } from "./markdown.js";
+import { createQuizPanel } from "./quiz.js";
 import { PATHS, getProgress, preferredPathOf, setPreferredPath, visitStep } from "./progress.js";
 import { createValidatorPanel } from "./validator.js";
 import { createDeployPanel, createTeardownPanel } from "./cloudformation.js";
@@ -296,8 +297,19 @@ export async function renderLab({ labId, stepId, navigate }) {
       })
     );
   } else if (step.type === "quiz") {
-    // A tela do quiz chega com a correção no servidor (task 15N).
-    panel.append(el("p", { class: "card__meta" }, "A verificação de conhecimento deste step ainda não está disponível."));
+    // Não reconstrói o wizard: o resultado com as explicações fica na tela.
+    panel.append(
+      createQuizPanel({
+        labId,
+        step,
+        onResult: (result) => {
+          step.status = result.step_status;
+          step.attempts = result.attempt_count;
+          lab.status = result.lab_status;
+          lab.resume_step = result.resume_step;
+        },
+      })
+    );
   } else {
     panel.append(renderMarkdown(step.content, { labId }));
     if (step.type === "deploy") panel.append(createDeployPanel(labId).node);
