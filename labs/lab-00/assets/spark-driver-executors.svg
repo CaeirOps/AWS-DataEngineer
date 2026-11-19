@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" role="img" aria-labelledby="t d">
+  <title id="t">Driver, executors e o DAG de um job Spark</title>
+  <desc id="d">O driver monta o DAG e distribui tarefas; cada executor processa partições; o estágio 1 lê e filtra, o shuffle redistribui por id_loja e o estágio 2 soma e grava.</desc>
+  <style>
+    .h{font:bold 15px sans-serif;fill:#16191F}
+    .t{font:13px sans-serif;fill:#16191F}
+    .n{font:12px sans-serif;fill:#5F6B7A}
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5F6B7A"/>
+    </marker>
+  </defs>
+  <rect x="270" y="10" width="180" height="56" rx="10" fill="#232F3E"/>
+  <text x="360" y="34" text-anchor="middle" style="font:bold 15px sans-serif;fill:#FFFFFF">Driver</text>
+  <text x="360" y="54" text-anchor="middle" style="font:12px sans-serif;fill:#FF9900">monta o DAG e distribui tarefas</text>
+  <line x1="300" y1="66" x2="110" y2="100" stroke="#5F6B7A" marker-end="url(#a)"/>
+  <line x1="360" y1="66" x2="360" y2="100" stroke="#5F6B7A" marker-end="url(#a)"/>
+  <line x1="420" y1="66" x2="610" y2="100" stroke="#5F6B7A" marker-end="url(#a)"/>
+
+  <rect x="20" y="102" width="180" height="70" rx="8" fill="#EAF2FE" stroke="#1A73E8"/>
+  <text x="110" y="126" text-anchor="middle" class="h">Executor 1</text>
+  <text x="110" y="148" text-anchor="middle" class="n">partições 1 e 2</text>
+  <rect x="270" y="102" width="180" height="70" rx="8" fill="#EAF2FE" stroke="#1A73E8"/>
+  <text x="360" y="126" text-anchor="middle" class="h">Executor 2</text>
+  <text x="360" y="148" text-anchor="middle" class="n">partições 3 e 4</text>
+  <rect x="520" y="102" width="180" height="70" rx="8" fill="#EAF2FE" stroke="#1A73E8"/>
+  <text x="610" y="126" text-anchor="middle" class="h">Executor 3</text>
+  <text x="610" y="148" text-anchor="middle" class="n">partições 5 e 6</text>
+
+  <text x="360" y="205" text-anchor="middle" class="h">DAG do job: soma das vendas por loja</text>
+  <rect x="20" y="222" width="200" height="62" rx="8" fill="#EAF9F0" stroke="#2ECC71"/>
+  <text x="120" y="246" text-anchor="middle" class="t">Estágio 1</text>
+  <text x="120" y="266" text-anchor="middle" class="n">ler e filtrar (sem rede)</text>
+  <line x1="220" y1="253" x2="268" y2="253" stroke="#5F6B7A" marker-end="url(#a)"/>
+  <rect x="270" y="222" width="180" height="62" rx="8" fill="#FDEDEB" stroke="#E74C3C"/>
+  <text x="360" y="246" text-anchor="middle" class="t">Shuffle</text>
+  <text x="360" y="266" text-anchor="middle" class="n">redistribui por id_loja</text>
+  <line x1="450" y1="253" x2="498" y2="253" stroke="#5F6B7A" marker-end="url(#a)"/>
+  <rect x="500" y="222" width="200" height="62" rx="8" fill="#EAF9F0" stroke="#2ECC71"/>
+  <text x="600" y="246" text-anchor="middle" class="t">Estágio 2</text>
+  <text x="600" y="266" text-anchor="middle" class="n">somar e gravar</text>
+  <text x="360" y="308" text-anchor="middle" class="n">O shuffle move dados pela rede: é a etapa mais cara</text>
+</svg>

@@ -1,0 +1,40 @@
+{
+  "lab_id": "lab-00",
+  "title": "Módulo 00 - Fundamentos de engenharia de dados",
+  "description": "Conceitos que aparecem em todo o exame: os 3 Vs e os tipos de dados, batch e streaming, formatos e particionamento, computação distribuída, estruturas de dados, linguagens e serviços gerenciados. Só teoria, sem custo.",
+  "difficulty": "iniciante",
+  "estimated_duration_minutes": 60,
+  "dea_domains": ["D1", "D2", "D4"],
+  "dea_tasks": ["1.1", "1.2", "1.4", "2.4", "4.1"],
+  "services": ["Amazon S3", "AWS Glue", "Amazon EMR", "Amazon Kinesis Data Streams", "Amazon MSK"],
+  "skills": ["1.1.11", "1.1.12", "1.2.6", "1.2.9", "1.4.3", "1.4.10", "1.4.11", "2.4.5", "4.1.6"],
+  "has_infrastructure": false,
+  "prerequisites": {
+    "hard": [
+      "Conta AWS própria, de preferência dedicada ao workshop",
+      "Docker 20+ com Docker Compose v2",
+      "AWS CLI v2 com um profile SSO (aws configure sso) ou aws login",
+      "Python 3.9+ no host para os scripts check_requirements.py e start.py"
+    ],
+    "recommended": [
+      "Alerta no AWS Budgets configurado na conta",
+      "Noções de SQL, linha de comando e Git"
+    ]
+  },
+  "steps": [
+    {"step_id": "step-01", "title": "Objetivos e cenário da AnyCompany", "type": "info",
+     "skills": ["1.1.11", "1.1.12", "1.2.6", "1.2.9", "1.4.3", "1.4.10", "1.4.11", "2.4.5", "4.1.6"]},
+    {"step_id": "step-02", "title": "Como usar o workshop", "type": "info"},
+    {"step_id": "step-03", "title": "Os 3 Vs e os tipos de dados", "type": "info", "skills": ["1.2.9"]},
+    {"step_id": "step-04", "title": "Batch, streaming, estado e replayability", "type": "info", "skills": ["1.1.11", "1.1.12"]},
+    {"step_id": "step-05", "title": "Formatos, compressão e particionamento", "type": "info", "skills": ["1.2.6", "2.4.5"]},
+    {"step_id": "step-06", "title": "Computação distribuída", "type": "info", "skills": ["1.4.10"]},
+    {"step_id": "step-07", "title": "Estruturas de dados e algoritmos", "type": "info", "skills": ["1.4.11"]},
+    {"step_id": "step-08", "title": "Linguagens e frameworks", "type": "info", "skills": ["1.4.3"]},
+    {"step_id": "step-09", "title": "Serviços gerenciados e não gerenciados", "type": "info", "skills": ["4.1.6"]},
+    {"step_id": "step-10", "title": "Verificação de conhecimento", "type": "quiz", "pass_score": 0.7,
+     "skills": ["1.1.11", "1.1.12", "1.2.6", "1.2.9", "1.4.3", "1.4.10", "1.4.11", "2.4.5", "4.1.6"]},
+    {"step_id": "step-11", "title": "Resumo e próximos passos", "type": "completion"}
+  ],
+  "residual_resources": []
+}

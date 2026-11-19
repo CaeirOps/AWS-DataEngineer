@@ -695,19 +695,19 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
 
 ## Parte 2: Módulos (um por task, com proposta e revisão do mantenedor)
 
-- [ ] 16. Módulo 00 - Fundamentos de engenharia de dados (D1, D2)
-  - [ ] 16.1 Checkpoint de proposta do Módulo 00
+- [-] 16. Módulo 00 - Fundamentos de engenharia de dados (D1, D2)
+  - [x] 16.1 Checkpoint de proposta do Módulo 00
     - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
     - Aguardar a aprovação antes de escrever qualquer conteúdo
     - Depende da task 15Q (release v0.2.0 publicada)
     - _Requirements: 7.1, 7.6, 10.1, 10.3_
-  - [ ] 16.2 Criar `labs/lab-00/metadata.json`
+  - [x] 16.2 Criar `labs/lab-00/metadata.json`
     - Módulo sem infraestrutura: `has_infrastructure: false`, sem `stack.yaml`, sem steps `deploy`/`teardown`; listar os pré-requisitos do workshop em `prerequisites`
     - _Requirements: 4.4, 6.8, 7.5, 20.2_
-  - [ ] 16.3 Escrever o conteúdo teórico em `labs/lab-00/steps/`
+  - [x] 16.3 Escrever o conteúdo teórico em `labs/lab-00/steps/`
     - Objetivos com as skills do exame, seções de conceito com exemplos e comparações, Destaques "Na prova", "Custo", "Boas práticas" e "Atenção", diagramas em `assets/` e resumo com links para a documentação oficial
     - _Requirements: 4.5, 4.6, 4.7, 4.8_
-  - [ ] 16.5 Escrever a Verificação de conhecimento do Módulo 00
+  - [x] 16.5 Escrever a Verificação de conhecimento do Módulo 00
     - `quiz.json` com questões de escolha única e múltipla no estilo do exame, explicação por alternativa, `domain` e `skills` por questão
     - _Requirements: 17.1, 18.2_
   - [ ] 16.8 Checkpoint de revisão do Módulo 00
