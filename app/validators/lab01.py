@@ -209,8 +209,9 @@ def _validate_evento(session: Any, ctx: dict) -> ValidationResult:
     if not resumos:
         return _fail(
             "A notificação está certa, mas ainda não há resumos em curated/resumos/pedidos/.",
-            "Copie um CSV para pedidos/dt=2026-03-11/ depois de criar a notificação. Se não aparecer, "
-            "veja os logs em /aws/lambda/workshop-lab-01-indexador no CloudWatch.",
+            "Espere cerca de 1 minuto depois de criar a notificação e copie um CSV para uma data nova "
+            "em pedidos/ (por exemplo dt=2026-03-12). Se não aparecer, veja os logs em "
+            "/aws/lambda/workshop-lab-01-indexador no CloudWatch.",
         )
     return ValidationResult(
         passed=True, message=f"Evento configurado e {len(resumos)} resumo(s) gravado(s) pela Lambda."

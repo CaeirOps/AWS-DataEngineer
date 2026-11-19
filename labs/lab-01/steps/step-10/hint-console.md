@@ -1,4 +1,4 @@
 - A notificação fica em **Properties > Event notifications** do bucket `raw`.
 - O prefixo é `pedidos/` e o sufixo é `.csv`, com o ponto.
-- Copiar um arquivo antes de criar a notificação não gera evento. Crie a notificação e copie de novo.
+- Copiar um arquivo antes de criar a notificação, ou nos primeiros segundos depois dela, não gera evento. Espere cerca de 1 minuto e copie para outra data, por exemplo `dt=2026-03-12`.
 - Se o resumo não aparecer em alguns segundos, veja os logs da função no CloudWatch (**Monitor > View CloudWatch logs**).

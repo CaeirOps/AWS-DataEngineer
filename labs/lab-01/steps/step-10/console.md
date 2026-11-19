@@ -7,7 +7,7 @@
    - **Suffix:** `.csv`
    - **Event types:** marque **All object create events**
 3. Em **Destination**, escolha **Lambda function** e selecione `workshop-lab-01-indexador`. Clique em **Save changes**.
-4. Abra `pedidos/dt=2026-03-10/`, marque o CSV e escolha **Actions > Copy**. Em **Destination**, digite `s3://workshop-lab-01-raw-<conta>-<region>/pedidos/dt=2026-03-11/pedidos-2026-03-11.csv` e clique em **Copy**.
+4. Espere cerca de 1 minuto: o S3 leva um tempo para aplicar a nova notificação, e um arquivo copiado antes disso não gera evento. Depois, abra `pedidos/dt=2026-03-10/`, marque o CSV e escolha **Actions > Copy**. Em **Destination**, digite `s3://workshop-lab-01-raw-<conta>-<region>/pedidos/dt=2026-03-11/pedidos-2026-03-11.csv` e clique em **Copy**.
 5. Abra o bucket `curated` e entre em `resumos/pedidos/dt=2026-03-11/`. Abra o JSON e veja as linhas e o total pago.
 6. Clique em **Validar**.
 

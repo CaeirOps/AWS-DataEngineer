@@ -40,12 +40,12 @@ aws s3api put-bucket-notification-configuration --bucket "$RAW" \
   --notification-configuration file://notificacao.json
 ```
 
-**3. Teste com um arquivo novo:**
+**3. Teste com um arquivo novo.** Espere cerca de 1 minuto depois do passo anterior: o S3 leva um tempo para aplicar a nova notificação, e um arquivo copiado antes disso não gera evento.
 
 ```bash
 aws s3 cp "s3://${RAW}/pedidos/dt=2026-03-10/pedidos-2026-03-10.csv" \
           "s3://${RAW}/pedidos/dt=2026-03-11/pedidos-2026-03-11.csv"
-sleep 10
+sleep 20
 aws s3 ls "s3://${CURATED}/resumos/" --recursive
 aws s3 cp "s3://${CURATED}/resumos/pedidos/dt=2026-03-11/pedidos-2026-03-11.json" -
 aws logs tail /aws/lambda/workshop-lab-01-indexador --since 15m
