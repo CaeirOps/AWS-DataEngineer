@@ -662,13 +662,13 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Mais testes das rotas e de DOM da interface
     - **Validates: Requirements 17.2, 17.3, 17.4, 17.5**
 
-- [ ] 15O. Prática opcional e Aviso de custo na interface
-  - [ ] 15O.1 Exibir o selo "Opcional" e o aviso de custo do step
+- [x] 15O. Prática opcional e Aviso de custo na interface
+  - [x] 15O.1 Exibir o selo "Opcional" e o aviso de custo do step
     - _Requirements: 19.1_
-  - [ ] 15O.2 Exibir o Aviso de custo antes do `deploy`
+  - [x] 15O.2 Exibir o Aviso de custo antes do `deploy`
     - Serviços cobrados com os links das páginas oficiais de preços, sem valores em USD; módulo sem infraestrutura não mostra disclaimer nem controles de stack
     - _Requirements: 4.2, 4.3, 6.8_
-  - [ ]* 15O.3 Escrever testes de DOM do selo, do Aviso de custo e da conclusão sem prática opcional
+  - [x]* 15O.3 Escrever testes de DOM do selo, do Aviso de custo e da conclusão sem prática opcional
     - _Requirements: 4.3, 19.1, 19.2_
 
 - [ ] 15P. Simulado final

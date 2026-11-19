@@ -64,14 +64,48 @@ function overviewView(lab) {
   );
 }
 
-function costBanner(lab) {
+const PRICING_PREFIX = "https://aws.amazon.com/";
+
+/** Link para a página oficial de preços; URL fora de aws.amazon.com vira só texto. */
+function pricingLink(service) {
+  const name = itemText(service.name);
+  const url = String(service.pricing_url || "");
+  if (!url.startsWith(PRICING_PREFIX)) return name;
+  return el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, `${name}: página de preços`);
+}
+
+/** Aviso de custo antes do deploy: serviços cobrados e preços oficiais, sem USD (4.2, 4.3, 19.4). */
+export function costBanner(lab) {
+  const services = listOf((lab.cost_notice || {}).services);
   return el(
     "div",
-    { class: "banner banner--cost", role: "note" },
-    el("div", { class: "banner__title" }, "Aviso de custos"),
-    el("p", null, lab.cost_disclaimer || "Os recursos provisionados neste lab podem gerar custos na sua conta AWS.")
+    { class: "banner banner--cost", role: "note", "aria-label": "Aviso de custo" },
+    el("div", { class: "banner__title" }, "Aviso de custo"),
+    el(
+      "p",
+      null,
+      "Este módulo cria recursos na sua conta AWS, cobrados conforme o uso. " +
+        "Confira os preços na sua Region e finalize o módulo (teardown) ao terminar."
+    ),
+    services.length > 0
+      ? el("ul", { class: "cost-notice__services" }, services.map((s) => el("li", null, pricingLink(s))))
+      : null,
+    lab.cost_disclaimer ? el("p", null, lab.cost_disclaimer) : null
   );
 }
+
+/** Selo e aviso reforçado de uma Prática opcional (19.1, 19.2). */
+export function optionalBanner(step) {
+  return el(
+    "div",
+    { class: "banner banner--cost banner--optional", role: "note", "aria-label": "Prática opcional" },
+    el("div", { class: "banner__title" }, el("span", { class: "badge badge--optional" }, "Opcional"), " Prática opcional"),
+    step.cost_note ? el("p", null, step.cost_note) : null,
+    el("p", null, "Você pode pular esta prática: ela não bloqueia a conclusão do módulo.")
+  );
+}
+
+const optionalBadge = () => el("span", { class: "badge badge--optional" }, "Opcional");
 
 /** Seção de abas e conteúdo de um step `task`. */
 function taskView(lab, step, preferred, onValidated) {
@@ -204,7 +238,9 @@ function completionView(lab) {
     el(
       "ul",
       { class: "checklist" },
-      tasks.map((t) => el("li", null, `${t.status === "passed" ? "\u2713" : "\u2022"} ${t.title}`))
+      tasks.map((t) =>
+        el("li", null, `${t.status === "passed" ? "\u2713" : "\u2022"} ${t.title}`, t.optional ? [" ", optionalBadge()] : null)
+      )
     )
   );
 }
@@ -268,7 +304,8 @@ export async function renderLab({ labId, stepId, navigate }) {
             "aria-disabled": reachable ? null : "true",
           },
           el("span", { class: "wizard__icon", "aria-hidden": "true" }, icon),
-          el("span", null, s.title)
+          el("span", null, s.title),
+          s.type === "task" && s.optional ? [" ", optionalBadge()] : null
         );
         return el("li", { class: `wizard__item wizard__item--${status}` }, link);
       })
@@ -289,6 +326,7 @@ export async function renderLab({ labId, stepId, navigate }) {
   if (showCost && (step.type === "deploy" || (!hasDeploy && index === firstTask))) panel.append(costBanner(lab));
 
   if (step.type === "task") {
+    if (step.optional) panel.append(optionalBanner(step));
     panel.append(
       taskView(lab, step, preferred, (result) => {
         step.status = result.step_status;
