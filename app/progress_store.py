@@ -19,6 +19,8 @@ from typing import Iterator, Optional
 from app.errors import (
     InvalidPathError,
     InvalidPayloadError,
+    MockExamAlreadySubmittedError,
+    MockExamNotFoundError,
     StepNotFoundError,
     StepRequiresValidationError,
 )
@@ -31,6 +33,7 @@ DEFAULT_FILEPATH = "/app/progress/progress.json"
 ENV_FILEPATH = "WORKSHOP_PROGRESS_FILE"
 
 STEP_STATUSES = ("not_visited", "failed", "passed")
+MOCK_EXAM_MAX_ATTEMPTS = 20  # tentativas mais recentes guardadas (18.5)
 
 
 def _now() -> str:
@@ -327,6 +330,82 @@ class ProgressStore:
             }
         result["resume_step"] = self.get_resume_step(lab_id, lab_metadata)
         return result
+
+    # ------------------------------------------------------------------
+    # Simulado (Requirement 18)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _mock_attempts(data: dict) -> list:
+        mock = data.get("mock_exam")
+        if not isinstance(mock, dict) or not isinstance(mock.get("attempts"), list):
+            mock = {"attempts": []}
+            data["mock_exam"] = mock
+        return mock["attempts"]
+
+    def get_mock_attempts(self) -> list[dict]:
+        """Tentativas do Simulado, da mais antiga para a mais recente."""
+        with self._locked():
+            data = self._read()
+        return copy.deepcopy(self._mock_attempts(data))
+
+    def get_mock_attempt(self, attempt_id: str) -> dict:
+        """Raises: MockExamNotFoundError."""
+        for attempt in self.get_mock_attempts():
+            if attempt.get("attempt_id") == attempt_id:
+                return attempt
+        raise MockExamNotFoundError("Tentativa do Simulado não encontrada.")
+
+    def create_mock_attempt(self, attempt_id: str, question_ids: list[str]) -> dict:
+        """Registra uma tentativa iniciada, mantendo só as 20 mais recentes."""
+        now = _now()
+        attempt = {
+            "attempt_id": attempt_id,
+            "started_at": now,
+            "finished_at": None,
+            "question_ids": list(question_ids),
+            "score": None,
+            "right": None,
+            "total": len(question_ids),
+            "by_domain": None,
+        }
+        with self._locked():
+            data = self._read()
+            attempts = self._mock_attempts(data)
+            attempts.append(attempt)
+            del attempts[:-MOCK_EXAM_MAX_ATTEMPTS]
+            data["last_updated"] = now
+            self._write(data)
+        return copy.deepcopy(attempt)
+
+    def finish_mock_attempt(self, attempt_id: str, result: dict) -> dict:
+        """Grava `finished_at`, nota geral e por domínio. Uma tentativa só é corrigida uma vez.
+
+        Raises:
+            MockExamNotFoundError, MockExamAlreadySubmittedError.
+        """
+        now = _now()
+        with self._locked():
+            data = self._read()
+            attempt = next(
+                (a for a in self._mock_attempts(data) if a.get("attempt_id") == attempt_id), None
+            )
+            if attempt is None:
+                raise MockExamNotFoundError("Tentativa do Simulado não encontrada.")
+            if attempt.get("finished_at"):
+                raise MockExamAlreadySubmittedError(
+                    "Esta tentativa do Simulado já foi corrigida. Inicie uma nova tentativa."
+                )
+            attempt.update(
+                finished_at=now,
+                score=result["score"],
+                right=result["right"],
+                total=result["total"],
+                by_domain=result["by_domain"],
+            )
+            data["last_updated"] = now
+            self._write(data)
+            return copy.deepcopy(attempt)
 
     def get_resume_step(self, lab_id: str, lab_metadata: LabMetadata) -> Optional[str]:
         """Retorna o `step_id` do primeiro step (ordem do metadata) não `passed`.

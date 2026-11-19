@@ -153,3 +153,24 @@ class InvalidAnswerError(WorkshopError):
 
     code = "INVALID_ANSWER"
     http_status = 400
+
+
+class MockExamNotFoundError(WorkshopError):
+    """Tentativa do Simulado inexistente (18.3)."""
+
+    code = "MOCK_EXAM_NOT_FOUND"
+    http_status = 404
+
+
+class MockExamAlreadySubmittedError(WorkshopError):
+    """Tentativa do Simulado já corrigida; inicie outra (18.3)."""
+
+    code = "MOCK_EXAM_ALREADY_SUBMITTED"
+    http_status = 409
+
+
+class MockExamUnavailableError(WorkshopError):
+    """Catálogo sem questões para o Simulado (18.2)."""
+
+    code = "MOCK_EXAM_UNAVAILABLE"
+    http_status = 409
