@@ -146,3 +146,10 @@ class AssetNotFoundError(WorkshopError):
 
     code = "ASSET_NOT_FOUND"
     http_status = 404
+
+
+class InvalidAnswerError(WorkshopError):
+    """Resposta de quiz com questão ou alternativa inexistente (17.3)."""
+
+    code = "INVALID_ANSWER"
+    http_status = 400

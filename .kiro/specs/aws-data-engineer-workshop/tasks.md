@@ -646,17 +646,17 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - JS: escape de HTML, cada Destaque, imagem local aceita, imagem externa, `data:`, `..` e alternativo vazio recusados. Python: nomes inválidos, path traversal, tipos e cabeçalhos
     - **Validates: Requirements 4.7, 4.8, 8.2**
 
-- [ ] 15N. Verificação de conhecimento (step `quiz`)
-  - [ ] 15N.1 Implementar o carregamento e a validação do `quiz.json`
+- [x] 15N. Verificação de conhecimento (step `quiz`)
+  - [x] 15N.1 Implementar o carregamento e a validação do `quiz.json`
     - Escolha única com 4 alternativas e 1 correta; múltipla com 5 ou mais alternativas e 2 ou mais corretas; ids únicos; `domain` e `skills` válidos
     - _Requirements: 17.1_
-  - [ ] 15N.2 Implementar as rotas e o Progress Store do quiz
+  - [x] 15N.2 Implementar as rotas e o Progress Store do quiz
     - `GET .../quiz` sem gabarito e sem explicações; `POST .../quiz` corrige no servidor, retorna nota, resultado por questão e explicações, registra `attempts`, `last_score`, `best_score` e `passed_at`; `INVALID_ANSWER` (400) para alternativa inexistente
     - _Requirements: 17.2, 17.3, 17.4, 17.5, 17.6_
-  - [ ] 15N.3 Implementar a interface do quiz
+  - [x] 15N.3 Implementar a interface do quiz
     - Questões com rádio ou caixas de seleção conforme o tipo, aviso de quantas marcar, envio via `api.js`, resultado com explicações por alternativa, nova tentativa
     - _Requirements: 17.1, 17.3_
-  - [ ]* 15N.4 Escrever testes de propriedade e de unidade do quiz
+  - [x]* 15N.4 Escrever testes de propriedade e de unidade do quiz
     - **Property 23: O gabarito nunca chega ao browser antes da resposta**
     - **Property 24: A nota é calculada corretamente para escolha única e múltipla**
     - Mais testes das rotas e de DOM da interface

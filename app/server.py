@@ -33,6 +33,7 @@ from app.lab_catalog import LabCatalog
 from app.models import LabMetadata, StepMetadata
 from app import session as session_module
 from app.progress_store import ProgressStore
+from app.quiz import grade, public_questions
 from app.redaction import log_exception, mask_json
 from app.validation_service import ValidationService
 
@@ -214,6 +215,8 @@ def create_app(config: Optional[dict] = None) -> Flask:
                 data["content"] = catalog.get_step_single_content(lab_id, step.step_id)
             data["status"] = progress["steps"].get(step.step_id, {}).get("status", "not_visited")
             data["attempts"] = progress["steps"].get(step.step_id, {}).get("attempts", 0)
+            if step.type == "quiz":
+                data["best_score"] = progress["steps"].get(step.step_id, {}).get("best_score")
             steps.append(data)
         return jsonify(
             {
@@ -247,6 +250,47 @@ def create_app(config: Optional[dict] = None) -> Flask:
         markdown = catalog.get_step_content(lab_id, step_id, path)
         return jsonify(
             {"lab_id": lab_id, "step_id": step_id, "path": path, "markdown": markdown}
+        )
+
+    # ------------------------------------------------------------------
+    # Verificação de conhecimento (Requirement 17): sem AWS e sem sessão
+    # ------------------------------------------------------------------
+
+    @app.get("/api/labs/<lab_id>/steps/<step_id>/quiz")
+    def get_quiz(lab_id, step_id):
+        """Questões sem gabarito e sem explicações (17.2, Property 23)."""
+        quiz = catalog.get_quiz(lab_id, step_id)
+        step = store.get_lab_progress(lab_id)["steps"].get(step_id, {})
+        return jsonify(
+            {
+                "lab_id": quiz.lab_id,
+                "step_id": quiz.step_id,
+                "pass_score": quiz.pass_score,
+                "questions": public_questions(quiz),
+                "status": step.get("status", "not_visited"),
+                "attempts": step.get("attempts", 0),
+                "best_score": step.get("best_score"),
+            }
+        )
+
+    @app.post("/api/labs/<lab_id>/steps/<step_id>/quiz")
+    def submit_quiz(lab_id, step_id):
+        """Corrige no servidor e registra a tentativa (17.3 a 17.6)."""
+        quiz = catalog.get_quiz(lab_id, step_id)
+        result = grade(quiz, _json_body().get("answers"))
+        lab = require_lab(lab_id)
+        saved = store.record_quiz_attempt(
+            lab_id, step_id, result["score"], result["passed"], lab
+        )
+        return jsonify(
+            {
+                "lab_id": quiz.lab_id,
+                "step_id": quiz.step_id,
+                "pass_score": quiz.pass_score,
+                **result,
+                "attempts": saved["attempt_count"],
+                **saved,
+            }
         )
 
     @app.get("/api/labs/<lab_id>/assets/<name>")
