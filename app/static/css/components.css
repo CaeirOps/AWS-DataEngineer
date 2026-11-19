@@ -379,3 +379,13 @@
 .badge--optional { background: #6C3483; }
 .banner--optional .banner__title { display: flex; align-items: center; gap: var(--space-2); }
 .cost-notice__services { margin: var(--space-2) 0; padding-left: var(--space-4); }
+
+/* ---------- Simulado ---------- */
+.mock-exam__card { margin-top: var(--space-5); }
+.mock-exam__timer { font-weight: 700; font-variant-numeric: tabular-nums; }
+.mock-exam__nav { display: flex; flex-wrap: wrap; gap: var(--space-1); list-style: none; padding: 0; margin: 0 0 var(--space-3); }
+.mock-exam__nav-item { min-width: 2.25rem; padding: var(--space-1); border: 1px solid var(--aws-border); border-radius: var(--radius); background: var(--aws-surface); cursor: pointer; }
+.mock-exam__nav-item--answered { background: #EAF2FE; border-color: var(--aws-light-blue); }
+.mock-exam__nav-item[aria-current="step"] { outline: 2px solid var(--aws-orange); }
+.mock-exam__history, .mock-exam__domains { border-collapse: collapse; margin-bottom: var(--space-3); }
+.mock-exam__history th, .mock-exam__history td, .mock-exam__domains th, .mock-exam__domains td { border: 1px solid var(--aws-border); padding: var(--space-2) var(--space-3); text-align: left; }

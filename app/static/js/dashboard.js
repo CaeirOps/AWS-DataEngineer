@@ -82,6 +82,15 @@ export async function renderDashboard() {
         el("div", { class: "card-grid" }, labs.map(labCard))
       );
     }
+    view.append(
+      el(
+        "section",
+        { class: "card mock-exam__card", "aria-label": "Simulado final" },
+        el("h2", { class: "card__title" }, "Simulado final"),
+        el("p", { class: "card__body" }, "Questões sorteadas de todos os módulos com a distribuição de domínios do exame DEA-C01. Cronômetro opcional."),
+        el("div", { class: "card__footer" }, el("a", { class: "btn btn--primary", href: "/mock-exam", "data-link": "" }, "Abrir simulado"))
+      )
+    );
   } catch (err) {
     view.append(errorBanner(err, "Não foi possível carregar os labs"));
   }

@@ -38,7 +38,7 @@ function questionField(question, index) {
 }
 
 /** Resultado de uma questão: certa ou errada, e a explicação de cada alternativa. */
-function resultItem(result, index) {
+export function resultItem(result, index) {
   const correct = new Set(result.correct);
   const selected = new Set(result.selected);
   return el(

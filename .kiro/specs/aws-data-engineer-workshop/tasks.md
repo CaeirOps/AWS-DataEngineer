@@ -671,14 +671,14 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
   - [x]* 15O.3 Escrever testes de DOM do selo, do Aviso de custo e da conclusão sem prática opcional
     - _Requirements: 4.3, 19.1, 19.2_
 
-- [ ] 15P. Simulado final
-  - [ ] 15P.1 Implementar o sorteio, as rotas e o Progress Store do Simulado
+- [x] 15P. Simulado final
+  - [x] 15P.1 Implementar o sorteio, as rotas e o Progress Store do Simulado
     - `POST /api/mock-exam` sorteia sem repetição com a cota por domínio e a regra de arredondamento do design; `POST /api/mock-exam/<attempt_id>/submit` corrige e retorna nota geral e por domínio; últimas 20 tentativas no Progress Store
     - _Requirements: 18.1, 18.2, 18.3, 18.5_
-  - [ ] 15P.2 Implementar a interface do Simulado
+  - [x] 15P.2 Implementar a interface do Simulado
     - Rota `/mock-exam`, cronômetro opcional de 130 minutos, navegação entre questões, resultado por domínio e histórico de tentativas
     - _Requirements: 18.3, 18.4_
-  - [ ]* 15P.3 Escrever testes de propriedade e de unidade do Simulado
+  - [x]* 15P.3 Escrever testes de propriedade e de unidade do Simulado
     - **Property 25: O Simulado respeita os pesos dos domínios e não repete questões**
     - **Validates: Requirements 7.4, 18.2**
 
