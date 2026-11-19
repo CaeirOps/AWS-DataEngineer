@@ -1,6 +1,8 @@
 # Regras para IAM dos labs: nenhum statement Allow com Action "*" e Resource "*" juntos.
 let politicas = Resources.*[ Type in ['AWS::IAM::Policy', 'AWS::IAM::ManagedPolicy'] ]
-let roles = Resources.*[ Type == 'AWS::IAM::Role' ]
+# Roles sem politicas inline nao tem o que verificar aqui (por exemplo, roles usadas so como principal).
+let roles = Resources.*[ Type == 'AWS::IAM::Role'
+                         Properties.Policies exists ]
 
 rule iam_sem_admin_total_em_politicas when %politicas !empty {
     %politicas.Properties.PolicyDocument.Statement[ Effect == 'Allow' Action == '*' ] {
