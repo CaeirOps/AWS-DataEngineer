@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" width="720" height="330" role="img" aria-labelledby="t d">
+  <title id="t">Armazenamento por linha, por coluna e com partições</title>
+  <desc id="d">No formato por linha cada registro fica inteiro; no colunar os valores de cada coluna ficam juntos e a consulta lê só as colunas usadas; com partições por data a consulta lê só a pasta do dia filtrado.</desc>
+  <style>
+    .h{font:bold 16px sans-serif;fill:#16191F}
+    .t{font:13px sans-serif;fill:#16191F}
+    .m{font:12px monospace;fill:#16191F}
+    .n{font:12px sans-serif;fill:#5F6B7A}
+  </style>
+  <text x="120" y="25" text-anchor="middle" class="h">Por linha (CSV, JSON, Avro)</text>
+  <rect x="20" y="40" width="200" height="26" fill="#EAF2FE" stroke="#1A73E8"/>
+  <text x="30" y="58" class="m">1001 | 17 | 89,90 | pago</text>
+  <rect x="20" y="70" width="200" height="26" fill="#EAF2FE" stroke="#1A73E8"/>
+  <text x="30" y="88" class="m">1002 | 04 | 39,90 | pago</text>
+  <rect x="20" y="100" width="200" height="26" fill="#EAF2FE" stroke="#1A73E8"/>
+  <text x="30" y="118" class="m">1003 | 17 | 15,00 | novo</text>
+  <text x="120" y="150" text-anchor="middle" class="n">SUM(valor) lê todas as colunas</text>
+
+  <text x="360" y="25" text-anchor="middle" class="h">Por coluna (Parquet, ORC)</text>
+  <rect x="265" y="40" width="40" height="86" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <rect x="310" y="40" width="40" height="86" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <rect x="355" y="40" width="55" height="86" fill="#EAF9F0" stroke="#2ECC71" stroke-width="3"/>
+  <rect x="415" y="40" width="40" height="86" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <text x="285" y="58" text-anchor="middle" class="m">1001</text>
+  <text x="285" y="88" text-anchor="middle" class="m">1002</text>
+  <text x="285" y="118" text-anchor="middle" class="m">1003</text>
+  <text x="330" y="58" text-anchor="middle" class="m">17</text>
+  <text x="330" y="88" text-anchor="middle" class="m">04</text>
+  <text x="330" y="118" text-anchor="middle" class="m">17</text>
+  <text x="382" y="58" text-anchor="middle" class="m">89,90</text>
+  <text x="382" y="88" text-anchor="middle" class="m">39,90</text>
+  <text x="382" y="118" text-anchor="middle" class="m">15,00</text>
+  <text x="435" y="58" text-anchor="middle" class="m">pago</text>
+  <text x="435" y="88" text-anchor="middle" class="m">pago</text>
+  <text x="435" y="118" text-anchor="middle" class="m">novo</text>
+  <text x="360" y="150" text-anchor="middle" class="n">SUM(valor) lê só a coluna valor</text>
+
+  <text x="600" y="25" text-anchor="middle" class="h">Com partições</text>
+  <text x="490" y="58" class="m">pedidos/</text>
+  <rect x="505" y="68" width="185" height="24" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <text x="515" y="85" class="m">dt=2026-03-09/</text>
+  <rect x="505" y="98" width="185" height="24" fill="#EAF9F0" stroke="#2ECC71" stroke-width="3"/>
+  <text x="515" y="115" class="m">dt=2026-03-10/</text>
+  <rect x="505" y="128" width="185" height="24" fill="#F2F3F3" stroke="#5F6B7A"/>
+  <text x="515" y="145" class="m">dt=2026-03-11/</text>
+  <text x="600" y="175" text-anchor="middle" class="n">WHERE dt = '2026-03-10'</text>
+  <text x="600" y="192" text-anchor="middle" class="n">lê só uma pasta</text>
+
+  <rect x="20" y="225" width="680" height="85" rx="10" fill="#FFF8EC" stroke="#F39C12"/>
+  <text x="360" y="255" text-anchor="middle" class="h">Colunar + compressão + partições</text>
+  <text x="360" y="280" text-anchor="middle" class="t">menos bytes lidos: consultas mais rápidas e, no Athena, mais baratas</text>
+</svg>

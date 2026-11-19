@@ -1,0 +1,363 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.2.9"
+      ],
+      "prompt": "A AnyCompany recebe quatro tipos de dados: a tabela de pedidos do banco transacional, eventos do site em JSON com campos que variam conforme o tipo de evento, fotos de produtos e manuais em PDF. Qual fonte é um exemplo de dado semiestruturado?",
+      "options": [
+        {
+          "id": "a",
+          "text": "A tabela de pedidos do banco transacional",
+          "explanation": "Incorreta. A tabela tem esquema fixo em linhas e colunas: é dado estruturado."
+        },
+        {
+          "id": "b",
+          "text": "Os eventos do site em JSON",
+          "explanation": "Correta. O JSON traz a estrutura junto com o dado, e cada evento pode ter campos diferentes: é dado semiestruturado."
+        },
+        {
+          "id": "c",
+          "text": "As fotos de produtos",
+          "explanation": "Incorreta. Imagens não têm modelo de dados definido: são dados não estruturados."
+        },
+        {
+          "id": "d",
+          "text": "Os manuais em PDF",
+          "explanation": "Incorreta. Documentos PDF são dados não estruturados, sem campos definidos para consulta."
+        }
+      ],
+      "correct": [
+        "b"
+      ]
+    },
+    {
+      "id": "q2",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.1.12"
+      ],
+      "prompt": "A AnyCompany processa os eventos do site em streaming. Qual destas transformações é stateful?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Descartar os eventos gerados por robôs de busca",
+          "explanation": "Incorreta. Cada evento é avaliado sozinho, sem depender de eventos anteriores: é stateless."
+        },
+        {
+          "id": "b",
+          "text": "Converter o campo de horário para o fuso de São Paulo",
+          "explanation": "Incorreta. A conversão usa só o próprio registro: é stateless."
+        },
+        {
+          "id": "c",
+          "text": "Somar os itens adicionados ao carrinho por produto em janelas de 5 minutos",
+          "explanation": "Correta. A agregação por janela precisa guardar os totais acumulados entre eventos: é stateful."
+        },
+        {
+          "id": "d",
+          "text": "Mascarar o e-mail do cliente antes de gravar o evento",
+          "explanation": "Incorreta. O mascaramento trata cada registro de forma independente: é stateless."
+        }
+      ],
+      "correct": [
+        "c"
+      ]
+    },
+    {
+      "id": "q3",
+      "type": "multiple",
+      "domain": "D1",
+      "skills": [
+        "1.1.11"
+      ],
+      "prompt": "Um bug no job diário da AnyCompany gravou valores errados de vendas nos últimos 3 dias. O time quer corrigir o job e reprocessar esses dias sem duplicar dados. Quais práticas tornam isso possível? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Manter os arquivos brutos originais, sem alteração, em uma camada raw no Amazon S3",
+          "explanation": "Correta. Com a fonte preservada, o job corrigido pode ler de novo os dados dos dias afetados."
+        },
+        {
+          "id": "b",
+          "text": "Gravar a saída por partição de data, substituindo a partição inteira a cada execução",
+          "explanation": "Correta. Sobrescrever a partição do dia torna o reprocessamento idempotente: rodar de novo não duplica os valores."
+        },
+        {
+          "id": "c",
+          "text": "Acrescentar (append) o resultado de cada execução à tabela final, sem chave",
+          "explanation": "Incorreta. Sem chave nem partição para substituir, reprocessar soma os mesmos dados de novo e duplica as vendas."
+        },
+        {
+          "id": "d",
+          "text": "Apagar os arquivos brutos logo depois do processamento para economizar armazenamento",
+          "explanation": "Incorreta. Sem os dados de origem não há o que reprocessar."
+        },
+        {
+          "id": "e",
+          "text": "Aumentar a memória dos workers do job",
+          "explanation": "Incorreta. Mais memória pode acelerar o job, mas não permite reprocessar sem duplicar."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q4",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.1.11"
+      ],
+      "prompt": "A AnyCompany envia os eventos do site para um stream do Amazon Kinesis Data Streams com a configuração padrão. Um novo consumidor precisa ler os eventos dos últimos 3 dias quando for implantado. O que o time deve fazer?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Aumentar o período de retenção do stream para pelo menos 72 horas",
+          "explanation": "Correta. A retenção padrão é de 24 horas e pode ser aumentada até 365 dias. Com os registros retidos, o consumidor pode ler a partir de um horário anterior."
+        },
+        {
+          "id": "b",
+          "text": "Aumentar o número de shards do stream",
+          "explanation": "Incorreta. Mais shards aumentam a capacidade de leitura e gravação, mas não mudam por quanto tempo os registros ficam guardados."
+        },
+        {
+          "id": "c",
+          "text": "Ativar o enhanced fan-out para o novo consumidor",
+          "explanation": "Incorreta. O enhanced fan-out dá vazão dedicada ao consumidor, mas não estende a retenção."
+        },
+        {
+          "id": "d",
+          "text": "Trocar o stream por uma fila do Amazon SQS",
+          "explanation": "Incorreta. Na fila, a mensagem é removida depois de processada por um consumidor, e outros consumidores não podem reler o histórico."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q5",
+      "type": "multiple",
+      "domain": "D2",
+      "skills": [
+        "1.2.6",
+        "2.4.5"
+      ],
+      "prompt": "A AnyCompany guarda os pedidos em arquivos CSV sem compressão no Amazon S3 e consulta com o Amazon Athena. Quase todas as consultas filtram por data e usam 3 das 40 colunas. Quais mudanças reduzem mais o volume de dados escaneado? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Converter os arquivos para Apache Parquet com compressão Snappy",
+          "explanation": "Correta. No formato colunar, o Athena lê só as colunas usadas, e a compressão reduz ainda mais os bytes lidos."
+        },
+        {
+          "id": "b",
+          "text": "Particionar os dados pela coluna de data (dt)",
+          "explanation": "Correta. Com partições por data, o filtro faz o Athena ler só as pastas dos dias consultados (partition pruning)."
+        },
+        {
+          "id": "c",
+          "text": "Converter os arquivos para JSON",
+          "explanation": "Incorreta. JSON também é orientado a linha e costuma ocupar mais que o CSV, então a consulta continuaria lendo todas as colunas."
+        },
+        {
+          "id": "d",
+          "text": "Particionar os dados pela coluna id_pedido",
+          "explanation": "Incorreta. Cada pedido viraria uma partição: milhões de pastas com arquivos minúsculos, e o filtro por data não seria aproveitado."
+        },
+        {
+          "id": "e",
+          "text": "Dividir os dados em milhares de arquivos de 1 MB",
+          "explanation": "Incorreta. Arquivos pequenos demais aumentam o tempo de listagem e abertura e não reduzem o volume lido."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": "q6",
+      "type": "single",
+      "domain": "D2",
+      "skills": [
+        "2.4.5"
+      ],
+      "prompt": "Um analista da AnyCompany diz que a mesma consulta ficou mais rápida depois que os dados foram convertidos para Apache Parquet, mesmo filtrando por um valor de loja que aparece em poucos blocos. Qual característica do Parquet explica isso?",
+      "options": [
+        {
+          "id": "a",
+          "text": "O Parquet guarda estatísticas, como mínimo e máximo por bloco, que permitem pular blocos sem o valor procurado",
+          "explanation": "Correta. Com as estatísticas por row group, o motor faz predicate pushdown e deixa de ler os blocos que não podem conter o valor."
+        },
+        {
+          "id": "b",
+          "text": "O Parquet cria índices B-tree para cada coluna",
+          "explanation": "Incorreta. O Parquet não tem índices B-tree. A filtragem usa as estatísticas dos blocos."
+        },
+        {
+          "id": "c",
+          "text": "O Parquet guarda os dados em texto, que é mais rápido de ler",
+          "explanation": "Incorreta. O Parquet é binário e colunar, não texto."
+        },
+        {
+          "id": "d",
+          "text": "O Parquet replica os dados em várias Regions",
+          "explanation": "Incorreta. O formato do arquivo não tem relação com replicação entre Regions."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q7",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.4.10"
+      ],
+      "prompt": "Um job Apache Spark da AnyCompany lê os pedidos, filtra os pagos, seleciona três colunas e soma o valor por id_loja. Qual operação provoca um shuffle dos dados entre os executors?",
+      "options": [
+        {
+          "id": "a",
+          "text": "O filtro dos pedidos pagos",
+          "explanation": "Incorreta. Cada executor filtra as suas partições sem trocar dados com os outros."
+        },
+        {
+          "id": "b",
+          "text": "A seleção das três colunas",
+          "explanation": "Incorreta. A seleção é feita dentro de cada partição, sem mover dados pela rede."
+        },
+        {
+          "id": "c",
+          "text": "O agrupamento e a soma por id_loja",
+          "explanation": "Correta. Para somar por loja, todas as linhas de cada loja precisam ficar no mesmo executor, e isso redistribui os dados pela rede."
+        },
+        {
+          "id": "d",
+          "text": "A leitura dos arquivos do Amazon S3",
+          "explanation": "Incorreta. Cada executor lê as próprias partições da fonte. A leitura não é um shuffle."
+        }
+      ],
+      "correct": [
+        "c"
+      ]
+    },
+    {
+      "id": "q8",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.4.11"
+      ],
+      "prompt": "A AnyCompany orquestra o pipeline com o Apache Airflow. A tarefa de carga só pode rodar depois das tarefas de ingestão e de validação, e nenhuma tarefa pode depender dela mesma. Qual estrutura representa essas dependências?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Um grafo acíclico dirigido (DAG)",
+          "explanation": "Correta. As tarefas são nós, as dependências são arestas com direção, e a ausência de ciclos garante que o pipeline termina."
+        },
+        {
+          "id": "b",
+          "text": "Uma fila FIFO",
+          "explanation": "Incorreta. A fila define só a ordem de chegada, sem expressar dependências entre várias tarefas."
+        },
+        {
+          "id": "c",
+          "text": "Uma árvore B-tree",
+          "explanation": "Incorreta. A B-tree é usada em índices de bancos de dados para buscas, não para dependências entre tarefas."
+        },
+        {
+          "id": "d",
+          "text": "Uma tabela hash",
+          "explanation": "Incorreta. A tabela hash mapeia chaves para posições e não representa ordem nem dependências."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q9",
+      "type": "single",
+      "domain": "D1",
+      "skills": [
+        "1.4.3"
+      ],
+      "prompt": "Os pedidos da AnyCompany já estão catalogados no AWS Glue Data Catalog e são consultados com o Amazon Athena. O time precisa criar, uma vez, uma tabela com o total de vendas por loja e por mês, com o menor esforço operacional. Qual é a melhor opção?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Uma consulta SQL CREATE TABLE AS SELECT (CTAS) no Athena",
+          "explanation": "Correta. O SQL resolve a agregação direto sobre os dados catalogados, sem servidores nem código adicional."
+        },
+        {
+          "id": "b",
+          "text": "Um job PySpark em um cluster Amazon EMR on EC2 criado para isso",
+          "explanation": "Incorreta. Funciona, mas exige criar, configurar e desligar um cluster para uma agregação que o SQL resolve."
+        },
+        {
+          "id": "c",
+          "text": "Uma função AWS Lambda em Python que lê cada arquivo e soma os valores",
+          "explanation": "Incorreta. Exige escrever e manter código de leitura e agregação, e a função tem limite de tempo e memória para grandes volumes."
+        },
+        {
+          "id": "d",
+          "text": "Um script Bash agendado com cron em uma instância Amazon EC2",
+          "explanation": "Incorreta. Exige manter uma instância e um script para algo que uma consulta SQL faz sem servidor."
+        }
+      ],
+      "correct": [
+        "a"
+      ]
+    },
+    {
+      "id": "q10",
+      "type": "multiple",
+      "domain": "D4",
+      "skills": [
+        "4.1.6"
+      ],
+      "prompt": "A AnyCompany vai trocar um cluster Apache Kafka que ela mantém em instâncias Amazon EC2 pelo Amazon MSK Serverless. Quais responsabilidades continuam com a AnyCompany? (Selecione DUAS.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Definir as políticas do IAM que dão aos produtores e consumidores acesso aos tópicos",
+          "explanation": "Correta. O controle de acesso aos dados continua sendo do cliente em qualquer tipo de serviço."
+        },
+        {
+          "id": "b",
+          "text": "Escolher as subnets e os security groups da VPC por onde os clientes se conectam",
+          "explanation": "Correta. A configuração de rede do cluster é feita pelo cliente."
+        },
+        {
+          "id": "c",
+          "text": "Aplicar os patches de segurança no sistema operacional dos brokers",
+          "explanation": "Incorreta. Em um serviço gerenciado, o sistema operacional e o software dos brokers são responsabilidade da AWS."
+        },
+        {
+          "id": "d",
+          "text": "Substituir os brokers que falharem",
+          "explanation": "Incorreta. A AWS detecta e substitui brokers com falha."
+        },
+        {
+          "id": "e",
+          "text": "Dimensionar o número de brokers e o tamanho dos discos",
+          "explanation": "Incorreta. No MSK Serverless, a capacidade é provisionada e ajustada pelo serviço."
+        }
+      ],
+      "correct": [
+        "a",
+        "b"
+      ]
+    }
+  ]
+}

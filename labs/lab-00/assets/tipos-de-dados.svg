@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" width="720" height="300" role="img" aria-labelledby="t d">
+  <title id="t">Fontes de dados da AnyCompany por tipo</title>
+  <desc id="d">Pedidos em tabelas são dados estruturados; eventos JSON do site e CSV de estoque são semiestruturados; fotos e PDFs são não estruturados.</desc>
+  <style>
+    .box{stroke-width:2;rx:10}
+    .h{font:bold 17px sans-serif;fill:#16191F}
+    .t{font:14px sans-serif;fill:#16191F}
+    .m{font:12px monospace;fill:#5F6B7A}
+  </style>
+  <rect x="10" y="10" width="220" height="280" rx="10" fill="#EAF2FE" stroke="#1A73E8" class="box"/>
+  <text x="120" y="40" text-anchor="middle" class="h">Estruturado</text>
+  <text x="120" y="64" text-anchor="middle" class="t">esquema fixo, linhas e colunas</text>
+  <rect x="30" y="85" width="180" height="110" fill="#FFFFFF" stroke="#1A73E8"/>
+  <line x1="30" y1="110" x2="210" y2="110" stroke="#1A73E8"/>
+  <line x1="90" y1="85" x2="90" y2="195" stroke="#1A73E8"/>
+  <line x1="150" y1="85" x2="150" y2="195" stroke="#1A73E8"/>
+  <text x="60" y="103" text-anchor="middle" class="m">pedido</text>
+  <text x="120" y="103" text-anchor="middle" class="m">loja</text>
+  <text x="180" y="103" text-anchor="middle" class="m">valor</text>
+  <text x="60" y="135" text-anchor="middle" class="m">1001</text>
+  <text x="120" y="135" text-anchor="middle" class="m">17</text>
+  <text x="180" y="135" text-anchor="middle" class="m">89,90</text>
+  <text x="60" y="165" text-anchor="middle" class="m">1002</text>
+  <text x="120" y="165" text-anchor="middle" class="m">04</text>
+  <text x="180" y="165" text-anchor="middle" class="m">39,90</text>
+  <text x="120" y="230" text-anchor="middle" class="t">Pedidos do e-commerce</text>
+  <text x="120" y="252" text-anchor="middle" class="t">e dos caixas das lojas</text>
+
+  <rect x="250" y="10" width="220" height="280" rx="10" fill="#EAF9F0" stroke="#2ECC71" class="box"/>
+  <text x="360" y="40" text-anchor="middle" class="h">Semiestruturado</text>
+  <text x="360" y="64" text-anchor="middle" class="t">estrutura flexível, junto do dado</text>
+  <text x="270" y="105" class="m">{"evento": "search",</text>
+  <text x="270" y="123" class="m"> "termo": "camiseta"}</text>
+  <text x="270" y="153" class="m">{"evento": "add_to_cart",</text>
+  <text x="270" y="171" class="m"> "sku": "CAM-042"}</text>
+  <text x="360" y="230" text-anchor="middle" class="t">Eventos do site (JSON)</text>
+  <text x="360" y="252" text-anchor="middle" class="t">e CSV dos fornecedores</text>
+
+  <rect x="490" y="10" width="220" height="280" rx="10" fill="#FFF8EC" stroke="#F39C12" class="box"/>
+  <text x="600" y="40" text-anchor="middle" class="h">Não estruturado</text>
+  <text x="600" y="64" text-anchor="middle" class="t">sem modelo de dados definido</text>
+  <rect x="525" y="90" width="70" height="70" fill="#FFFFFF" stroke="#F39C12"/>
+  <polyline points="530,150 552,120 568,138 580,126 590,150" fill="none" stroke="#F39C12" stroke-width="2"/>
+  <circle cx="580" cy="105" r="7" fill="#F39C12"/>
+  <rect x="610" y="90" width="60" height="75" fill="#FFFFFF" stroke="#F39C12"/>
+  <text x="640" y="135" text-anchor="middle" class="m">PDF</text>
+  <text x="600" y="230" text-anchor="middle" class="t">Fotos de produtos</text>
+  <text x="600" y="252" text-anchor="middle" class="t">e manuais em PDF</text>
+</svg>
