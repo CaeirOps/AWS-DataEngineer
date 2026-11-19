@@ -139,3 +139,10 @@ class NoInfrastructureError(WorkshopError):
 
     code = "NO_INFRASTRUCTURE"
     http_status = 409
+
+
+class AssetNotFoundError(WorkshopError):
+    """Imagem do módulo inexistente ou com nome fora da regra (4.8)."""
+
+    code = "ASSET_NOT_FOUND"
+    http_status = 404

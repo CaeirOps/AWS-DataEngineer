@@ -207,6 +207,20 @@
   border-radius: 4px;
 }
 .markdown blockquote { margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); border-left: 4px solid var(--aws-orange); background: #FFF8EC; }
+/* ---------- Destaques (> [!EXAM], [!COST], [!TIP], [!WARNING]) ---------- */
+.callout {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid;
+  border-left-width: 6px;
+  border-radius: var(--radius);
+}
+.callout__title { font-weight: 700; margin-bottom: var(--space-1); }
+.callout__body > :last-child { margin-bottom: 0; }
+.callout--exam { background: #EAF2FE; border-color: var(--aws-light-blue); }
+.callout--cost { background: #FFF8EC; border-color: var(--aws-warning); }
+.callout--tip { background: #EAF9F0; border-color: var(--aws-success); }
+.callout--warning { background: #FDEDEB; border-color: var(--aws-error); }
 
 .code-block { position: relative; margin-bottom: var(--space-3); }
 .code-block pre {

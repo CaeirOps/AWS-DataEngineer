@@ -57,6 +57,12 @@ def _is_json_content_type(value: str) -> bool:
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 )
+# Imagens do conteúdo (SVG pode conter script): abertas direto no browser,
+# ficam em sandbox, sem nenhuma origem permitida (4.8, 8.2).
+ASSET_CONTENT_SECURITY_POLICY = (
+    "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; sandbox"
+)
+ASSET_CSP_FLAG = "workshop_asset_csp"
 SECURITY_HEADERS = {
     "Content-Security-Policy": CONTENT_SECURITY_POLICY,
     "X-Content-Type-Options": "nosniff",
@@ -78,6 +84,9 @@ def register_security_headers(app: Flask) -> None:
     def add_security_headers(response):
         for name, value in SECURITY_HEADERS.items():
             response.headers[name] = value
+        # Só a rota de assets troca a CSP, e só pela política mais restrita.
+        if getattr(request, ASSET_CSP_FLAG, False):
+            response.headers["Content-Security-Policy"] = ASSET_CONTENT_SECURITY_POLICY
         if request.path.startswith(API_PREFIX):
             response.headers["Cache-Control"] = "no-store"
         return response

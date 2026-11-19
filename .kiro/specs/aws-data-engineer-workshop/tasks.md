@@ -634,14 +634,14 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - **Property 28: Prática opcional não bloqueia a conclusão**
     - **Validates: Requirements 5.8, 19.2**
 
-- [ ] 15M. Destaques e imagens locais no conteúdo
-  - [ ] 15M.1 Implementar os Destaques no `markdown.js`
+- [x] 15M. Destaques e imagens locais no conteúdo
+  - [x] 15M.1 Implementar os Destaques no `markdown.js`
     - `> [!EXAM]`, `> [!COST]`, `> [!TIP]` e `> [!WARNING]` viram `aside.callout` com os títulos "Na prova", "Custo", "Boas práticas" e "Atenção"; texto sempre escapado; estilos em `components.css`
     - _Requirements: 4.7_
-  - [ ] 15M.2 Implementar imagens locais e a rota de assets
+  - [x] 15M.2 Implementar imagens locais e a rota de assets
     - Renderizar `<img>` só para `assets/<nome>.svg|png` com texto alternativo não vazio; rota `GET /api/labs/<lab_id>/assets/<nome>` com validação do nome, proteção contra path traversal, `nosniff` e CSP `sandbox` para SVG
     - _Requirements: 4.8, 8.2_
-  - [ ]* 15M.3 Escrever testes do renderizador e da rota de assets
+  - [x]* 15M.3 Escrever testes do renderizador e da rota de assets
     - **Property 27: Imagens do conteúdo são sempre locais**
     - JS: escape de HTML, cada Destaque, imagem local aceita, imagem externa, `data:`, `..` e alternativo vazio recusados. Python: nomes inválidos, path traversal, tipos e cabeçalhos
     - **Validates: Requirements 4.7, 4.8, 8.2**
