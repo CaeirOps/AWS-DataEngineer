@@ -1,4 +1,4 @@
-"""Testes de política do repositório: workflows, CODEOWNERS e documentação."""
+"""Testes de política do repositório: workflows, CODEOWNERS, documentação, ADRs e arquivos do Kiro."""
 
 import glob
 import re
@@ -40,6 +40,8 @@ CAMINHOS_SENSIVEIS = [
     "/LICENSE*",
     "/NOTICE",
     "/SECURITY.md",
+    "/.kiro/",
+    "/docs/adr/",
 ]
 
 SHA_40 = re.compile(r"^[0-9a-f]{40}$")
@@ -247,3 +249,68 @@ def test_dependabot_ignora_major_e_minor_do_python():
     assert regras, "docker sem regra de ignore para python"
     tipos = set(regras[0]["update-types"])
     assert {"version-update:semver-major", "version-update:semver-minor"} <= tipos
+
+
+# ---------------------------------------------------------------- ADRs e Kiro
+
+ADR_DIR = RAIZ / "docs" / "adr"
+ADRS = sorted(ADR_DIR.glob("[0-9][0-9][0-9][0-9]-*.md"))
+STEERING_DO_PROJETO = RAIZ / ".kiro" / "steering" / "projeto.md"
+# Arquivos de contexto escritos pelo projeto. O aws-rules.md vem do AWS Agent
+# Toolkit, em inglês, e fica fora das regras de redação.
+CONTEXTO = [ADR_DIR / "README.md", *ADRS, STEERING_DO_PROJETO]
+ID_DE_CONTA = re.compile(r"(?<![0-9])[0-9]{12}(?![0-9])")
+CAMINHOS_KIRO_PROIBIDOS = (".kiro/hooks/", ".kiro/settings/")
+STEERING_LOCAL = ".kiro/steering/local-"
+
+
+def _arquivos_versionados() -> list[str]:
+    import subprocess
+
+    saida = subprocess.run(
+        ["git", "ls-files"], cwd=RAIZ, capture_output=True, text=True, check=True
+    ).stdout
+    return saida.splitlines()
+
+
+def test_existem_adrs_e_steering_do_projeto():
+    assert ADRS, "nenhum ADR em docs/adr/"
+    assert STEERING_DO_PROJETO.is_file()
+
+
+@pytest.mark.parametrize("arquivo", CONTEXTO, ids=lambda p: p.name)
+def test_contexto_sem_dados_sensiveis_nem_em_dash(arquivo):
+    """ADRs e steering são públicos e lidos por agentes: nada de credencial ou ID de conta."""
+    texto = arquivo.read_text(encoding="utf-8")
+    assert EM_DASH not in texto, "em dash encontrado"
+    for padrao in PADROES_CREDENCIAL_AWS:
+        assert not padrao.search(texto), f"padrão de credencial AWS: {padrao.pattern}"
+    assert not ID_DE_CONTA.search(texto), "número de 12 dígitos (possível ID de conta AWS)"
+    for padrao in TERMOS_ADMINISTRATIVOS + RECOMENDA_MERGE_ERRADO:
+        assert not padrao.search(texto), f"termo não permitido: {padrao.pattern}"
+
+
+def test_indice_de_adrs_lista_todos_e_numeracao_unica():
+    indice = (ADR_DIR / "README.md").read_text(encoding="utf-8")
+    numeros = [a.name[:4] for a in ADRS]
+    assert len(numeros) == len(set(numeros)), "número de ADR repetido"
+    for adr in ADRS:
+        assert f"]({adr.name})" in indice, f"{adr.name} não está no índice"
+
+
+@pytest.mark.parametrize("adr", ADRS, ids=lambda p: p.name)
+def test_adr_tem_as_secoes_do_modelo(adr):
+    texto = adr.read_text(encoding="utf-8")
+    assert texto.startswith(f"# ADR-{adr.name[:4]}:")
+    for secao in ("- **Status:**", "- **Data:**", "## Contexto", "## Decisão",
+                  "## Alternativas rejeitadas", "## Consequências"):
+        assert secao in texto, f"{adr.name} sem {secao!r}"
+
+
+def test_hooks_e_configuracoes_do_kiro_nao_sao_versionados():
+    """Hooks e MCP executam comandos na máquina de quem abre o projeto."""
+    proibidos = [f for f in _arquivos_versionados() if f.startswith(CAMINHOS_KIRO_PROIBIDOS + (STEERING_LOCAL,))]
+    assert proibidos == [], f"arquivos do Kiro que não podem ser versionados: {proibidos}"
+    ignorados = (RAIZ / ".gitignore").read_text(encoding="utf-8").splitlines()
+    for caminho in (*CAMINHOS_KIRO_PROIBIDOS, f"{STEERING_LOCAL}*.md"):
+        assert caminho in ignorados, f"{caminho} fora do .gitignore"

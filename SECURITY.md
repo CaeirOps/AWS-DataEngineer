@@ -12,7 +12,7 @@ Esta política cobre o código e a configuração deste repositório:
 - os templates CloudFormation e os validadores dos labs;
 - os workflows de CI e a cadeia de dependências.
 
-Exemplos de problemas relevantes: vazamento ou escrita indevida de credenciais do `~/.aws`, saída de rede fora da allowlist do gateway, exposição da interface fora de `127.0.0.1`, execução de código ou path traversal pela API, e templates de lab que criem permissões mais amplas do que o necessário.
+Exemplos de problemas relevantes: vazamento ou escrita indevida de credenciais do `~/.aws`, saída de rede fora da allowlist do gateway, exposição da interface fora de `127.0.0.1`, execução de código ou path traversal pela API, templates de lab que criem permissões mais amplas do que o necessário, e instruções para agentes de IA (`.kiro/`) que levem o agente de quem abre o repositório a executar ações indevidas.
 
 ## Versões suportadas
 

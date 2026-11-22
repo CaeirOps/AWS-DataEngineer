@@ -1,0 +1,53 @@
+name: Problema na plataforma ou em um módulo
+description: Algo não funciona como o esperado (interface, validação, deploy, teardown ou instruções).
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar. **Não inclua** credenciais, tokens, IDs de conta, ARNs reais, e-mails nem capturas de tela com esses dados. Para vulnerabilidades, use o relato privado (SECURITY.md).
+  - type: input
+    id: modulo
+    attributes:
+      label: Módulo e step
+      description: Por exemplo lab-01, step-10. Deixe em branco se for da plataforma.
+  - type: dropdown
+    id: trilha
+    attributes:
+      label: Trilha
+      options:
+        - Não se aplica
+        - Console
+        - CLI
+  - type: textarea
+    id: o-que-aconteceu
+    attributes:
+      label: O que aconteceu
+      description: Inclua a mensagem de erro, com dados sensíveis trocados por valores fictícios.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que era esperado
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como reproduzir
+      placeholder: |
+        1. ...
+        2. ...
+  - type: input
+    id: versao
+    attributes:
+      label: Versão ou commit
+      description: Por exemplo v0.2.1 ou o hash do commit.
+  - type: checkboxes
+    id: confirmacoes
+    attributes:
+      label: Confirmações
+      options:
+        - label: Removi credenciais, IDs de conta e dados pessoais do relato.
+          required: true

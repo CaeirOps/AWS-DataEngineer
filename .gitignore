@@ -45,3 +45,10 @@ tmp/
 
 # --- Estado local de execução do Kiro (histórico de tarefas desta máquina) ---
 .kiro/specs/**/tasks.meta.json
+
+# Kiro: hooks e configuracoes de MCP executam comandos na maquina de quem abre
+# o projeto e nao sao versionados (veja CONTRIBUTING.md, "Usando agentes de IA")
+.kiro/hooks/
+.kiro/settings/
+# Steering pessoal de cada contribuidor (profile, porta, caminhos locais)
+.kiro/steering/local-*.md

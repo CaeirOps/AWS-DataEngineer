@@ -1,0 +1,40 @@
+name: Conteúdo ou novo módulo
+description: Correção de conteúdo, sugestão de melhoria ou proposta para um módulo.
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Antes de escrever um módulo, abra esta issue com a proposta e espere a aprovação do mantenedor (veja "Como escrever um módulo" no CONTRIBUTING.md e o ADR-0011). Use só dados fictícios.
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo
+      options:
+        - Correção de conteúdo (erro técnico, link quebrado, texto confuso)
+        - Melhoria em um módulo existente
+        - Proposta de módulo
+    validations:
+      required: true
+  - type: input
+    id: modulo
+    attributes:
+      label: Módulo
+      description: Por exemplo lab-03.
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição
+      description: O que deve mudar e por quê. Para fatos técnicos da AWS, cite a documentação oficial.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta de módulo
+      description: Preencha só para proposta de módulo.
+      placeholder: |
+        Objetivos e skills da Matriz de cobertura:
+        Roteiro (teoria e práticas):
+        Serviços AWS e práticas opcionais:
+        Custo previsto (serviços cobrados, sem valores em USD):

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Reportar uma vulnerabilidade
+    url: https://github.com/CaeirOps/AWS-DataEngineer/security/advisories/new
+    about: Use o relato privado do GitHub. Não abra issue pública para vulnerabilidades (veja SECURITY.md).
+  - name: Dúvidas sobre o conteúdo ou o exame
+    url: https://github.com/CaeirOps/AWS-DataEngineer/discussions
+    about: Perguntas e conversas gerais ficam nas Discussions.

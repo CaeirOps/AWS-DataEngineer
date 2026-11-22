@@ -19,7 +19,8 @@ Veja o [fluxo de trabalho (gitflow)](../README.md#fluxo-de-trabalho-gitflow). De
 ## Checklist geral
 
 - [ ] Todos os commits têm assinatura DCO (`git commit -s`).
-- [ ] Os testes passam localmente (`python -m pytest tests/unit -q` e `node --test "tests/js/*.test.mjs"`).
+- [ ] Os testes passam localmente (`python -m pytest tests -q` e `node --test "tests/js/*.test.mjs"`).
+- [ ] Se este PR muda uma decisão registrada em `docs/adr/`, ele inclui um ADR novo que a substitui.
 - [ ] Usei apenas dados fictícios, sem dados pessoais ou de empresas reais.
 - [ ] Não incluí credenciais, tokens, chaves de acesso nem IDs de conta reais, nem em exemplos, logs ou capturas de tela.
 - [ ] Atualizei a documentação afetada.
@@ -30,11 +31,13 @@ Preencha esta seção apenas se o Pull Request criar ou alterar um lab.
 
 - [ ] Cada tarefa tem as duas trilhas: **Console** (passo a passo pelas telas) e **CLI** (comandos do AWS CLI).
 - [ ] O lab inclui o **teardown** completo dos recursos criados.
-- [ ] O lab informa a **estimativa de custo** antes do deploy e usa recursos de baixo custo.
+- [ ] O lab declara o **Aviso de custo** (`cost_notice`) com as páginas oficiais de preço, sem valores em USD, e usa recursos de baixo custo. Serviços caros ficam em prática opcional.
+- [ ] O lab tem Verificação de conhecimento (`quiz.json`) e validadores com testes.
+- [ ] Testei o lab na minha conta: cada prática falha antes e passa depois, o teardown removeu tudo e listei em `residual_resources` o que fica fora da stack.
 
 ## Mudanças em arquivos sensíveis
 
-Marque se o Pull Request altera algum destes itens: `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `start.py`, `check_requirements.py`, `host_credentials.py`, `gateway/`, `app/server.py`, `app/session.py`, `app/http_security.py`, `app/validators/base.py`, `requirements*.txt`, `requirements.in`, `scripts/`, `.github/`, `.gitleaks.toml`, `tests/security/`, `tests/fixtures/http_client.py`, `LICENSE*`, `NOTICE`, `SECURITY.md`.
+Marque se o Pull Request altera algum destes itens: `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `start.py`, `check_requirements.py`, `host_credentials.py`, `gateway/`, `app/server.py`, `app/session.py`, `app/http_security.py`, `app/validators/base.py`, `requirements*.txt`, `requirements.in`, `scripts/`, `.github/`, `.gitleaks.toml`, `tests/security/`, `tests/fixtures/http_client.py`, `LICENSE*`, `NOTICE`, `SECURITY.md`, `.kiro/`, `docs/adr/`.
 
 - [ ] Este Pull Request **não** altera arquivos sensíveis.
 - [ ] Este Pull Request altera arquivos sensíveis e a justificativa está abaixo.
