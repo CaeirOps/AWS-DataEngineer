@@ -83,7 +83,23 @@ Mudanças nos arquivos abaixo exigem revisão e aprovação do mantenedor, e a d
 - dependências: `requirements.in`, `requirements.txt`, `requirements-dev.txt`;
 - CI e automações: `.github/`;
 - testes de segurança: `tests/security/`;
-- licenças e avisos: `LICENSE`, `LICENSE-CONTENT` e `NOTICE`.
+- licenças e avisos: `LICENSE`, `LICENSE-CONTENT` e `NOTICE`;
+- instruções para agentes de IA e plano do projeto: `.kiro/` (o steering orienta o agente de quem abre o repositório, por isso uma mudança maliciosa ali funcionaria como injeção de instruções);
+- registros de decisão: `docs/adr/`.
+
+## Decisões do projeto (ADR)
+
+As decisões de arquitetura e de produto ficam em [`docs/adr/`](docs/adr/README.md), uma por arquivo, com contexto, alternativas rejeitadas e consequências. Antes de propor uma mudança grande, confira se o tema já foi decidido. Para mudar uma decisão, proponha um ADR novo que substitua o anterior, no mesmo Pull Request da mudança ou antes dele.
+
+## Usando agentes de IA
+
+Você pode usar agentes de IA para contribuir. O repositório traz instruções para eles em `.kiro/steering/projeto.md`, que o Kiro carrega automaticamente e que outros agentes podem ler. As regras são as mesmas para pessoas e agentes:
+
+- você é responsável pelo que envia: revise o código, o conteúdo e os comandos gerados antes do commit;
+- o DCO continua valendo: ao assinar, você declara que tem o direito de enviar a contribuição;
+- não peça ao agente para criar recursos na AWS sem saber o custo e sem conferir a limpeza;
+- não versione hooks (`.kiro/hooks/`) nem configurações de MCP (`.kiro/settings/`). Eles executam comandos na máquina de quem abre o projeto, e os testes de política recusam esses caminhos;
+- preferências do seu ambiente (profile, porta, caminhos) ficam em um steering local, `.kiro/steering/local-<nome>.md`, que o `.gitignore` exclui do repositório. O steering global (`~/.kiro/steering/`) vale para todos os seus projetos, então evite colocar nele notas de um projeto só.
 
 ## Regenerando o `requirements.txt`
 

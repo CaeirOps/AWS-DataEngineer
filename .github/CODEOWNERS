@@ -43,6 +43,11 @@
 /tests/security/ @CaeirOps
 /tests/fixtures/http_client.py @CaeirOps
 
+# Instrucoes para agentes de IA e plano do projeto: o steering orienta o agente
+# de quem abre o repositorio, entao toda mudanca passa pelo mantenedor
+/.kiro/ @CaeirOps
+# Registros de decisao
+/docs/adr/ @CaeirOps
 # Licencas, avisos e politica de seguranca
 /LICENSE* @CaeirOps
 /NOTICE @CaeirOps
