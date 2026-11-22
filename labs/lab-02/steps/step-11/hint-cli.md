@@ -1,0 +1,3 @@
+- Confira o arquivo com `head -1 estoque-2026-03-10.csv` antes do upload.
+- Confira a política com `aws glue get-crawler --name workshop-lab-02-fontes --query Crawler.SchemaChangePolicy`.
+- A coluna não apareceu: execute o crawler de novo depois do `update-crawler` e espere o estado `READY`.

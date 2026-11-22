@@ -1,0 +1,3 @@
+- Copie o arquivo **antes** de executar o crawler: uma pasta vazia não vira partição.
+- O nome da pasta é exatamente `dt=2026-03-11`.
+- Se o crawler falhar, veja a mensagem em **Crawler runs** e os logs do CloudWatch.

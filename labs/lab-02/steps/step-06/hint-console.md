@@ -1,0 +1,4 @@
+- As três pastas entram como **três fontes S3** separadas no mesmo crawler.
+- O prefixo de tabela é `raw_`, com o sublinhado.
+- A expressão da agenda é `cron(0 6 * * ? *)`, com o ponto de interrogação no lugar do dia da semana.
+- Se a agenda ficou pausada, abra o crawler e clique em **Resume schedule**.

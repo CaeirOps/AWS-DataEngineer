@@ -1,0 +1,4 @@
+- O **S3 path** termina em `/pedidos/`. Se apontar para o bucket inteiro, o crawler cria tabelas para todas as pastas.
+- A role é `workshop-lab-02-crawler-<region>`. Não crie uma role nova: ela teria permissões diferentes.
+- Se a execução falhou, abra a página do crawler e veja a mensagem em **Crawler runs**. O erro mais comum é de permissão: confira a role e o database.
+- Se não encontra o bucket nem o database, troque a Region no canto superior direito.

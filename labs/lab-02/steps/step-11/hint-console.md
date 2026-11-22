@@ -1,0 +1,3 @@
+- A coluna nova vai no **fim** do cabeçalho. No meio, ela deslocaria as colunas seguintes.
+- Depois de mudar a política, execute o crawler **de novo**: a mudança vale só para as próximas execuções.
+- Não escolha apagar do catálogo para objetos excluídos: aqui você só quer acrescentar a coluna.
