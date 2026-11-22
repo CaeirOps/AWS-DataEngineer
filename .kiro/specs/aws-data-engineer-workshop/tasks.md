@@ -742,7 +742,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
     - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
     - _Requirements: 7.1, 7.3, 19.4_
 
-- [-] 18. Módulo 02 - Catálogo de dados (D2)
+- [x] 18. Módulo 02 - Catálogo de dados (D2)
   - [x] 18.1 Checkpoint de proposta do Módulo 02
     - Apresentar ao mantenedor: cenário da AnyCompany, roteiro de teoria e práticas, skills cobertas (conforme a Matriz de cobertura), serviços AWS, práticas opcionais e custo previsto
     - Aguardar a aprovação antes de escrever qualquer conteúdo
@@ -766,7 +766,7 @@ Princípio: "security first", seguindo as recomendações de segurança do GitHu
   - [x]* 18.7 Escrever testes de unidade do validador do Módulo 02
     - Sucesso e falha de cada step com boto3 mockado, incluindo exceções AWS
     - _Requirements: 5.1, 5.2, 5.3_
-  - [ ] 18.8 Checkpoint de revisão do Módulo 02
+  - [x] 18.8 Checkpoint de revisão do Módulo 02
     - Nota: a prática opcional de crawler JDBC foi retirada depois de falhar no teste na conta; ver "Melhorias futuras" no README
     - Apresentar o módulo pronto ao mantenedor e aguardar a aprovação antes do próximo módulo
     - _Requirements: 7.1, 7.3, 19.4_
