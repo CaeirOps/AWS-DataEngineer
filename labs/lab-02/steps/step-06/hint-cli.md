@@ -1,0 +1,4 @@
+- Valide o arquivo com `python3 -m json.tool crawler-fontes.json` antes do `create-crawler`.
+- Para corrigir um crawler existente, use `aws glue update-crawler --cli-input-json file://crawler-fontes.json` (sem mudar o nome).
+- Agenda pausada (`NOT_SCHEDULED`): `aws glue start-crawler-schedule --crawler-name workshop-lab-02-fontes`.
+- Tabela faltando: confira os três caminhos com `aws glue get-crawler --name workshop-lab-02-fontes --query Crawler.Targets`.

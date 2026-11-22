@@ -1,0 +1,3 @@
+- `sd-base.json` vazio ou com texto em colunas: falta `--output json` no `get-partition`.
+- Confira que a localização ficou com `dt=2026-03-11` com `grep '"Location"' sd-nova.json`.
+- `AlreadyExistsException`: a partição já existe. Para corrigir a localização, apague com `aws glue batch-delete-partition --database-name "$DB" --table-name pedidos --partitions-to-delete '[{"Values":["2026-03-11"]}]'` e crie de novo.

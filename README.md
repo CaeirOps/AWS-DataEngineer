@@ -216,6 +216,7 @@ git push origin origin/main:refs/heads/release/vX.Y.Z
 
 ## Melhorias futuras
 
+- **Prática opcional de crawler JDBC no Módulo 02.** Foi testada na conta com Amazon Aurora PostgreSQL Serverless v2, RDS Data API, secret gerenciado pelo RDS e conexão do Glue na VPC, e não funcionou: o crawler falhou com `Test connection failed` sem chegar ao banco, e com driver JDBC próprio falhou com `JDBC connection not found`. A prática foi retirada para o módulo não publicar um passo que não funciona. As skills 2.2.5 e 1.2.2 seguem cobertas pela teoria e pela Verificação de conhecimento, e voltam com prática no Módulo 09 (migração e CDC).
 - **Estimativa de custo em USD por módulo.** A ideia é gerá-la por script a partir do AWS Price List API (`pricing:GetProducts`, somente leitura), com premissas de uso versionadas e revisadas, cálculo determinístico e data da consulta. Ela só entra quando o método for reprodutível e revisado pelo mantenedor. Até lá, o Aviso de custo mostra os serviços cobrados e as páginas oficiais de preços.
 
 ---

@@ -1,0 +1,4 @@
+- Confira as variáveis com `echo "$BUCKET" "$ROLE"`. Se estiverem vazias, rode de novo o bloco de variáveis.
+- Para trocar o alvo de um crawler que já existe: `aws glue update-crawler --name workshop-lab-02-pedidos --targets "{\"S3Targets\": [{\"Path\": \"s3://${BUCKET}/pedidos/\"}]}"`.
+- `AlreadyExistsException`: o crawler já existe. Use `update-crawler` ou siga para o passo 2.
+- Status `FAILED`: veja `aws glue get-crawler --name workshop-lab-02-pedidos --query Crawler.LastCrawl.ErrorMessage`.
